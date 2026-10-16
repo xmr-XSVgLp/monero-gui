@@ -112,7 +112,7 @@ Rectangle {
                         hoverEnabled: true
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
-                        onEntered: parent.color = MoneroComponents.Style.orange
+                        onEntered: parent.color = MoneroComponents.Style.textAccent
                         onExited: parent.color = MoneroComponents.Style.defaultFontColor
                         onClicked: {
                             console.log("Copied to clipboard");
@@ -147,7 +147,7 @@ Rectangle {
                         hoverEnabled: true
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
-                        onEntered: parent.color = MoneroComponents.Style.orange
+                        onEntered: parent.color = MoneroComponents.Style.textAccent
                         onExited: parent.color = MoneroComponents.Style.defaultFontColor
                         onClicked: {
                             console.log("Copied to clipboard");
@@ -231,14 +231,20 @@ Rectangle {
                         height: subaddressAccountListRow.subaddressAccountListItemHeight
                         width: parent ? parent.width : undefined
                         Layout.fillWidth: true
-                        color: itemMouseArea.containsMouse || index === currentAccountIndex ? MoneroComponents.Style.titleBarButtonHoverColor : "transparent"
+                        color: "transparent"
+
+                        MoneroComponents.ListRowFx {
+                            anchors.fill: parent
+                            selected: index === currentAccountIndex
+                            hovered: itemMouseArea.containsMouse
+                        }
 
                         Rectangle {
                             visible: index === currentAccountIndex
                             Layout.fillHeight: true
                             anchors.top: parent.top
                             anchors.bottom: parent.bottom
-                            color: MoneroComponents.Style.accountColors[currentAccountIndex % MoneroComponents.Style.accountColors.length]
+                            color: MoneroComponents.Style.orange
                             width: 2
                         }
 
@@ -335,11 +341,11 @@ Rectangle {
 
                             MoneroComponents.IconButton {
                                 id: renameButton
-                                image: "qrc:///images/edit.svg"
+                                image: "qrc:///images/edit-neon.png"
                                 fontAwesomeFallbackIcon: FontAwesome.edit
                                 fontAwesomeFallbackSize: 22
                                 color: MoneroComponents.Style.defaultFontColor
-                                opacity: GraphicsInfo.api !== GraphicsInfo.Software ? 0.5 : 1
+                                opacity: 1; imgMockColor.colorization: 0
                                 fontAwesomeFallbackOpacity: 0.5
                                 Layout.preferredWidth: 23
                                 Layout.preferredHeight: 21
@@ -350,11 +356,11 @@ Rectangle {
 
                             MoneroComponents.IconButton {
                                 id: copyButton
-                                image: "qrc:///images/copy.svg"
+                                image: "qrc:///images/copy-neon.png"
                                 fontAwesomeFallbackIcon: FontAwesome.clipboard
                                 fontAwesomeFallbackSize: 22
                                 color: MoneroComponents.Style.defaultFontColor
-                                opacity: GraphicsInfo.api !== GraphicsInfo.Software ? 0.5 : 1
+                                opacity: 1; imgMockColor.colorization: 0
                                 fontAwesomeFallbackOpacity: 0.5
                                 Layout.preferredWidth: 16
                                 Layout.preferredHeight: 21

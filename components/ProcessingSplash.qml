@@ -38,8 +38,8 @@ Rectangle {
     color: MoneroComponents.Style.blackTheme ? "black" : "white"
     visible: false
     radius: 10
-    border.color: MoneroComponents.Style.blackTheme ? Qt.rgba(255, 255, 255, 0.25) : Qt.rgba(0, 0, 0, 0.25)
-    border.width: 1
+    border.color: MoneroComponents.Style.orange
+    border.width: 2
     z: 11
     property alias messageText: messageTitle.text
 

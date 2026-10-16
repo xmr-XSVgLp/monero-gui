@@ -93,6 +93,37 @@ Rectangle {
                 MoneroComponents.Style.blackTheme = !MoneroComponents.Style.blackTheme;
             }
         }
+
+        MoneroComponents.LabelSubheader {
+            Layout.fillWidth: true
+            Layout.topMargin: 14
+            Layout.bottomMargin: 4
+            text: "MATRIX FX"
+        }
+
+        MoneroComponents.CheckBox {
+            checked: persistentSettings.fxMatrixRain
+            onClicked: persistentSettings.fxMatrixRain = !persistentSettings.fxMatrixRain
+            text: "Lluvia Matrix de fondo (tema oscuro)"
+        }
+
+        MoneroComponents.CheckBox {
+            checked: persistentSettings.fxBootScreen
+            onClicked: persistentSettings.fxBootScreen = !persistentSettings.fxBootScreen
+            text: "Pantalla de arranque tipo terminal"
+        }
+
+        MoneroComponents.CheckBox {
+            checked: persistentSettings.fxPageGlitch
+            onClicked: persistentSettings.fxPageGlitch = !persistentSettings.fxPageGlitch
+            text: "Efecto glitch al cambiar de página"
+        }
+
+        MoneroComponents.CheckBox {
+            checked: persistentSettings.fxSounds
+            onClicked: persistentSettings.fxSounds = !persistentSettings.fxSounds
+            text: "Sonidos de la interfaz"
+        }
         
         MoneroComponents.CheckBox {
             checked: persistentSettings.askPasswordBeforeSending

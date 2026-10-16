@@ -95,3 +95,15 @@ Monero::optional<std::string> WalletListenerImpl::onDevicePassphraseRequest(bool
     qDebug() << __FUNCTION__;
     return m_phelper.onDevicePassphraseRequest(on_device);
 }
+
+void WalletListenerImpl::onPairingCodeEntered(const QString &code, bool entry_abort)
+{
+    qDebug() << __FUNCTION__;
+    m_phelper.onPairingCodeEntered(code, entry_abort);
+}
+
+Monero::optional<std::string> WalletListenerImpl::onDevicePairingCodeRequest()
+{
+    qDebug() << __FUNCTION__;
+    return m_phelper.onDevicePairingCodeRequest();
+}

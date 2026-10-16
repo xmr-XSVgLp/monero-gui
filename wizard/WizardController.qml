@@ -272,7 +272,7 @@ Rectangle {
             clip: true
             boundsBehavior: isMac ? Flickable.DragAndOvershootBounds : Flickable.StopAtBounds
 
-            ScrollBar.vertical: ScrollBar {
+            ScrollBar.vertical: MoneroComponents.NeonScrollBar {
                 parent: wizardController
                 anchors.left: parent.right
                 anchors.leftMargin: -14 // 10 margin + 4 scrollbar width
@@ -432,6 +432,7 @@ Rectangle {
     function disconnect(){
         walletManager.walletCreated.disconnect(onWalletCreated);
         walletManager.walletPassphraseNeeded.disconnect(onWalletPassphraseNeeded);
+        walletManager.walletPairingCodeNeeded.disconnect(onWalletPairingCodeNeeded);
         walletManager.deviceButtonRequest.disconnect(onDeviceButtonRequest);
         walletManager.deviceButtonPressed.disconnect(onDeviceButtonPressed);
     }
@@ -439,6 +440,7 @@ Rectangle {
     function connect(){
         walletManager.walletCreated.connect(onWalletCreated);
         walletManager.walletPassphraseNeeded.connect(onWalletPassphraseNeeded);
+        walletManager.walletPairingCodeNeeded.connect(onWalletPairingCodeNeeded);
         walletManager.deviceButtonRequest.connect(onDeviceButtonRequest);
         walletManager.deviceButtonPressed.connect(onDeviceButtonPressed);
     }
@@ -513,6 +515,22 @@ Rectangle {
         }
 
         devicePassphraseDialog.open(on_device)
+    }
+
+    function onWalletPairingCodeNeeded(){
+        splash.close()
+
+        console.log(">>> device pairing code needed");
+        inputDialog.labelText = qsTr("Pair your Trezor with this computer.\nEnter the 6-digit code shown on the device:") + translationManager.emptyString;
+        inputDialog.onAcceptedCallback = function() {
+            walletManager.onPairingCodeEntered(inputDialog.inputText.replace(/[^0-9]/g, ""), false);
+            creatingWalletDeviceSplash();
+        }
+        inputDialog.onRejectedCallback = function() {
+            walletManager.onPairingCodeEntered("", true);
+            creatingWalletDeviceSplash();
+        }
+        inputDialog.open("")
     }
 
     function onDeviceButtonRequest(code){

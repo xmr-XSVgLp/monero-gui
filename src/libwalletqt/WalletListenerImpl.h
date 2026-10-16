@@ -60,6 +60,10 @@ public:
 
     virtual Monero::optional<std::string> onDevicePassphraseRequest(bool & on_device) override;
 
+    virtual void onPairingCodeEntered(const QString &code, bool entry_abort) override;
+
+    virtual Monero::optional<std::string> onDevicePairingCodeRequest() override;
+
 private:
     Wallet * m_wallet;
     PassphraseHelper m_phelper;

@@ -70,6 +70,18 @@ public:
       return m_phelper.onDevicePassphraseRequest(on_device);
   }
 
+  virtual void onPairingCodeEntered(const QString &code, bool entry_abort) override
+  {
+      qDebug() << __FUNCTION__;
+      m_phelper.onPairingCodeEntered(code, entry_abort);
+  }
+
+  virtual Monero::optional<std::string> onDevicePairingCodeRequest() override
+  {
+      qDebug() << __FUNCTION__;
+      return m_phelper.onDevicePairingCodeRequest();
+  }
+
   virtual void onDeviceButtonRequest(uint64_t code) override
   {
       qDebug() << __FUNCTION__;
@@ -588,6 +600,20 @@ void WalletManager::onPassphraseEntered(const QString &passphrase, bool enter_on
     if (m_passphraseReceiver != nullptr)
     {
         m_passphraseReceiver->onPassphraseEntered(passphrase, enter_on_device, entry_abort);
+    }
+}
+
+void WalletManager::onWalletPairingCodeNeeded()
+{
+    emit this->walletPairingCodeNeeded();
+}
+
+void WalletManager::onPairingCodeEntered(const QString &code, bool entry_abort)
+{
+    QMutexLocker locker(&m_mutex_passphraseReceiver);
+    if (m_passphraseReceiver != nullptr)
+    {
+        m_passphraseReceiver->onPairingCodeEntered(code, entry_abort);
     }
 }
 

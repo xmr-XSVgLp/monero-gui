@@ -1,3 +1,40 @@
+# Monero GUI — Safe 7 Edition (unofficial)
+
+> **This is an unofficial, community fork of the [Monero GUI](https://github.com/monero-project/monero-gui).
+> It is not made, reviewed or endorsed by The Monero Project or by Trezor / SatoshiLabs.**
+> It handles real money: it is **experimental**, use it at your own risk and test with small amounts first.
+
+## What is different from the official Monero GUI
+
+- **Trezor Safe 7 support.** The Safe 7 uses the new Trezor Host Protocol (THP, Noise-encrypted channel),
+  which the official Monero code does not speak yet. This fork adds a THP transport to Monero's Trezor code
+  (in the [`safe7-thp` branch of the monero fork](https://github.com/xmr-XSVgLp/monero/tree/safe7-thp)),
+  including first-time pairing with the 6-digit code shown on the device.
+- **Matrix / cypherpunk theme:** neon dark theme, redesigned buttons, inputs, menus, cards and icons,
+  optional effects (code rain, boot screen, page glitch, UI sounds) that can be switched off in
+  *Settings → Interface → MATRIX FX*.
+
+Tested only on **macOS (Apple Silicon) with a Trezor Safe 7**. Older Trezor models and other platforms are untested.
+Close Trezor Suite before opening the wallet: the Safe 7 is used directly over USB, not through Trezor Bridge.
+
+## Building (macOS)
+
+```
+git clone --recursive -b safe7-matrix https://github.com/xmr-XSVgLp/monero-gui.git
+```
+Then follow the official *Building on OS X* instructions below (Qt 6, Homebrew dependencies),
+configuring CMake with `-D USE_DEVICE_TREZOR=ON`.
+
+## License
+
+Same as upstream: BSD 3-Clause, see [LICENSE](LICENSE). Copyright (c) 2014-2024, The Monero Project,
+plus the contributors of this fork. "Monero" and "Trezor" are used only to describe compatibility;
+they are trademarks of their respective owners.
+
+---
+
+*The original README of the Monero GUI follows.*
+
 # Monero GUI
 
 Copyright (c) 2014-2024, The Monero Project

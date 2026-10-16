@@ -29,6 +29,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Effects
 
 import FontAwesome
 
@@ -43,8 +44,8 @@ ColumnLayout {
     property alias dataModel: repeater.model
     property string shadowPressedColor
     property string shadowReleasedColor
-    property string pressedColor: MoneroComponents.Style.appWindowBorderColor
-    property string releasedColor: MoneroComponents.Style.titleBarButtonHoverColor
+    property string pressedColor: MoneroComponents.Style.blackTheme ? "#000000" : "#FFFFFF"
+    property string releasedColor: Qt.rgba(dropdown.accent.r, dropdown.accent.g, dropdown.accent.b, 0.16)
     property string textColor: MoneroComponents.Style.defaultFontColor
     property alias currentIndex: columnid.currentIndex
     readonly property alias expanded: popup.visible
@@ -64,6 +65,9 @@ ColumnLayout {
     property string colorHeaderBackground: "transparent"
     property bool headerBorder: true
     property bool headerFontBold: false
+
+    readonly property color accent: MoneroComponents.Style.orange
+    readonly property bool lit: dropArea.containsMouse || dropdown.expanded
 
     property real maxAvailableDropdownHeight: Number.POSITIVE_INFINITY
 
@@ -103,14 +107,55 @@ ColumnLayout {
         }
     }
 
-    Rectangle {
+    Item {
         id: head
-        color: dropArea.containsMouse ? MoneroComponents.Style.titleBarButtonHoverColor : "transparent"
-        border.width: dropdown.headerBorder ? 1 : 0
-        border.color: dropdown.colorBorder
-        radius: 4
         Layout.fillWidth: true
         Layout.preferredHeight: dropdownHeight
+
+        // Cypherpunk frame: chamfered corners, neon border, glow when hovered/open
+        Canvas {
+            id: headFrame
+            anchors.fill: parent
+            visible: dropdown.headerBorder
+            property color fillColor: Qt.rgba(dropdown.accent.r, dropdown.accent.g, dropdown.accent.b, dropdown.lit ? 0.14 : 0.06)
+            property color lineColor: dropdown.lit ? dropdown.accent : Qt.rgba(dropdown.accent.r, dropdown.accent.g, dropdown.accent.b, 0.6)
+            onFillColorChanged: requestPaint()
+            onLineColorChanged: requestPaint()
+            onWidthChanged: requestPaint()
+            onHeightChanged: requestPaint()
+            onPaint: {
+                var ctx = getContext("2d");
+                var c = 9, w = width, h = height;
+                ctx.reset();
+                ctx.beginPath();
+                ctx.moveTo(c + 0.5, 0.5);
+                ctx.lineTo(w - 0.5, 0.5);
+                ctx.lineTo(w - 0.5, h - c - 0.5);
+                ctx.lineTo(w - c - 0.5, h - 0.5);
+                ctx.lineTo(0.5, h - 0.5);
+                ctx.lineTo(0.5, c + 0.5);
+                ctx.closePath();
+                ctx.fillStyle = fillColor;
+                ctx.fill();
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = lineColor;
+                ctx.stroke();
+                ctx.fillStyle = lineColor;
+                ctx.fillRect(w - 6, 2.5, 3, 1);
+                ctx.fillRect(3, h - 3.5, 3, 1);
+            }
+            layer.enabled: GraphicsInfo.api !== GraphicsInfo.Software
+            layer.effect: MultiEffect {
+                autoPaddingEnabled: true
+                blurMax: 24
+                shadowEnabled: true
+                shadowColor: dropdown.accent
+                shadowHorizontalOffset: 0
+                shadowVerticalOffset: 0
+                shadowBlur: dropdown.lit ? 0.9 : 0.5
+                shadowOpacity: dropdown.lit ? 0.8 : 0.25
+            }
+        }
 
         MoneroComponents.TextPlain {
             anchors.verticalCenter: parent.verticalCenter
@@ -120,11 +165,11 @@ ColumnLayout {
             anchors.rightMargin: 12
             width: droplist.width
             elide: Text.ElideRight
-            font.family: MoneroComponents.Style.fontRegular.name
+            font.family: MoneroComponents.Style.fontMonoMedium.name
             font.bold: dropdown.headerFontBold
             font.pixelSize: dropdown.fontSize
-            color: dropdown.textColor
-            text: columnid.currentIndex < repeater.model.count ? qsTr(repeater.model.get(columnid.currentIndex).column1) + translationManager.emptyString : ""
+            color: dropdown.lit ? MoneroComponents.Style.textAccent : dropdown.textColor
+            text: "> " + (columnid.currentIndex < repeater.model.count ? qsTr(repeater.model.get(columnid.currentIndex).column1) + translationManager.emptyString : "")
         }
 
         Item {
@@ -135,15 +180,27 @@ ColumnLayout {
             anchors.rightMargin: 12
             width: dropdownIcon.width
 
-            MoneroEffects.ImageMask {
+            Canvas {
                 id: dropdownIcon
                 anchors.centerIn: parent
-                image: "qrc:///images/whiteDropIndicator.png"
-                height: 8
                 width: 12
-                fontAwesomeFallbackIcon: FontAwesome.arrowDown
-                fontAwesomeFallbackSize: 14
-                color: MoneroComponents.Style.defaultFontColor
+                height: 8
+                rotation: dropdown.expanded ? 180 : 0
+                Behavior on rotation { NumberAnimation { duration: 120 } }
+                property color c: dropdown.accent
+                onCChanged: requestPaint()
+                onPaint: {
+                    var ctx = getContext("2d");
+                    ctx.reset();
+                    ctx.lineWidth = 2;
+                    ctx.lineCap = "square";
+                    ctx.strokeStyle = c;
+                    ctx.beginPath();
+                    ctx.moveTo(1.5, 1.5);
+                    ctx.lineTo(6, 6);
+                    ctx.lineTo(10.5, 1.5);
+                    ctx.stroke();
+                }
             }
         }
 
@@ -174,8 +231,10 @@ ColumnLayout {
             width: dropdown.width
             y: head.y + head.height
             clip: true
-            height: dropdown.expanded ? Math.min(columnid.height, dropdown.maxAvailableDropdownHeight) : 0
+            height: dropdown.expanded ? Math.min(columnid.height + 2, dropdown.maxAvailableDropdownHeight) : 0
             color: dropdown.pressedColor
+            border.width: 1
+            border.color: dropdown.accent
 
             Behavior on height {
                 NumberAnimation { duration: 100; easing.type: Easing.InQuad }
@@ -183,11 +242,12 @@ ColumnLayout {
 
             Flickable {
                 anchors.fill: parent
+                anchors.margins: 1
                 contentHeight: columnid.height
                 interactive: contentHeight > height
                 boundsBehavior: Flickable.StopAtBounds
                 clip: true
-                ScrollBar.vertical: ScrollBar { }
+                ScrollBar.vertical: MoneroComponents.NeonScrollBar { }
 
                 Column {
                     id: columnid
@@ -210,7 +270,16 @@ ColumnLayout {
                             anchors.right: parent.right
                             height: (dropdown.dropdownHeight * 0.75)
                             //radius: index === repeater.count - 1 ? 4 : 0
-                            color: itemArea.containsMouse || index === columnid.currentIndex || itemArea.containsMouse ? dropdown.releasedColor : dropdown.pressedColor
+                            color: itemArea.containsMouse || index === columnid.currentIndex ? dropdown.releasedColor : "transparent"
+
+                            Rectangle {
+                                anchors.left: parent.left
+                                anchors.top: parent.top
+                                anchors.bottom: parent.bottom
+                                width: 3
+                                color: dropdown.accent
+                                visible: itemArea.containsMouse || index === columnid.currentIndex
+                            }
 
                             MoneroComponents.TextPlain {
                                 id: col1Text
@@ -219,11 +288,11 @@ ColumnLayout {
                                 anchors.right: col2Text.left
                                 anchors.leftMargin: 12
                                 anchors.rightMargin: 0
-                                font.family: MoneroComponents.Style.fontRegular.name
+                                font.family: MoneroComponents.Style.fontMonoRegular.name
                                 font.bold: false
                                 font.pixelSize: fontItemSize
-                                color: itemArea.containsMouse || index === columnid.currentIndex || itemArea.containsMouse ? "#FA6800" : "#FFFFFF"
-                                text: qsTr(column1) + translationManager.emptyString
+                                color: itemArea.containsMouse || index === columnid.currentIndex ? MoneroComponents.Style.textAccent : MoneroComponents.Style.defaultFontColor
+                                text: (index === columnid.currentIndex ? "> " : "  ") + qsTr(column1) + translationManager.emptyString
                             }
 
                             MoneroComponents.TextPlain {
@@ -233,7 +302,7 @@ ColumnLayout {
                                 anchors.rightMargin: 45
                                 font.family: MoneroComponents.Style.fontRegular.name
                                 font.pixelSize: 14
-                                color: "#FFFFFF"
+                                color: MoneroComponents.Style.defaultFontColor
                                 text: ""
                             }
 

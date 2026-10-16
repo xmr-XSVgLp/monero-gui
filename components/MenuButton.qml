@@ -40,6 +40,9 @@ Rectangle {
     property var under: null
     signal clicked()
 
+    readonly property color accent: MoneroComponents.Style.orange
+    readonly property bool hovered: buttonArea.containsMouse
+
     function doClick() {
         // Android workaround
         releaseFocus();
@@ -60,20 +63,75 @@ Rectangle {
     property bool present: !under || under.checked || checked || under.numSelectedChildren > 0
     height: present ? ((appWindow.height >= 800) ? 44  : 38 ) : 0
 
-    Rectangle {
-        visible: GraphicsInfo.api !== GraphicsInfo.Software && (button.checked || buttonArea.containsMouse)
-        height: parent.height
-        width: 260
-        anchors.verticalCenter: parent.verticalCenter
-        anchors.right: parent.right
-        anchors.rightMargin: -20
-        anchors.leftMargin: parent.getOffset()
-        gradient: Gradient {
-            orientation: Gradient.Horizontal
-            GradientStop { position: 0.0; color: MoneroComponents.Style.menuButtonGradientStop }
-            GradientStop { position: 1.0; color: MoneroComponents.Style.menuButtonGradientStart }
+    // Subtle cypherpunk highlight: neon wash, thin chamfered outline, faint scanline on hover
+    Item {
+        id: highlight
+        visible: GraphicsInfo.api !== GraphicsInfo.Software && (button.checked || button.hovered)
+        anchors.fill: parent
+        anchors.leftMargin: 12 + button.getOffset()
+        anchors.rightMargin: 8
+        anchors.topMargin: 3
+        anchors.bottomMargin: 3
+
+        Rectangle {
+            anchors.fill: parent
+            gradient: Gradient {
+                orientation: Gradient.Horizontal
+                GradientStop { position: 0.0; color: Qt.rgba(button.accent.r, button.accent.g, button.accent.b, button.checked ? 0.16 : 0.08) }
+                GradientStop { position: 1.0; color: "transparent" }
+            }
         }
-        opacity: button.checked ? 1 : 0.3
+
+        Canvas {
+            id: outline
+            anchors.fill: parent
+            visible: button.checked
+            property color lineColor: Qt.rgba(button.accent.r, button.accent.g, button.accent.b, 0.35)
+            onLineColorChanged: requestPaint()
+            onWidthChanged: requestPaint()
+            onHeightChanged: requestPaint()
+            onPaint: {
+                var ctx = getContext("2d");
+                var c = 7, w = width, h = height;
+                ctx.reset();
+                ctx.beginPath();
+                ctx.moveTo(c + 0.5, 0.5);
+                ctx.lineTo(w - 0.5, 0.5);
+                ctx.lineTo(w - 0.5, h - c - 0.5);
+                ctx.lineTo(w - c - 0.5, h - 0.5);
+                ctx.lineTo(0.5, h - 0.5);
+                ctx.lineTo(0.5, c + 0.5);
+                ctx.closePath();
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = lineColor;
+                ctx.stroke();
+            }
+        }
+
+        Item {
+            anchors.fill: parent
+            clip: true
+            visible: button.hovered && !button.checked
+            Rectangle {
+                id: scan
+                width: 40
+                height: parent.height
+                opacity: 0.12
+                gradient: Gradient {
+                    orientation: Gradient.Horizontal
+                    GradientStop { position: 0.0; color: "transparent" }
+                    GradientStop { position: 0.5; color: button.accent }
+                    GradientStop { position: 1.0; color: "transparent" }
+                }
+                NumberAnimation on x {
+                    from: -scan.width
+                    to: highlight.width
+                    duration: 1400
+                    loops: Animation.Infinite
+                    running: button.hovered && !button.checked
+                }
+            }
+        }
     }
 
     // fallback hover effect for the software renderer
@@ -84,18 +142,36 @@ Rectangle {
         opacity: button.checked ? 1 : 0.3
     }
 
+    // active indicator: neon bar just left of the highlight frame
+    Rectangle {
+        visible: button.checked
+        x: 4 + button.getOffset() - 2
+        anchors.verticalCenter: parent.verticalCenter
+        width: 6
+        height: parent.height - 6
+        color: Qt.rgba(button.accent.r, button.accent.g, button.accent.b, 0.25)
+        Rectangle {
+            anchors.centerIn: parent
+            width: 2
+            height: parent.height
+            color: button.accent
+        }
+    }
+
     // button decorations that are subject to leftMargin offsets
     Rectangle {
         anchors.left: parent.left
         anchors.leftMargin: 20
         height: parent.height
         width: 2
-        color: button.checked ? MoneroComponents.Style.accountColors[currentAccountIndex % MoneroComponents.Style.accountColors.length] : "transparent"
+        color: "transparent"
 
         // button text
         MoneroComponents.TextPlain {
             id: label
-            color: MoneroComponents.Style.menuButtonTextColor
+            color: button.checked ? MoneroComponents.Style.textAccent : MoneroComponents.Style.menuButtonTextColor
+            font.family: MoneroComponents.Style.fontMonoMedium.name
+            font.letterSpacing: 0.5
             themeTransitionBlackColor: MoneroComponents.Style._b_menuButtonTextColor
             themeTransitionWhiteColor: MoneroComponents.Style._w_menuButtonTextColor
             anchors.verticalCenter: parent.verticalCenter

@@ -1191,6 +1191,19 @@ void Wallet::onWalletPassphraseNeeded(bool on_device)
     emit this->walletPassphraseNeeded(on_device);
 }
 
+void Wallet::onWalletPairingCodeNeeded()
+{
+    emit this->walletPairingCodeNeeded();
+}
+
+void Wallet::onPairingCodeEntered(const QString &code, bool entry_abort)
+{
+    if (m_walletListener != nullptr)
+    {
+        m_walletListener->onPairingCodeEntered(code, entry_abort);
+    }
+}
+
 void Wallet::onPassphraseEntered(const QString &passphrase, bool enter_on_device, bool entry_abort)
 {
     if (m_walletListener != nullptr)

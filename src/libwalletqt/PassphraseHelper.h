@@ -43,6 +43,8 @@
 class PassprasePrompter {
 public:
     virtual void onWalletPassphraseNeeded(bool onDevice) = 0;
+    // Trezor Safe 7 and newer: the user rewrites the 6-digit code shown on the device
+    virtual void onWalletPairingCodeNeeded() {}
 };
 
 /**
@@ -52,6 +54,7 @@ public:
 class PassphraseReceiver {
 public:
     virtual void onPassphraseEntered(const QString &passphrase, bool enter_on_device, bool entry_abort) = 0;
+    virtual void onPairingCodeEntered(const QString &code, bool entry_abort) { (void)code; (void)entry_abort; }
 };
 
 class PassphraseHelper {
@@ -60,6 +63,8 @@ public:
     PassphraseHelper(const PassphraseHelper & h): PassphraseHelper(h.m_prompter) {};
     Monero::optional<std::string> onDevicePassphraseRequest(bool & on_device);
     void onPassphraseEntered(const QString &passphrase, bool enter_on_device, bool entry_abort);
+    Monero::optional<std::string> onDevicePairingCodeRequest();
+    void onPairingCodeEntered(const QString &code, bool entry_abort);
 
 private:
     PassprasePrompter * m_prompter;
@@ -68,6 +73,9 @@ private:
     QString m_passphrase;
     bool m_passphrase_abort;
     bool m_passphrase_on_device;
+    QWaitCondition m_cond_code;
+    QString m_pairing_code;
+    bool m_pairing_abort;
 
 };
 

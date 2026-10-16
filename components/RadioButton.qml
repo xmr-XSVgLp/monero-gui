@@ -52,23 +52,30 @@ Item {
     RowLayout {
         id: layout
 
-        Rectangle {
+        Item {
             id: button
-            color: "transparent"
-            border.color: borderColor
             height: radioButton.height
             width: radioButton.height
-            radius: radioButton.height
+
+            MoneroComponents.NeonFrame {
+                anchors.fill: parent
+                anchors.margins: 3
+                rotation: 45
+                cut: 4
+                ticks: false
+                fillOpacity: radioButton.checked ? 0.12 : 0.02
+                lineOpacity: radioButton.checked || radioArea.containsMouse ? 1.0 : 0.5
+                glow: radioButton.checked ? 0.6 : 0
+            }
 
             Rectangle {
-                visible: radioButton.checked
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.verticalCenter: parent.verticalCenter
-                color: checkedColor
-                width: 10
-                height: 10
-                radius: 10
-                opacity: 0.8
+                anchors.centerIn: parent
+                width: 8
+                height: 8
+                rotation: 45
+                color: MoneroComponents.Style.orange
+                scale: radioButton.checked ? 1 : 0
+                Behavior on scale { NumberAnimation { duration: 150; easing.type: Easing.OutBack } }
             }
         }
 
@@ -83,6 +90,8 @@ Item {
     }
 
     MouseArea {
+        id: radioArea
+        hoverEnabled: true
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor
         onClicked: {

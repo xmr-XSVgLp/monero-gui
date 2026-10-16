@@ -389,6 +389,10 @@ public:
     Q_INVOKABLE void onPassphraseEntered(const QString &passphrase, bool enter_on_device, bool entry_abort=false);
     virtual void onWalletPassphraseNeeded(bool on_device) override;
 
+    // Pairing code entry for Trezor Safe 7 and newer
+    Q_INVOKABLE void onPairingCodeEntered(const QString &code, bool entry_abort=false);
+    virtual void onWalletPairingCodeNeeded() override;
+
     // TODO: setListenter() when it implemented in API
 signals:
     // emitted on every event happened with wallet
@@ -412,6 +416,7 @@ signals:
     void deviceButtonRequest(quint64 buttonCode);
     void deviceButtonPressed();
     void walletPassphraseNeeded(bool onDevice);
+    void walletPairingCodeNeeded();
     void transactionCommitted(bool status, PendingTransaction *t, const QStringList& txid);
     void heightRefreshed(quint64 walletHeight, quint64 daemonHeight, quint64 targetHeight) const;
     void deviceShowAddressShowed();

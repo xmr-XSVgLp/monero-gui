@@ -68,3 +68,36 @@ void PassphraseHelper::onPassphraseEntered(const QString &passphrase, bool enter
 
     m_cond_pass.wakeAll();
 }
+
+Monero::optional<std::string> PassphraseHelper::onDevicePairingCodeRequest()
+{
+    qDebug() << __FUNCTION__;
+    QMutexLocker locker(&m_mutex_pass);
+    m_pairing_abort = false;
+    m_pairing_code = QString();
+
+    if (m_prompter != nullptr){
+        m_prompter->onWalletPairingCodeNeeded();
+    }
+
+    m_cond_code.wait(&m_mutex_pass);
+
+    if (m_pairing_abort)
+    {
+        return Monero::optional<std::string>();
+    }
+
+    auto code = m_pairing_code.toStdString();
+    m_pairing_code = QString();
+    return Monero::optional<std::string>(code);
+}
+
+void PassphraseHelper::onPairingCodeEntered(const QString &code, bool entry_abort)
+{
+    qDebug() << __FUNCTION__;
+    QMutexLocker locker(&m_mutex_pass);
+    m_pairing_code = code;
+    m_pairing_abort = entry_abort;
+
+    m_cond_code.wakeAll();
+}

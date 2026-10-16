@@ -163,7 +163,7 @@ Drawer {
                 }
             }
 
-            ScrollBar.vertical: ScrollBar {
+            ScrollBar.vertical: MoneroComponents.NeonScrollBar {
                 onActiveChanged: if (!active && !isMac) active = true
                 palette.mid: "#8E8E93"
                 palette.dark: "#B8B8BD"

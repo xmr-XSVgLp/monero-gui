@@ -20,6 +20,7 @@ file(GLOB GUI_IMAGE_FILES CONFIGURE_DEPENDS
     "${CMAKE_SOURCE_DIR}/images/*.ico"
     "${CMAKE_SOURCE_DIR}/images/*.png"
     "${CMAKE_SOURCE_DIR}/images/*.svg"
+    "${CMAKE_SOURCE_DIR}/images/sounds/*.wav"
     "${CMAKE_SOURCE_DIR}/images/merchant/*.png"
     "${CMAKE_SOURCE_DIR}/images/themes/white/*.png"
 )

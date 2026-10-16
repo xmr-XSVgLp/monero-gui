@@ -34,3 +34,8 @@ Session.vim
 tags
 # Persistent undo
 [._]*.un~
+images_matrix/
+images_original/
+images.zip
+.DS_Store
+images/*.zip

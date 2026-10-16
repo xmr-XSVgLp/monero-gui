@@ -432,7 +432,7 @@ Item {
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
                             onEntered: {
-                                parent.color = MoneroComponents.Style.orange
+                                parent.color = MoneroComponents.Style.textAccent
                             }
                             onExited: {
                                 parent.color = parent._color

@@ -90,6 +90,23 @@ Rectangle {
         end: Qt.point(0, 0)
     }
 
+    // neon separator under the bar
+    Rectangle {
+        id: titleBarNeonLine
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        height: 1
+        z: parent.z + 1
+        gradient: Gradient {
+            orientation: Gradient.Horizontal
+            GradientStop { position: 0.0; color: "transparent" }
+            GradientStop { position: 0.5; color: MoneroComponents.Style.orange }
+            GradientStop { position: 1.0; color: "transparent" }
+        }
+        opacity: 0.6
+    }
+
     RowLayout {
         z: parent.z + 2
         spacing: 0
@@ -292,7 +309,7 @@ Rectangle {
                 visible: GraphicsInfo.api !== GraphicsInfo.Software && MoneroComponents.Style.blackTheme
                 anchors.fill: imgLogo
                 source: imgLogo
-                saturation: -1.0
+                saturation: 0.0
             }
         }
 
@@ -301,14 +318,47 @@ Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: parent.height
 
-            MoneroComponents.TextPlain {
-                font.pixelSize: 20
-                horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignVCenter
-                width: parent.width
-                height: parent.height
-                elide: Text.ElideRight
-                text: walletName
+            Row {
+                id: walletTitle
+                anchors.centerIn: parent
+                spacing: 10
+                readonly property color accent: MoneroComponents.Style.orange
+                readonly property color ink: MoneroComponents.Style.blackTheme ? "#FFFFFF" : "#0B1F0F"
+                readonly property int nameMax: Math.max(40, parent.width - 120)
+
+                MoneroComponents.SafeIcon {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 22
+                    height: 22
+                }
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "["
+                    color: walletTitle.accent
+                    font.family: MoneroComponents.Style.fontMonoBold.name
+                    font.pixelSize: 19
+                }
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: Math.min(implicitWidth, walletTitle.nameMax)
+                    elide: Text.ElideRight
+                    text: walletName
+                    color: walletTitle.ink
+                    font.family: MoneroComponents.Style.fontMonoMedium.name
+                    font.pixelSize: 16
+                    font.capitalization: Font.AllUppercase
+                    font.letterSpacing: 2
+                }
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "]"
+                    color: walletTitle.accent
+                    font.family: MoneroComponents.Style.fontMonoBold.name
+                    font.pixelSize: 19
+                }
             }
         }
 

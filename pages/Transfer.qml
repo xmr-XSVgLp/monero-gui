@@ -714,7 +714,7 @@ Rectangle {
                 spacing: 10
 
                 StandardDropdown {
-                    Layout.maximumWidth: 200
+                    Layout.maximumWidth: 380; Layout.preferredWidth: 380
                     id: priorityDropdown
                     currentIndex: 0
                     dataModel: priorityModelV5

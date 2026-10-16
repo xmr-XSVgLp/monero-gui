@@ -65,12 +65,18 @@ Rectangle {
             id: progressText
             anchors.top: parent.top
             anchors.topMargin: 6
-            font.family: MoneroComponents.Style.fontMedium.name
-            font.pixelSize: 13
-            font.bold: MoneroComponents.Style.progressBarProgressTextBold
+            anchors.left: parent.left
+            anchors.right: progressTextValue.left
+            anchors.rightMargin: 6
+            elide: Text.ElideRight
+            font.family: MoneroComponents.Style.fontMonoMedium.name
+            font.pixelSize: 11
+            font.capitalization: Font.AllUppercase
+            font.letterSpacing: 0.5
             color: MoneroComponents.Style.defaultFontColor
             text: qsTr("Synchronizing %1").arg(syncType) + translationManager.emptyString
             height: 18
+            themeTransition: false
         }
 
         MoneroComponents.TextPlain {
@@ -78,59 +84,104 @@ Rectangle {
             anchors.top: parent.top
             anchors.topMargin: 6
             anchors.right: parent.right
-            font.family: MoneroComponents.Style.fontMedium.name
-            font.pixelSize: 13
-            font.bold: MoneroComponents.Style.progressBarProgressTextBold
-            color: MoneroComponents.Style.defaultFontColor
-            height:18
+            font.family: MoneroComponents.Style.fontMonoBold.name
+            font.pixelSize: 11
+            color: MoneroComponents.Style.textAccent
+            height: 18
+            themeTransition: false
         }
 
-        Rectangle {
+        Item {
             id: bar
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.top: progressText.bottom
-            anchors.topMargin: 4
-            height: 8
-            radius: 8
-            color: MoneroComponents.Style.progressBarBackgroundColor
+            anchors.topMargin: 3
+            height: 12
 
-            states: [
-                State {
-                    name: "black";
-                    when: MoneroComponents.Style.blackTheme
-                    PropertyChanges { target: bar; color: MoneroComponents.Style._b_progressBarBackgroundColor}
-                }, State {
-                    name: "white";
-                    when: !MoneroComponents.Style.blackTheme
-                    PropertyChanges { target: bar; color: MoneroComponents.Style._w_progressBarBackgroundColor}
+            readonly property color accent: MoneroComponents.Style.orange
+            readonly property int segW: 4
+            readonly property int gap: 2
+            readonly property int count: Math.max(1, Math.floor((segments.width + gap) / (segW + gap)))
+            readonly property int lit: Math.round(count * Math.max(0, Math.min(100, fillLevel)) / 100)
+
+            Text {
+                id: lb
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                text: "["
+                color: MoneroComponents.Style.textAccent
+                font.family: MoneroComponents.Style.fontMonoBold.name
+                font.pixelSize: 13
+            }
+
+            Text {
+                id: pct
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                width: 40
+                horizontalAlignment: Text.AlignRight
+                text: ("  " + fillLevel).slice(-3) + "%"
+                color: MoneroComponents.Style.textAccent
+                font.family: MoneroComponents.Style.fontMonoBold.name
+                font.pixelSize: 11
+            }
+
+            Text {
+                id: rb
+                anchors.right: pct.left
+                anchors.rightMargin: 2
+                anchors.verticalCenter: parent.verticalCenter
+                text: "]"
+                color: MoneroComponents.Style.textAccent
+                font.family: MoneroComponents.Style.fontMonoBold.name
+                font.pixelSize: 13
+            }
+
+            Item {
+                id: segments
+                anchors.left: lb.right
+                anchors.leftMargin: 3
+                anchors.right: rb.left
+                anchors.rightMargin: 3
+                anchors.verticalCenter: parent.verticalCenter
+                height: 8
+                clip: true
+
+                Row {
+                    spacing: bar.gap
+                    Repeater {
+                        model: bar.count
+                        Rectangle {
+                            width: bar.segW
+                            height: segments.height
+                            color: bar.accent
+                            opacity: index < bar.lit ? (index === bar.lit - 1 ? 1.0 : 0.85) : 0.13
+                        }
+                    }
                 }
-            ]
 
-            transitions: Transition {
-                enabled: appWindow.themeTransition
-                ColorAnimation { properties: "color"; easing.type: Easing.InOutQuad; duration: 300 }
-            }
-
-            Rectangle {
-                id: fillRect
-                anchors.top: parent.top
-                anchors.bottom: parent.bottom
-                anchors.left: parent.left
-                height: bar.height
-                property int maxWidth: bar.width
-                width: (maxWidth * fillLevel) / 100
-                radius: 8
-                color: "#FA6800"
-            }
-
-            Rectangle {
-                color:"#333"
-                anchors.bottom: parent.bottom
-                anchors.left: parent.left
-                anchors.leftMargin: 8
+                // light sweep over the filled part
+                Rectangle {
+                    id: sweep
+                    width: 22
+                    height: parent.height
+                    visible: bar.lit > 0 && bar.lit < bar.count && item.visible
+                    gradient: Gradient {
+                        orientation: Gradient.Horizontal
+                        GradientStop { position: 0.0; color: "transparent" }
+                        GradientStop { position: 0.5; color: MoneroComponents.Style.blackTheme ? "#CCFFFFFF" : "#99FFFFFF" }
+                        GradientStop { position: 1.0; color: "transparent" }
+                    }
+                    NumberAnimation on x {
+                        running: sweep.visible
+                        loops: Animation.Infinite
+                        from: -sweep.width
+                        to: bar.lit * (bar.segW + bar.gap)
+                        duration: 1400
+                    }
+                }
             }
         }
-
     }
 }

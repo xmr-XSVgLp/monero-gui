@@ -51,6 +51,20 @@ Window {
     height: 200
     color: MoneroComponents.Style.middlePanelBackgroundColor
 
+    Rectangle {
+        anchors.fill: parent
+        color: "transparent"
+        border.color: MoneroComponents.Style.orange
+        border.width: 2
+        Rectangle {
+            anchors.fill: parent
+            anchors.margins: 5
+            color: "transparent"
+            border.color: Qt.rgba(0, 1, 0.25, 0.25)
+            border.width: 1
+        }
+    }
+
     // Make window draggable
     MouseArea {
         anchors.fill: parent

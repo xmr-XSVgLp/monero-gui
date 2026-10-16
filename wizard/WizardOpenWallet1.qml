@@ -222,9 +222,9 @@ Rectangle {
                                     fillMode: Image.PreserveAspectFit
                                     source: {
                                         if (networktype === 0 && fileName.toLowerCase().includes("viewonly")) return "qrc:///images/open-wallet-from-file-view-only.png";
-                                        else if (networktype === 0 && fileName.toLowerCase().includes("trezor")) return "qrc:///images/open-wallet-from-file-trezor.png";
+                                        else if (networktype === 0 && /trezor|tzr|trial/.test(fileName.toLowerCase())) return "qrc:///images/open-wallet-from-file-trezor.png";
                                         else if (networktype === 0 && fileName.toLowerCase().includes("ledger")) return "qrc:///images/restore-wallet-from-hardware.png";
-                                        else if (networktype === 0) return "qrc:///images/open-wallet-from-file-mainnet.png";
+                                        else if (networktype === 0) return "qrc:///images/open-wallet-safe.png";
                                         else if (networktype === 1) return "qrc:///images/open-wallet-from-file-testnet.png";
                                         else if (networktype === 2) return "qrc:///images/open-wallet-from-file-stagenet.png";
                                     }

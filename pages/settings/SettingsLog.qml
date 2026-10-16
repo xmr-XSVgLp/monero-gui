@@ -217,7 +217,7 @@ Rectangle {
                     }
                 }
 
-                ScrollBar.vertical: ScrollBar {
+                ScrollBar.vertical: MoneroComponents.NeonScrollBar {
                     onActiveChanged: if (!active && !isMac) active = true
                     policy: isMac ? ScrollBar.AsNeeded : ScrollBar.AlwaysOn
                     palette.mid: "#8E8E93"

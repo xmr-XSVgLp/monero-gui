@@ -195,6 +195,8 @@ public:
 
     Q_INVOKABLE void onPassphraseEntered(const QString &passphrase, bool enter_on_device, bool entry_abort=false);
     virtual void onWalletPassphraseNeeded(bool on_device) override;
+    Q_INVOKABLE void onPairingCodeEntered(const QString &code, bool entry_abort=false);
+    virtual void onWalletPairingCodeNeeded() override;
 
     QString proxyAddress() const;
     void setProxyAddress(QString address);
@@ -204,6 +206,7 @@ signals:
     void walletOpened(Wallet * wallet);
     void walletCreated(Wallet * wallet);
     void walletPassphraseNeeded(bool onDevice);
+    void walletPairingCodeNeeded();
     void deviceButtonRequest(quint64 buttonCode);
     void deviceButtonPressed();
     void checkUpdatesComplete(

@@ -149,7 +149,13 @@ Rectangle {
                         height: addressBookListRow.addressBookListItemHeight
                         width: parent ? parent.width : undefined
                         Layout.fillWidth: true
-                        color: itemMouseArea.containsMouse ? MoneroComponents.Style.titleBarButtonHoverColor : "transparent"
+                        color: "transparent"
+
+                        MoneroComponents.ListRowFx {
+                            anchors.fill: parent
+                            selected: false
+                            hovered: itemMouseArea.containsMouse
+                        }
 
                         function doSend() {
                             console.log("Sending to: ", address +" "+ paymentId);
@@ -251,9 +257,9 @@ Rectangle {
 
                             MoneroComponents.IconButton {
                                 id: editEntryButton
-                                image: "qrc:///images/edit.svg"
+                                image: "qrc:///images/edit-neon.png"
                                 color: MoneroComponents.Style.defaultFontColor
-                                opacity: GraphicsInfo.api !== GraphicsInfo.Software ? 0.5 : 1
+                                opacity: 1; imgMockColor.colorization: 0
                                 fontAwesomeFallbackIcon: FontAwesome.edit
                                 fontAwesomeFallbackSize: 22
                                 fontAwesomeFallbackOpacity: 0.5
@@ -269,9 +275,9 @@ Rectangle {
 
                             MoneroComponents.IconButton {
                                 id: copyButton
-                                image: "qrc:///images/copy.svg"
+                                image: "qrc:///images/copy-neon.png"
                                 color: MoneroComponents.Style.defaultFontColor
-                                opacity: GraphicsInfo.api !== GraphicsInfo.Software ? 0.5 : 1
+                                opacity: 1; imgMockColor.colorization: 0
                                 fontAwesomeFallbackIcon: FontAwesome.clipboard
                                 fontAwesomeFallbackSize: 22
                                 fontAwesomeFallbackOpacity: 0.5

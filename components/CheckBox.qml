@@ -80,25 +80,64 @@ Item {
 
             Rectangle {
                 id: backgroundRect
-                visible: checkBox.border
+                visible: checkBox.border && !checkBox.enabled
                 anchors.fill: parent
-                radius: 3
                 color: checkBox.enabled ? "transparent" : MoneroComponents.Style.inputBoxBackgroundDisabled
-                border.color:
-                    if (checkBox.activeFocus) {
-                        return MoneroComponents.Style.inputBorderColorActive;
+            }
+
+            MoneroComponents.NeonFrame {
+                anchors.fill: parent
+                visible: checkBox.border
+                cut: 6
+                ticks: false
+                fillOpacity: checkBox.checked ? 0.16 : 0.03
+                lineOpacity: checkBox.checked || checkBox.activeFocus || checkArea.containsMouse ? 1.0 : 0.5
+                glow: checkBox.checked ? 0.7 : (checkArea.containsMouse ? 0.35 : 0)
+                Behavior on fillOpacity { NumberAnimation { duration: 140 } }
+            }
+
+            // neon tick for the default check icon
+            Canvas {
+                id: neonTick
+                readonly property bool active: !checkBox.fontAwesomeIcons && checkBox.uncheckedIcon == ""
+                    && checkBox.checkedIcon == "qrc:///images/check-white.svg"
+                property real progress: checkBox.checked ? 1 : 0
+                Behavior on progress { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+                visible: active && progress > 0
+                anchors.fill: parent
+                anchors.margins: 5
+                onProgressChanged: requestPaint()
+                onPaint: {
+                    var ctx = getContext("2d"), w = width, h = height;
+                    ctx.reset();
+                    var p = [[0.05, 0.55], [0.38, 0.88], [0.95, 0.12]];
+                    var l1 = Math.hypot((p[1][0]-p[0][0])*w, (p[1][1]-p[0][1])*h);
+                    var l2 = Math.hypot((p[2][0]-p[1][0])*w, (p[2][1]-p[1][1])*h);
+                    var len = (l1 + l2) * progress;
+                    ctx.lineWidth = 2.4;
+                    ctx.lineCap = "square";
+                    ctx.strokeStyle = MoneroComponents.Style.orange;
+                    ctx.beginPath();
+                    ctx.moveTo(p[0][0]*w, p[0][1]*h);
+                    if (len <= l1) {
+                        var t = len / l1;
+                        ctx.lineTo((p[0][0] + (p[1][0]-p[0][0])*t)*w, (p[0][1] + (p[1][1]-p[0][1])*t)*h);
                     } else {
-                        return MoneroComponents.Style.inputBorderColorInActive;
+                        var t2 = (len - l1) / l2;
+                        ctx.lineTo(p[1][0]*w, p[1][1]*h);
+                        ctx.lineTo((p[1][0] + (p[2][0]-p[1][0])*t2)*w, (p[1][1] + (p[2][1]-p[1][1])*t2)*h);
                     }
+                    ctx.stroke();
+                }
             }
 
             MoneroEffects.ImageMask {
                 id: img
-                visible: checkBox.checked || checkBox.uncheckedIcon != ""
+                visible: !neonTick.active && (checkBox.checked || checkBox.uncheckedIcon != "")
                 anchors.centerIn: parent
                 width: checkBox.imgWidth
                 height: checkBox.imgHeight
-                color: MoneroComponents.Style.defaultFontColor
+                color: MoneroComponents.Style.orange
                 fontAwesomeFallbackIcon: checkBox.fontAwesomeIcons ? getIcon() : FontAwesome.plus
                 fontAwesomeFallbackSize: 14
                 image: checkBox.fontAwesomeIcons ? "" : getIcon()
@@ -123,6 +162,7 @@ Item {
     }
 
     MouseArea {
+        id: checkArea
         anchors.fill: parent
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor

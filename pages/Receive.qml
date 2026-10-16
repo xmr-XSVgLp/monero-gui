@@ -166,6 +166,10 @@ Rectangle {
                     }
                 }
 
+                MoneroComponents.QrFrame {
+                    anchors.fill: parent
+                }
+
                 Menu {
                     id: qrMenu
                     title: "QrCode"
@@ -199,7 +203,7 @@ Rectangle {
                 verticalAlignment: Text.AlignVCenter
                 visible: paymentRequestGridLayout.visible
                 font.pixelSize: 12
-                color: qrCodeTextMouseArea.containsMouse ? MoneroComponents.Style.orange : MoneroComponents.Style.defaultFontColor
+                color: qrCodeTextMouseArea.containsMouse ? MoneroComponents.Style.textAccent : MoneroComponents.Style.defaultFontColor
                 text: generateQRCodeString();
                 wrapMode: Text.WrapAnywhere
                 tooltip: qsTr("Copy payment request to clipboard") + translationManager.emptyString
@@ -459,7 +463,7 @@ Rectangle {
                 font.family: MoneroComponents.Style.fontRegular.name
                 font.pixelSize: 17
                 textFormat: Text.RichText
-                color: selectedAddressDrescriptionMouseArea.containsMouse ? MoneroComponents.Style.orange : MoneroComponents.Style.dimmedFontColor
+                color: selectedAddressDrescriptionMouseArea.containsMouse ? MoneroComponents.Style.textAccent : MoneroComponents.Style.dimmedFontColor
                 themeTransition: false
                 tooltip: subaddressListView.currentIndex > 0 ? qsTr("Edit address label") : "" + translationManager.emptyString
                 MouseArea {
@@ -486,7 +490,7 @@ Rectangle {
                 horizontalAlignment: TextInput.AlignHCenter
                 wrapMode: Text.Wrap
                 textFormat: Text.RichText
-                color: selectedAddressMouseArea.containsMouse ? MoneroComponents.Style.orange : MoneroComponents.Style.defaultFontColor
+                color: selectedAddressMouseArea.containsMouse ? MoneroComponents.Style.textAccent : MoneroComponents.Style.defaultFontColor
                 font.pixelSize: 15
                 font.family: MoneroComponents.Style.fontRegular.name
                 themeTransition: false
@@ -591,7 +595,13 @@ Rectangle {
                         height: subaddressListRow.subaddressListItemHeight
                         width: parent ? parent.width : undefined
                         Layout.fillWidth: true
-                        color: itemMouseArea.containsMouse || index === appWindow.current_subaddress_table_index ? MoneroComponents.Style.titleBarButtonHoverColor : "transparent"
+                        color: "transparent"
+
+                        MoneroComponents.ListRowFx {
+                            anchors.fill: parent
+                            selected: index === appWindow.current_subaddress_table_index
+                            hovered: itemMouseArea.containsMouse
+                        }
 
                         Rectangle {
                             visible: index === appWindow.current_subaddress_table_index
@@ -599,7 +609,7 @@ Rectangle {
                             anchors.top: parent.top
                             anchors.bottom: parent.bottom
                             property int currentAccountIndex: currentWallet ? currentWallet.currentSubaddressAccount : 0
-                            color: MoneroComponents.Style.accountColors[currentAccountIndex % MoneroComponents.Style.accountColors.length]
+                            color: MoneroComponents.Style.orange
                             width: 2
                         }
 
@@ -690,11 +700,11 @@ Rectangle {
 
                             MoneroComponents.IconButton {
                                 id: renameButton
-                                image: "qrc:///images/edit.svg"
+                                image: "qrc:///images/edit-neon.png"
                                 fontAwesomeFallbackIcon: FontAwesome.edit
                                 fontAwesomeFallbackSize: 22
                                 color: MoneroComponents.Style.defaultFontColor
-                                opacity: GraphicsInfo.api !== GraphicsInfo.Software ? 0.5 : 1
+                                opacity: 1; imgMockColor.colorization: 0
                                 fontAwesomeFallbackOpacity: 0.5
                                 Layout.preferredWidth: 23
                                 Layout.preferredHeight: 21
@@ -708,11 +718,11 @@ Rectangle {
 
                             MoneroComponents.IconButton {
                                 id: copyButton
-                                image: "qrc:///images/copy.svg"
+                                image: "qrc:///images/copy-neon.png"
                                 fontAwesomeFallbackIcon: FontAwesome.clipboard
                                 fontAwesomeFallbackSize: 22
                                 color: MoneroComponents.Style.defaultFontColor
-                                opacity: GraphicsInfo.api !== GraphicsInfo.Software ? 0.5 : 1
+                                opacity: 1; imgMockColor.colorization: 0
                                 fontAwesomeFallbackOpacity: 0.5
                                 Layout.preferredWidth: 16
                                 Layout.preferredHeight: 21

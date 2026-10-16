@@ -72,11 +72,12 @@ Rectangle {
         id: popup
         height: tooltip.height + 20
 
-        background: Rectangle {
-            border.color: MoneroComponents.Style.buttonInlineBackgroundColor
-            border.width: 1
-            color: MoneroComponents.Style.titleBarBackgroundGradientStart
-            radius: 4
+        background: MoneroComponents.NeonFrame {
+            cut: 7
+            fillColor: MoneroComponents.Style.blackTheme ? "#000A02" : "#F4FFF6"
+            fillOpacity: 0.96
+            lineOpacity: 0.9
+            glow: 0.45
         }
         closePolicy: Popup.NoAutoClose
         padding: 10
@@ -87,8 +88,9 @@ Rectangle {
             ? (tooltipIconVisible ? icon.y + height : parent.y + parent.height + 2)
             : (tooltipIconVisible ? icon.y - height : parent.y - tooltip.height - 20)
         enter: Transition {
-            NumberAnimation { property: "opacity"; from: 0.0; to: 1.0; duration: 150 }
+            NumberAnimation { property: "opacity"; from: 0.0; to: 1.0; duration: 120 }
         }
+        onAboutToShow: typeIn.restart()
 
         exit: Transition {
             NumberAnimation { property: "opacity"; from: 1.0; to: 0.0; duration: 150 }
@@ -98,15 +100,48 @@ Rectangle {
         RowLayout {
             Layout.maximumWidth: 370
 
-            Text {
-                id: tooltip
-                width: contentWidth
-                Layout.maximumWidth: 370
-                color: MoneroComponents.Style.defaultFontColor
-                font.family: MoneroComponents.Style.fontRegular.name
-                font.pixelSize: 12
-                textFormat: Text.RichText
-                wrapMode: Text.WordWrap
+            Item {
+                id: typeClip
+                // typewriter reveal: the text is uncovered left to right, line by line feel
+                property real reveal: 1
+                implicitWidth: tooltip.implicitWidth
+                implicitHeight: tooltip.implicitHeight
+                Layout.preferredWidth: tooltip.width
+                Layout.preferredHeight: tooltip.height
+                clip: true
+
+                Text {
+                    id: tooltip
+                    width: Math.min(implicitWidth, 370)
+                    color: MoneroComponents.Style.defaultFontColor
+                    font.family: MoneroComponents.Style.fontMonoRegular.name
+                    font.pixelSize: 12
+                    textFormat: Text.RichText
+                    wrapMode: Text.WordWrap
+                }
+
+                Rectangle {
+                    // cover that slides away to the right
+                    color: MoneroComponents.Style.blackTheme ? "#000A02" : "#F4FFF6"
+                    x: tooltip.width * typeClip.reveal
+                    width: tooltip.width + 12
+                    height: parent.height
+                    visible: typeClip.reveal < 1
+                    Rectangle {
+                        width: 7
+                        height: Math.min(parent.height, 14)
+                        color: MoneroComponents.Style.orange
+                    }
+                }
+
+                NumberAnimation {
+                    id: typeIn
+                    target: typeClip
+                    property: "reveal"
+                    from: 0
+                    to: 1
+                    duration: Math.min(450, 120 + tooltip.text.length * 4)
+                }
             }
         }
     }

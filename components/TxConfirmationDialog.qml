@@ -324,7 +324,7 @@ Rectangle {
                     }
                 }
 
-                ScrollBar.vertical: ScrollBar {
+                ScrollBar.vertical: MoneroComponents.NeonScrollBar {
                     policy: recipientsArea.contentHeight > flickable.height ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff
                     palette.mid: "#8E8E93"
                     palette.dark: "#B8B8BD"

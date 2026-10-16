@@ -88,11 +88,22 @@ Rectangle {
         end: Qt.point(height, width)
     }
 
+    // Matrix FX: rain behind the pages (dark theme)
+    MoneroComponents.MatrixRain {
+        anchors.fill: parent
+        visible: currentView !== merchantView && MoneroComponents.Style.blackTheme && persistentSettings.fxMatrixRain
+        opacity: 0.13
+    }
+
     onCurrentViewChanged: {
         if (previousView) {
             if (typeof previousView.onPageClosed === "function") {
                 previousView.onPageClosed();
             }
+        }
+        if (previousView && currentView && previousView !== currentView && persistentSettings.fxPageGlitch) {
+            Qt.callLater(pageGlitch.trigger);
+            appWindow.playFx("glitch");
         }
         previousView = currentView
         if (currentView) {
@@ -185,7 +196,7 @@ Rectangle {
             clip: true
             boundsBehavior: isMac ? Flickable.DragAndOvershootBounds : Flickable.StopAtBounds
 
-            ScrollBar.vertical: ScrollBar {
+            ScrollBar.vertical: MoneroComponents.NeonScrollBar {
                 parent: root
                 anchors.left: parent.right
                 anchors.leftMargin: -14 // 10 margin + 4 scrollbar width
@@ -212,6 +223,13 @@ Rectangle {
             }
 
         }// flickable
+    }
+
+    MoneroComponents.GlitchFx {
+        id: pageGlitch
+        anchors.fill: parent
+        z: 50
+        target: mainFlickable
     }
 
     // border

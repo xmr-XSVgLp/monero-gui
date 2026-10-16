@@ -121,7 +121,7 @@ Rectangle {
                     width: 260
                     height: 135
                     fillMode: Image.PreserveAspectFit
-                    source: MoneroComponents.Style.blackTheme ? "qrc:///images/card-background-black" + (currentAccountIndex % MoneroComponents.Style.accountColors.length) + ".png" : "qrc:///images/card-background-white.png"
+                    source: "qrc:///images/card-matrix-" + (MoneroComponents.Style.blackTheme ? "dark" : "light") + (currentAccountIndex % 8) + ".png"
                 }
 
                 MultiEffect {
@@ -252,6 +252,8 @@ Rectangle {
 
                 MoneroComponents.TextPlain {
                     id: balancePart1
+                    text: balancePart1Fx.output
+                    MoneroComponents.DecryptFx { id: balancePart1Fx; source: balancePart1.realText }
                     themeTransition: false
                     anchors.left: parent.left
                     anchors.leftMargin: 58
@@ -259,9 +261,9 @@ Rectangle {
                     color: MoneroComponents.Style.blackTheme ? "white" : "black"
                     Binding on color {
                         when: balancePart1MouseArea.containsMouse || balancePart2MouseArea.containsMouse
-                        value: MoneroComponents.Style.orange
+                        value: MoneroComponents.Style.textAccent
                     }
-                    text: {
+                    property string realText: {
                         if (persistentSettings.fiatPriceEnabled && persistentSettings.fiatPriceToggle) {
                             return balanceFiatString.split('.')[0] + "."
                         } else {
@@ -284,19 +286,21 @@ Rectangle {
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
                                 console.log("Copied to clipboard");
-                                clipboard.setText(balancePart1.text + balancePart2.text);
+                                clipboard.setText(balancePart1.realText + balancePart2.realText);
                                 appWindow.showStatusMessage(qsTr("Copied to clipboard"),3)
                         }
                     }
                 }
                 MoneroComponents.TextPlain {
                     id: balancePart2
+                    text: balancePart2Fx.output
+                    MoneroComponents.DecryptFx { id: balancePart2Fx; source: balancePart2.realText }
                     themeTransition: false
                     anchors.left: balancePart1.right
                     anchors.leftMargin: 2
                     anchors.baseline: currencyLabel.baseline
                     color: balancePart1.color
-                    text: {
+                    property string realText: {
                         if (persistentSettings.fiatPriceEnabled && persistentSettings.fiatPriceToggle) {
                             return balanceFiatString.split('.')[1]
                         } else {

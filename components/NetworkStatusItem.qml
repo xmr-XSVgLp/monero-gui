@@ -80,39 +80,142 @@ Rectangle {
             width: 40
             height: 40
             opacity: {
-                if(item.connected == Wallet.ConnectionStatus_Connected){
+                if(!appWindow.isMining || item.connected == Wallet.ConnectionStatus_Connected){
                     return 1
                 } else {
                     MoneroComponents.Style.blackTheme ? 0.5 : 0.3
                 }
             }
 
-            Image {
+            // node beacon: hex frame with a core that pulses when connected,
+            // a rotating dashed frame while connecting/syncing and a crossed-out core when offline
+            Item {
+                id: beacon
+                visible: !appWindow.isMining
+                width: 28
+                height: 28
                 anchors.top: parent.top
-                anchors.topMargin: !appWindow.isMining ? 6 : 4
+                anchors.topMargin: 6
                 anchors.right: parent.right
-                anchors.rightMargin: !appWindow.isMining ? 11 : 0
-                source: {
-                    if(appWindow.isMining) {
-                       return "qrc:///images/miningxmr.png"
-                    } else if(item.connected == Wallet.ConnectionStatus_Connected || !MoneroComponents.Style.blackTheme) {
-                        return "qrc:///images/lightning.png"
-                    } else {
-                        return "qrc:///images/lightning-white.png"
+                anchors.rightMargin: 6
+
+                readonly property color accent: MoneroComponents.Style.orange
+                readonly property color offColor: MoneroComponents.Style.dimmedFontColor
+                // 0 = offline, 1 = busy (starting/connecting/syncing), 2 = online
+                readonly property int status: {
+                    if (appWindow.daemonStartStopInProgress > 0) return 1;
+                    if (item.connected == Wallet.ConnectionStatus_Connecting) return 1;
+                    if (item.connected == Wallet.ConnectionStatus_Connected) return appWindow.daemonSynced ? 2 : 1;
+                    return 0;
+                }
+                // blue = connected, yellow = connecting/syncing, red = disconnected
+                readonly property bool dark: MoneroComponents.Style.blackTheme
+                readonly property color tint: status === 2 ? (dark ? "#2F9BFF" : "#1565C0")
+                                            : status === 1 ? (dark ? "#FFD400" : "#B08900")
+                                            : (dark ? "#FF3B3B" : "#C62828")
+
+                Repeater {
+                    model: 2
+                    Rectangle {
+                        anchors.centerIn: parent
+                        width: 8
+                        height: 8
+                        radius: width / 2
+                        color: "transparent"
+                        border.color: beacon.tint
+                        border.width: 1.5
+                        visible: beacon.status === 2
+                        opacity: 0
+                        SequentialAnimation on opacity {
+                            running: beacon.status === 2 && beacon.visible
+                            loops: Animation.Infinite
+                            PauseAnimation { duration: index * 900 }
+                            NumberAnimation { from: 0.8; to: 0; duration: 1800 }
+                        }
+                        SequentialAnimation on scale {
+                            running: beacon.status === 2 && beacon.visible
+                            loops: Animation.Infinite
+                            PauseAnimation { duration: index * 900 }
+                            NumberAnimation { from: 1; to: 3.4; duration: 1800; easing.type: Easing.OutCubic }
+                        }
                     }
                 }
+
+                Canvas {
+                    id: hex
+                    anchors.fill: parent
+                    property color c: beacon.tint
+                    property int st: beacon.status
+                    onCChanged: requestPaint()
+                    onStChanged: requestPaint()
+                    onPaint: {
+                        var ctx = getContext("2d");
+                        var cx = width / 2, cy = height / 2, r = width / 2 - 2;
+                        ctx.reset();
+                        ctx.lineWidth = 1.5;
+                        ctx.strokeStyle = c;
+                        ctx.beginPath();
+                        for (var k = 0; k < 6; k++) {
+                            var a = Math.PI / 3 * k - Math.PI / 2;
+                            var x = cx + r * Math.cos(a), y = cy + r * Math.sin(a);
+                            if (k === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                        }
+                        ctx.closePath();
+                        if (st === 1) ctx.setLineDash([3, 3]);
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+                        // core
+                        ctx.beginPath();
+                        ctx.arc(cx, cy, 4, 0, 2 * Math.PI);
+                        if (st === 0) {
+                            ctx.lineWidth = 1.5;
+                            ctx.stroke();
+                            ctx.beginPath();
+                            ctx.moveTo(cx - 6, cy + 6);
+                            ctx.lineTo(cx + 6, cy - 6);
+                            ctx.stroke();
+                        } else {
+                            ctx.fillStyle = c;
+                            ctx.fill();
+                        }
+                    }
+                    RotationAnimator on rotation {
+                        running: beacon.status === 1 && beacon.visible
+                        loops: Animation.Infinite
+                        from: 0
+                        to: 360
+                        duration: 2400
+                    }
+                    rotation: 0
+                    Connections {
+                        target: beacon
+                        function onStatusChanged() { if (beacon.status !== 1) hex.rotation = 0 }
+                    }
+                }
+
                 MouseArea {
                     anchors.fill: parent
                     visible: appWindow.walletMode >= 2
                     cursorShape: Qt.PointingHandCursor
                     onClicked: {
-                        if(!appWindow.isMining) {
-                            middlePanel.settingsView.settingsStateViewState = "Node";
-                            appWindow.showPageRequest("Settings");
-                        } else {
-                            appWindow.showPageRequest("Mining")
-                        }
+                        middlePanel.settingsView.settingsStateViewState = "Node";
+                        appWindow.showPageRequest("Settings");
                     }
+                }
+            }
+
+            Image {
+                visible: appWindow.isMining
+                anchors.top: parent.top
+                anchors.topMargin: 4
+                anchors.right: parent.right
+                anchors.rightMargin: 0
+                source: "qrc:///images/miningxmr.png"
+                MouseArea {
+                    anchors.fill: parent
+                    visible: appWindow.walletMode >= 2
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: appWindow.showPageRequest("Mining")
                 }
             }
         }

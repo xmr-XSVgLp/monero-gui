@@ -3,7 +3,7 @@ pragma Singleton
 import QtQuick
 
 QtObject {
-    property bool blackTheme: true
+    property bool blackTheme: true   // Matrix theme: dark = green on black, light = dark green on pale green
     property QtObject fontMedium: FontLoader { id: _fontMedium; source: "qrc:/fonts/Roboto-Medium.ttf"; }
     property QtObject fontBold: FontLoader { id: _fontBold; source: "qrc:/fonts/Roboto-Bold.ttf"; }
     property QtObject fontLight: FontLoader { id: _fontLight; source: "qrc:/fonts/Roboto-Light.ttf"; }
@@ -14,12 +14,14 @@ QtObject {
     property QtObject fontMonoLight: FontLoader { id: _fontMonoLight; source: "qrc:/fonts/RobotoMono-Light.ttf"; }
     property QtObject fontMonoRegular: FontLoader { id: _fontMonoRegular; source: "qrc:/fonts/RobotoMono-Regular.ttf"; }
 
-    property string grey: "#404040"
-    property string orange: "#FF6C3C"
-    property string white: "#FFFFFF"
-    property string green: "#2EB358"
-    property string moneroGrey: "#4C4C4C"
-    property string warningColor: "orange"
+    property string grey: blackTheme ? "#0A1F0A" : "#C5DCC9"
+    property string orange: blackTheme ? "#00FF41" : "#00A82D"
+    // text that must stand out: white on dark, accent green on light
+    property string textAccent: blackTheme ? "#FFFFFF" : orange
+    property string white: blackTheme ? "#00FF41" : "#FFFFFF"
+    property string green: blackTheme ? "#00FF41" : "#00A82D"
+    property string moneroGrey: blackTheme ? "#0D2B0D" : "#B5CFBA"
+    property string warningColor: "#ADFF2F"
 
     property string defaultFontColor: blackTheme ? _b_defaultFontColor : _w_defaultFontColor
     property string dimmedFontColor: blackTheme ? _b_dimmedFontColor : _w_dimmedFontColor
@@ -83,127 +85,180 @@ QtObject {
     property string historyHeaderTextColor: blackTheme ? _b_historyHeaderTextColor : _w_historyHeaderTextColor
     property var accountColors: blackTheme ? _b_accountColors : _w_accountColors
 
-    property string _b_defaultFontColor: "white"
-    property string _b_dimmedFontColor: "#BBBBBB"
-    property string _b_lightGreyFontColor: "#DFDFDF"
-    property string _b_errorColor: "#FA6800"
-    property string _b_textSelectionColor: "#BBBBBB"
-    property string _b_textSelectedColor: "white"
+    property string _b_defaultFontColor: "#ECECEC"
+    property string _b_dimmedFontColor: "#8C8C8C"
+    property string _b_lightGreyFontColor: "#BDBDBD"
+    property string _b_errorColor: "#FF3B3B"
+    property string _b_textSelectionColor: "#005F0B"
+    property string _b_textSelectedColor: "#FFFFFF"
 
-    property string _b_inputBoxBackground: "black"
-    property string _b_inputBoxBackgroundDisabled: Qt.rgba(255, 255, 255, 0.10)
-    property string _b_inputBoxBackgroundError: "#FFDDDD"
-    property string _b_inputBoxColor: "white"
-    property string _b_legacy_placeholderFontColor: "#BABABA"
-    property string _b_inputBorderColorActive: Qt.rgba(255, 255, 255, 0.38)
-    property string _b_inputBorderColorInActive: Qt.rgba(255, 255, 255, 0.32)
-    property string _b_inputBorderColorInvalid: Qt.rgba(255, 0, 0, 0.40)
+    property string _b_inputBoxBackground: "#000000"
+    property string _b_inputBoxBackgroundDisabled: "#0A140A"
+    property string _b_inputBoxBackgroundError: "#2A0000"
+    property string _b_inputBoxColor: "#ECECEC"
+    property string _b_legacy_placeholderFontColor: "#6E6E6E"
+    property string _b_inputBorderColorActive: "#00FF41"
+    property string _b_inputBorderColorInActive: "#005F0B"
+    property string _b_inputBorderColorInvalid: "#FF3B3B"
 
-    property string _b_buttonBackgroundColor: "#FA6800"
-    property string _b_buttonBackgroundColorHover: "#E65E00"
-    property string _b_buttonBackgroundColorDisabled: "#707070"
-    property string _b_buttonBackgroundColorDisabledHover: "#808080"
-    property string _b_buttonInlineBackgroundColor: "#707070"
-    property string _b_buttonInlineBackgroundColorHover: "#808080"
-    property string _b_buttonTextColor: "white"
-    property string _b_buttonTextColorDisabled: "black"
-    property string _b_buttonSecondaryBackgroundColor: "#707070"
-    property string _b_buttonSecondaryBackgroundColorHover: "#808080"
-    property string _b_buttonSecondaryTextColor: "white"
-    property string _b_dividerColor: "white"
+    property string _b_buttonBackgroundColor: "#003B00"
+    property string _b_buttonBackgroundColorHover: "#005F0B"
+    property string _b_buttonBackgroundColorDisabled: "#0A140A"
+    property string _b_buttonBackgroundColorDisabledHover: "#0F1F0F"
+    property string _b_buttonInlineBackgroundColor: "#0A1F0A"
+    property string _b_buttonInlineBackgroundColorHover: "#003B00"
+    property string _b_buttonTextColor: "#FFFFFF"
+    property string _b_buttonTextColorDisabled: "#5A5A5A"
+    property string _b_buttonSecondaryBackgroundColor: "#0A1F0A"
+    property string _b_buttonSecondaryBackgroundColorHover: "#003B00"
+    property string _b_buttonSecondaryTextColor: "#D0D0D0"
+    property string _b_dividerColor: "#00FF41"
     property real _b_dividerOpacity: 0.20
 
-    property string _b_titleBarBackgroundGradientStart: "#262626";
-    property string _b_titleBarBackgroundGradientStop: "#191919"
-    property string _b_titleBarBackgroundBorderColor: "#2f2f2f"
+    property string _b_titleBarBackgroundGradientStart: "#1B1F1C"
+    property string _b_titleBarBackgroundGradientStop: "#151816"
+    property string _b_titleBarBackgroundBorderColor: "#003B00"
     property string _b_titleBarLogoSource: "qrc:///images/titlebarLogo.png"
     property string _b_titleBarMinimizeSource: "qrc:///images/minimize.svg"
     property string _b_titleBarFullscreenSource: "qrc:///images/fullscreen.svg"
     property string _b_titleBarCloseSource: "qrc:///images/close.svg"
-    property string _b_titleBarButtonHoverColor: "#10FFFFFF"
+    property string _b_titleBarButtonHoverColor: "#2000FF41"
 
-    property string _b_wizardBackgroundGradientStart: "#1e1e1e"
-    property string _b_middlePanelBackgroundGradientStart: "#232323"
-    property string _b_middlePanelBackgroundGradientStop: "#101010"
-    property string _b_middlePanelBackgroundColor: "#181818"
-    property string _b_menuButtonFallbackBackgroundColor: "#09FFFFFF"
-    property string _b_menuButtonGradientStart: "#11FFFFFF"
+    property string _b_wizardBackgroundGradientStart: "#000000"
+    property string _b_middlePanelBackgroundGradientStart: "#020A02"
+    property string _b_middlePanelBackgroundGradientStop: "#000000"
+    property string _b_middlePanelBackgroundColor: "#010601"
+    property string _b_menuButtonFallbackBackgroundColor: "#1000FF41"
+    property string _b_menuButtonGradientStart: "#2000FF41"
     property string _b_menuButtonGradientStop: "#00000000"
-    property string _b_menuButtonTextColor: "white"
-    property string _b_menuButtonImageRightColorActive: "white"
-    property string _b_menuButtonImageRightColor: "white"
+    property string _b_menuButtonTextColor: "#ECECEC"
+    property string _b_menuButtonImageRightColorActive: "#00FF41"
+    property string _b_menuButtonImageRightColor: "#008F11"
     property string _b_menuButtonImageRightSource: "qrc:///images/right.svg"
     property string _b_menuButtonImageDotArrowSource: "qrc:///images/arrow-right-medium-white.png"
-    property string _b_inlineButtonTextColor: "white"
-    property string _b_inlineButtonBorderColor: "black"
-    property string _b_appWindowBackgroundColor: "white"
-    property string _b_appWindowBorderColor: "#313131"
+    property string _b_inlineButtonTextColor: "#ECECEC"
+    property string _b_inlineButtonBorderColor: "#003B00"
+    property string _b_appWindowBackgroundColor: "#000000"
+    property string _b_appWindowBorderColor: "#003B00"
     property bool _b_progressBarProgressTextBold: true
-    property string _b_progressBarBackgroundColor: "#24FFFFFF"
-    property string _b_leftPanelBackgroundGradientStart: "#222222"
-    property string _b_leftPanelBackgroundGradientStop: "#1a1a1a"
-    property string _b_historyHeaderTextColor: "#C0C0C0"
-    property var _b_accountColors: ["#6E513C", "#842129", "#458421", "#742184", "#291DBE", "#846F21", "#217F84", "#696969"]
+    property string _b_progressBarBackgroundColor: "#2400FF41"
+    property string _b_leftPanelBackgroundGradientStart: "#020A02"
+    property string _b_leftPanelBackgroundGradientStop: "#000000"
+    property string _b_historyHeaderTextColor: "#A8A8A8"
+    property var _b_accountColors: ["#00FF41", "#00C832", "#39FF14", "#008F11", "#7CFC00", "#00E676", "#32CD32", "#005F0B"]
 
-    property string _w_defaultFontColor: "black"
-    property string _w_dimmedFontColor: "#3f3f3f"
-    property string _w_lightGreyFontColor: "#515151"
-    property string _w_errorColor: "#FA6800"
-    property string _w_textSelectionColor: "#BBBBBB"
-    property string _w_textSelectedColor: "black"
-
-    property string _w_inputBoxBackground: "white"
-    property string _w_inputBoxBackgroundDisabled: Qt.rgba(0, 0, 0, 0.20)
-    property string _w_inputBoxBackgroundError: "#FFDDDD"
-    property string _w_inputBoxColor: "black"
-    property string _w_legacy_placeholderFontColor: "#BABABA"
-    property string _w_inputBorderColorActive: Qt.rgba(0, 0, 0, 0.30)
-    property string _w_inputBorderColorInActive: Qt.rgba(0, 0, 0, 0.16)
-    property string _w_inputBorderColorInvalid: Qt.rgba(255, 0, 0, 0.50)
-
-    property string _w_buttonBackgroundColor: "#FA6800"
-    property string _w_buttonBackgroundColorHover: "#E65E00"
-    property string _w_buttonBackgroundColorDisabled: "#bbbbbb"
-    property string _w_buttonBackgroundColorDisabledHover: "#D1D1D1"
-    property string _w_buttonInlineBackgroundColor: "#d9d9d9"
-    property string _w_buttonInlineBackgroundColorHover: "#C8C8C8"
-    property string _w_buttonTextColor: "white"
-    property string _w_buttonTextColorDisabled: "black"
-    property string _w_buttonSecondaryBackgroundColor: "#d9d9d9"
-    property string _w_buttonSecondaryBackgroundColorHover: "#C8C8C8"
-    property string _w_buttonSecondaryTextColor: "#4d4d4d"
-    property string _w_dividerColor: "black"
-    property real _w_dividerOpacity: 0.20
-
-    property string _w_titleBarBackgroundGradientStart: "#fcfcfc"
-    property string _w_titleBarBackgroundGradientStop: "#FBFBFB"
-    property string _w_titleBarBackgroundBorderColor: "#DEDEDE"
-    property string _w_titleBarLogoSource: "qrc:///images/themes/white/titlebarLogo.png"
-    property string _w_titleBarMinimizeSource: "qrc:///images/themes/white/minimize.svg"
-    property string _w_titleBarFullscreenSource: "qrc:///images/themes/white/fullscreen.svg"
-    property string _w_titleBarCloseSource: "qrc:///images/themes/white/close.svg"
-    property string _w_titleBarButtonHoverColor: "#11000000"
-
-    property string _w_wizardBackgroundGradientStart: "white"
-    property string _w_middlePanelBackgroundGradientStart: "white"
-    property string _w_middlePanelBackgroundGradientStop: "#ededed"
-    property string _w_middlePanelBackgroundColor: "#f5f5f5"
-    property string _w_menuButtonFallbackBackgroundColor: "#09000000"
-    property string _w_menuButtonGradientStart: "#08000000"
-    property string _w_menuButtonGradientStop: "#10FFFFFF"
-    property string _w_menuButtonTextColor: "#787878"
-    property string _w_menuButtonImageRightSource: "qrc:///images/right.svg"
-    property string _w_menuButtonImageRightColorActive: "#FA6800"
-    property string _w_menuButtonImageRightColor: "#808080"
-    property string _w_menuButtonImageDotArrowSource: "qrc:///images/arrow-right-medium-white.png"
-    property string _w_inlineButtonTextColor: "#4d4d4d"
-    property string _w_inlineButtonBorderColor: "transparent"
-    property string _w_appWindowBackgroundColor: "black"
-    property string _w_appWindowBorderColor: "#dedede"
-    property bool _w_progressBarProgressTextBold: false
-    property string _w_progressBarBackgroundColor: "#24000000"
-    property string _w_leftPanelBackgroundGradientStart: "white"
-    property string _w_leftPanelBackgroundGradientStop: "#f5f5f5"
-    property string _w_historyHeaderTextColor: "#515151"
-    property var _w_accountColors: ["#6E513C", "#6E513C", "#842129", "#458421", "#742184", "#291DBE", "#846F21", "#217F84", "#696969"]
+     
+property string _w_defaultFontColor: "#003B00"
+    
+property string _w_dimmedFontColor: "#2E6B3A"
+    
+property string _w_lightGreyFontColor: "#1F5A2B"
+    
+property string _w_errorColor: "#D32F2F"
+    
+property string _w_textSelectionColor: "#9CF0AE"
+    
+property string _w_textSelectedColor: "#003B00"
+    
+property string _w_inputBoxBackground: "#FFFFFF"
+    
+property string _w_inputBoxBackgroundDisabled: "#E3F2E6"
+    
+property string _w_inputBoxBackgroundError: "#FFDDDD"
+    
+property string _w_inputBoxColor: "#003B00"
+    
+property string _w_legacy_placeholderFontColor: "#7FA889"
+    
+property string _w_inputBorderColorActive: "#00A82D"
+    
+property string _w_inputBorderColorInActive: "#A5D6AE"
+    
+property string _w_inputBorderColorInvalid: "#D32F2F"
+    
+property string _w_buttonBackgroundColor: "#00A82D"
+    
+property string _w_buttonBackgroundColorHover: "#008F11"
+    
+property string _w_buttonBackgroundColorDisabled: "#C5DCC9"
+    
+property string _w_buttonBackgroundColorDisabledHover: "#B5CFBA"
+    
+property string _w_buttonInlineBackgroundColor: "#D4EDD9"
+    
+property string _w_buttonInlineBackgroundColorHover: "#C0E4C8"
+    
+property string _w_buttonTextColor: "#FFFFFF"
+    
+property string _w_buttonTextColorDisabled: "#5E7A64"
+    
+property string _w_buttonSecondaryBackgroundColor: "#D4EDD9"
+    
+property string _w_buttonSecondaryBackgroundColorHover: "#C0E4C8"
+    
+property string _w_buttonSecondaryTextColor: "#003B00"
+    
+property string _w_dividerColor: "#003B00"
+    
+property real _w_dividerOpacity: 0.20
+    
+property string _w_titleBarBackgroundGradientStart: "#F4FFF6"
+    
+property string _w_titleBarBackgroundGradientStop: "#EAF8ED"
+    
+property string _w_titleBarBackgroundBorderColor: "#BFE3C6"
+    
+property string _w_titleBarLogoSource: "qrc:///images/themes/white/titlebarLogo.png"
+    
+property string _w_titleBarMinimizeSource: "qrc:///images/themes/white/minimize.svg"
+    
+property string _w_titleBarFullscreenSource: "qrc:///images/themes/white/fullscreen.svg"
+    
+property string _w_titleBarCloseSource: "qrc:///images/themes/white/close.svg"
+    
+property string _w_titleBarButtonHoverColor: "#1100A82D"
+    
+property string _w_wizardBackgroundGradientStart: "#F7FFF8"
+    
+property string _w_middlePanelBackgroundGradientStart: "#F7FFF8"
+    
+property string _w_middlePanelBackgroundGradientStop: "#E6F5E9"
+    
+property string _w_middlePanelBackgroundColor: "#EEF9F0"
+    
+property string _w_menuButtonFallbackBackgroundColor: "#0900A82D"
+    
+property string _w_menuButtonGradientStart: "#1400A82D"
+    
+property string _w_menuButtonGradientStop: "#10FFFFFF"
+    
+property string _w_menuButtonTextColor: "#2E6B3A"
+    
+property string _w_menuButtonImageRightSource: "qrc:///images/right.svg"
+    
+property string _w_menuButtonImageRightColorActive: "#00A82D"
+    
+property string _w_menuButtonImageRightColor: "#5E8A66"
+    
+property string _w_menuButtonImageDotArrowSource: "qrc:///images/arrow-right-medium-white.png"
+    
+property string _w_inlineButtonTextColor: "#003B00"
+    
+property string _w_inlineButtonBorderColor: "transparent"
+    
+property string _w_appWindowBackgroundColor: "white"
+    
+property string _w_appWindowBorderColor: "#BFE3C6"
+    
+property bool _w_progressBarProgressTextBold: false
+    
+property string _w_progressBarBackgroundColor: "#2400A82D"
+    
+property string _w_leftPanelBackgroundGradientStart: "#F7FFF8"
+    
+property string _w_leftPanelBackgroundGradientStop: "#E6F5E9"
+    
+property string _w_historyHeaderTextColor: "#1F5A2B"
+    
+property var _w_accountColors: ["#00A82D", "#008F11", "#2E7D32", "#1B5E20", "#00C853", "#388E3C", "#43A047", "#006400", "#2E6B3A"]
 }

@@ -494,7 +494,7 @@ Rectangle {
                             anchors.fill: parent
                             hoverEnabled: pages > 1
                             cursorShape: hoverEnabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-                            onEntered: parent.color = MoneroComponents.Style.orange
+                            onEntered: parent.color = MoneroComponents.Style.textAccent
                             onExited: parent.color = MoneroComponents.Style.defaultFontColor
                             onClicked: {
                                 if(pages === 1)
@@ -611,15 +611,12 @@ Rectangle {
                     width: sideMargin
                     color: "transparent"
 
-                    Rectangle {
+                    MoneroComponents.TxArrow {
                         visible: !isFailed && !isPending
                         anchors.top: parent.top
-                        anchors.topMargin: 24
+                        anchors.topMargin: 19
                         anchors.horizontalCenter: parent.horizontalCenter
-                        width: 10
-                        height: 10
-                        radius: 8
-                        color: isout ? "#d85a00" : "#2eb358"
+                        out: isout
                     }
 
                     MoneroComponents.TextPlain {
@@ -695,7 +692,7 @@ Rectangle {
                                         state: "copyable"
                                         anchors.fill: parent
                                         hoverEnabled: true
-                                        onEntered: parent.color = MoneroComponents.Style.orange
+                                        onEntered: parent.color = MoneroComponents.Style.textAccent
                                         onExited: parent.color = MoneroComponents.Style.defaultFontColor
                                     }
                                 }
@@ -750,7 +747,7 @@ Rectangle {
                                         state: "copyable"
                                         anchors.fill: parent
                                         hoverEnabled: true
-                                        onEntered: parent.color = MoneroComponents.Style.orange
+                                        onEntered: parent.color = MoneroComponents.Style.textAccent
                                         onExited: parent.color = MoneroComponents.Style.defaultFontColor
                                     }
                                 }
@@ -842,7 +839,7 @@ Rectangle {
                                         height: parent.height
                                         hoverEnabled: true
                                         onEntered: {
-                                            parent.color = MoneroComponents.Style.orange;
+                                            parent.color = MoneroComponents.Style.textAccent;
                                             if (recipientTooltip) {
                                                 parent.tooltipPopup.x = 0;
                                                 parent.tooltipPopup.open();
@@ -901,7 +898,7 @@ Rectangle {
                                         state: "copyable"
                                         anchors.fill: parent
                                         hoverEnabled: true
-                                        onEntered: parent.color = MoneroComponents.Style.orange
+                                        onEntered: parent.color = MoneroComponents.Style.textAccent
                                         onExited: parent.color = MoneroComponents.Style.defaultFontColor
                                     }
                                 }
@@ -948,7 +945,7 @@ Rectangle {
                                 Layout.preferredHeight: 20
 
                                 MoneroComponents.TextPlain {
-                                    font.family: MoneroComponents.Style.fontRegular.name
+                                    font.family: MoneroComponents.Style.fontMonoRegular.name
                                     font.pixelSize: 15
                                     text: persistentSettings.historyHumanDates ? dateHuman : dateTime
 
@@ -960,7 +957,7 @@ Rectangle {
                                         anchors.fill: parent
                                         hoverEnabled: true
                                         onEntered: {
-                                            parent.color = MoneroComponents.Style.orange
+                                            parent.color = MoneroComponents.Style.textAccent
                                             if (persistentSettings.historyHumanDates) {
                                                 parent.text = dateTime;
                                             }
@@ -1098,7 +1095,7 @@ Rectangle {
                                     state: "copyable"
                                     anchors.fill: parent
                                     hoverEnabled: true
-                                    onEntered: parent.color = MoneroComponents.Style.orange
+                                    onEntered: parent.color = MoneroComponents.Style.textAccent
                                     onExited: parent.color = MoneroComponents.Style.defaultFontColor
                                 }
                             }
@@ -1107,11 +1104,11 @@ Rectangle {
                                 anchors.top: parent.top
                                 anchors.left: txNoteText.right
                                 anchors.leftMargin: 12
-                                image: "qrc:///images/edit.svg"
+                                image: "qrc:///images/edit-neon.png"
                                 fontAwesomeFallbackIcon: FontAwesome.pencilSquare
                                 fontAwesomeFallbackSize: 22
                                 color: MoneroComponents.Style.defaultFontColor
-                                opacity: 0.75
+                                opacity: 1; imgMockColor.colorization: 0
                                 width: 23
                                 height: 21
 
@@ -1165,7 +1162,7 @@ Rectangle {
                                     state: "copyable"
                                     anchors.fill: parent
                                     hoverEnabled: true
-                                    onEntered: parent.color = MoneroComponents.Style.orange
+                                    onEntered: parent.color = MoneroComponents.Style.textAccent
                                     onExited: parent.color = MoneroComponents.Style.defaultFontColor
                                 }
                             }
@@ -1210,7 +1207,7 @@ Rectangle {
                                     state: "copyable_txkey"
                                     anchors.fill: parent
                                     hoverEnabled: true
-                                    onEntered: parent.color = MoneroComponents.Style.orange
+                                    onEntered: parent.color = MoneroComponents.Style.textAccent
                                     onExited: parent.color = MoneroComponents.Style.defaultFontColor
                                 }
                             }
@@ -1255,7 +1252,7 @@ Rectangle {
                                     state: "copyable"
                                     anchors.fill: parent
                                     hoverEnabled: true
-                                    onEntered: parent.color = MoneroComponents.Style.orange
+                                    onEntered: parent.color = MoneroComponents.Style.textAccent
                                     onExited: parent.color = MoneroComponents.Style.defaultFontColor
                                 }
                             }

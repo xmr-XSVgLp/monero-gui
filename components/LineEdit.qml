@@ -288,12 +288,25 @@ ColumnLayout {
         }
 
         Rectangle {
-            id: inputFill
             color: backgroundColor
             anchors.fill: parent
-            border.width: borderDisabled ? 0 : 1
-            border.color: borderColor
             radius: item.inputRadius
+        }
+
+        MoneroComponents.NeonFrame {
+            id: inputFill
+            anchors.fill: parent
+            visible: !borderDisabled
+            readonly property bool invalid: borderColor == MoneroComponents.Style.inputBorderColorInvalid
+            readonly property bool hot: input.activeFocus || frameHover.hovered
+            accent: invalid ? (MoneroComponents.Style.blackTheme ? "#FF3B3B" : "#C62828") : MoneroComponents.Style.orange
+            fillColor: accent
+            fillOpacity: input.activeFocus ? 0.07 : 0.025
+            lineOpacity: input.activeFocus || invalid ? 1.0 : (frameHover.hovered ? 0.75 : 0.4)
+            glow: input.activeFocus || invalid ? 0.55 : 0
+            cut: 8
+            HoverHandler { id: frameHover }
+            Behavior on lineOpacity { NumberAnimation { duration: 150 } }
         }
 
         RowLayout {

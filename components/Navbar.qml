@@ -28,78 +28,68 @@
 
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Effects
 import "." as MoneroComponents
 
-Rectangle {
+// Cypherpunk tab bar: chamfered neon frame, active tab lit with an underline glow.
+Item {
+    id: navbar
     default property list<MoneroComponents.NavbarItem> items
     property alias currentIndex: repeater.currentIndex
     property alias previousIndex: repeater.previousIndex
 
-    color: "transparent"
-    height: grid.height
-    width: grid.width
+    readonly property color accent: MoneroComponents.Style.orange
+    readonly property color ink: MoneroComponents.Style.blackTheme ? "#000000" : "#FFFFFF"
+    property int textMargin: appWindow.width < 890 ? 28 : 52
 
-    GridLayout {
-        id: grid
-        anchors.verticalCenter: parent.verticalCenter
-        anchors.horizontalCenter: parent.horizontalCenter
-        columnSpacing: 0
-        property string fontColorActive: MoneroComponents.Style.blackTheme ? "white" : "white"
-        property string fontColorInActive: MoneroComponents.Style.blackTheme ? "white" : MoneroComponents.Style.dimmedFontColor
-        property int fontSize: 15
-        property bool fontBold: true
-        property var fontFamily: MoneroComponents.Style.fontRegular.name
-        property string borderColor: MoneroComponents.Style.blackTheme ? "#808080" : "#B9B9B9"
-        property int textMargin: {
-            // left-right margins for a given cell
-            if(appWindow.width < 890){
-                return 32;
-            } else {
-                return 64;
-            }
+    height: 34
+    width: row.width
+    implicitHeight: height
+    implicitWidth: width
+
+    Canvas {
+        id: frame
+        anchors.fill: parent
+        property color lineColor: Qt.rgba(navbar.accent.r, navbar.accent.g, navbar.accent.b, 0.6)
+        onLineColorChanged: requestPaint()
+        onWidthChanged: requestPaint()
+        onHeightChanged: requestPaint()
+        onPaint: {
+            var ctx = getContext("2d");
+            var c = 9, w = width, h = height;
+            ctx.reset();
+            ctx.beginPath();
+            ctx.moveTo(c + 0.5, 0.5);
+            ctx.lineTo(w - 0.5, 0.5);
+            ctx.lineTo(w - 0.5, h - c - 0.5);
+            ctx.lineTo(w - c - 0.5, h - 0.5);
+            ctx.lineTo(0.5, h - 0.5);
+            ctx.lineTo(0.5, c + 0.5);
+            ctx.closePath();
+            ctx.fillStyle = Qt.rgba(navbar.accent.r, navbar.accent.g, navbar.accent.b, 0.05);
+            ctx.fill();
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = lineColor;
+            ctx.stroke();
+            ctx.fillStyle = lineColor;
+            ctx.fillRect(w - 6, 2.5, 3, 1);
+            ctx.fillRect(3, h - 3.5, 3, 1);
         }
-
-        Rectangle {
-            // navbar left side border
-            id: navBarLeft
-            Layout.preferredWidth: 2
-            Layout.preferredHeight: 32
-            color: "transparent"
-
-            Rectangle {
-                anchors.left: parent.left
-                anchors.verticalCenter: parent.verticalCenter
-                width: 1
-                height: parent.height - 2
-                color: grid.borderColor
-            }
-
-            ColumnLayout {
-                anchors.top: parent.top
-                anchors.bottom: parent.bottom
-                anchors.right: parent.right
-                width: 1
-                spacing: 0
-
-                Rectangle {
-                    Layout.preferredHeight: 1
-                    Layout.preferredWidth: 1
-                    color: grid.borderColor
-                }
-
-                Rectangle {
-                    Layout.fillHeight: true
-                    width: 1
-                    color: items.length > 0 && items[0].active ? grid.borderColor : "transparent";
-                }
-
-                Rectangle {
-                    color: grid.borderColor
-                    Layout.preferredHeight: 1
-                    Layout.preferredWidth: 1
-                }
-            }
+        layer.enabled: GraphicsInfo.api !== GraphicsInfo.Software
+        layer.effect: MultiEffect {
+            autoPaddingEnabled: true
+            shadowEnabled: true
+            shadowColor: navbar.accent
+            shadowHorizontalOffset: 0
+            shadowVerticalOffset: 0
+            shadowBlur: 0.5
+            shadowOpacity: 0.3
         }
+    }
+
+    Row {
+        id: row
+        height: parent.height
 
         Repeater {
             id: repeater
@@ -107,109 +97,77 @@ Rectangle {
             property int currentIndex: 0
             property int previousIndex: 0
 
-            RowLayout {
-                spacing: 0
+            Item {
+                id: tab
+                property bool active: items[index].active
+                visible: items[index].visible
+                height: row.height
+                width: visible ? Math.max(72, label.implicitWidth + navbar.textMargin) : 0
 
+                // separator
                 Rectangle {
-                    Layout.preferredWidth: 1
-                    Layout.preferredHeight: 32
-                    color: grid.borderColor
-                    visible: index > 0 && items[index - 1].visible
-                }
-
-                ColumnLayout {
-                    Layout.minimumWidth: 72
-                    Layout.preferredHeight: 32
-                    Layout.fillWidth: true
-                    spacing: 0
-                    visible: items[index].visible
-
-                    Rectangle {
-                        color: grid.borderColor
-                        Layout.preferredHeight: 1
-                        Layout.fillWidth: true
-                    }
-
-                    Rectangle {
-                        Layout.minimumHeight: 30
-                        Layout.fillWidth: true
-                        color: items[index].active ? grid.borderColor : "transparent"
-                        implicitHeight: children[0].implicitHeight
-                        implicitWidth: children[0].implicitWidth
-
-                        MoneroComponents.TextPlain {
-                            anchors.centerIn: parent
-                            font.family: grid.fontFamily
-                            font.pixelSize: grid.fontSize
-                            font.bold: grid.fontBold
-                            leftPadding: grid.textMargin / 2
-                            rightPadding: grid.textMargin / 2
-                            text: items[index].text
-                            color: items[index].active ? grid.fontColorActive : grid.fontColorInActive
-                            themeTransition: false
-                        }
-
-                        MouseArea {
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-
-                            onClicked: {
-                                repeater.previousIndex = repeater.currentIndex;
-                                repeater.currentIndex = index;
-                                items[index].selected()
-                            }
-                        }
-                    }
-
-                    Rectangle {
-                        color: grid.borderColor
-                        Layout.preferredHeight: 1
-                        Layout.fillWidth: true
-                    }
-                }
-            }
-        }
-
-        Rectangle {
-            // navbar right side border
-            id: navBarRight
-            Layout.preferredWidth: 2
-            Layout.preferredHeight: 32
-            color: "transparent"
-            rotation: 180
-
-            Rectangle {
-                anchors.left: parent.left
-                anchors.verticalCenter: parent.verticalCenter
-                width: 1
-                height: parent.height - 2
-                color: grid.borderColor
-            }
-
-            ColumnLayout {
-                anchors.top: parent.top
-                anchors.bottom: parent.bottom
-                anchors.right: parent.right
-                width: 1
-                spacing: 0
-
-                Rectangle {
-                    Layout.preferredHeight: 1
-                    Layout.preferredWidth: 1
-                    color: grid.borderColor
-                }
-
-                Rectangle {
-                    Layout.fillHeight: true
+                    visible: index > 0
+                    anchors.left: parent.left
+                    anchors.verticalCenter: parent.verticalCenter
                     width: 1
-                    color: items.length > 0 && items[items.length - 1].active ? grid.borderColor : "transparent"
+                    height: parent.height - 14
+                    color: Qt.rgba(navbar.accent.r, navbar.accent.g, navbar.accent.b, 0.3)
                 }
 
                 Rectangle {
-                    color: grid.borderColor
-                    Layout.preferredHeight: 1
-                    Layout.preferredWidth: 1
+                    anchors.fill: parent
+                    anchors.margins: 3
+                    visible: tab.active || tabArea.containsMouse
+                    gradient: Gradient {
+                        GradientStop { position: 0.0; color: "transparent" }
+                        GradientStop { position: 1.0; color: Qt.rgba(navbar.accent.r, navbar.accent.g, navbar.accent.b, tab.active ? 0.22 : 0.1) }
+                    }
+                }
+
+                Rectangle {
+                    visible: tab.active
+                    anchors.bottom: parent.bottom
+                    anchors.bottomMargin: 3
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: parent.width - 16
+                    height: 2
+                    color: navbar.accent
+                    layer.enabled: GraphicsInfo.api !== GraphicsInfo.Software
+                    layer.effect: MultiEffect {
+                        autoPaddingEnabled: true
+                        shadowEnabled: true
+                        shadowColor: navbar.accent
+                        shadowHorizontalOffset: 0
+                        shadowVerticalOffset: 0
+                        shadowBlur: 0.6
+                        shadowOpacity: 0.9
+                    }
+                }
+
+                MoneroComponents.TextPlain {
+                    id: label
+                    anchors.centerIn: parent
+                    font.family: MoneroComponents.Style.fontMonoBold.name
+                    font.pixelSize: 13
+                    font.bold: true
+                    font.capitalization: Font.AllUppercase
+                    font.letterSpacing: 1.2
+                    text: items[index].text
+                    color: tab.active || tabArea.containsMouse ? MoneroComponents.Style.textAccent : MoneroComponents.Style.dimmedFontColor
+                    themeTransition: false
+                }
+
+                MouseArea {
+                    id: tabArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+
+                    onClicked: {
+                        repeater.previousIndex = repeater.currentIndex;
+                        repeater.currentIndex = index;
+                        items[index].selected()
+                    }
                 }
             }
         }

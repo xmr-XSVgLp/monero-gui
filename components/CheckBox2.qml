@@ -76,6 +76,7 @@ RowLayout {
                 anchors.leftMargin: textMargin
                 color: "transparent"
                 rotation: checkBox.checked ? 180  : 0
+                Behavior on rotation { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
 
                 MoneroEffects.ImageMask {
                     id: indicatorImage
@@ -83,17 +84,10 @@ RowLayout {
                     width: 12
                     height: 8
                     image: "qrc:///images/whiteDropIndicator.png"
-                    color: MoneroComponents.Style.defaultFontColor
-                    opacity: MoneroComponents.Style.blackTheme ? 1 : 0.75
+                    color: MoneroComponents.Style.orange
+                    opacity: 1
                     fontAwesomeFallbackIcon: FontAwesome.arrowDown
                     fontAwesomeFallbackSize: 14
-
-                    MoneroEffects.ColorTransition {
-                        targetObj: indicatorImage
-                        blackColor: "white"
-                        whiteColor: "black"
-                        duration: 500
-                    }
                 }
             }
 

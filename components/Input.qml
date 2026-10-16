@@ -46,6 +46,24 @@ TextField {
         color: "transparent"
     }
 
+    // block cursor, terminal style
+    cursorDelegate: Rectangle {
+        id: blockCursor
+        width: Math.max(2, Math.round(textField.font.pixelSize * 0.55))
+        color: MoneroComponents.Style.orange
+        property real blink: 1
+        opacity: 0.6 * blink
+        visible: textField.activeFocus && !textField.readOnly && textField.selectionStart === textField.selectionEnd
+        SequentialAnimation on blink {
+            running: blockCursor.visible
+            loops: Animation.Infinite
+            NumberAnimation { to: 1; duration: 0 }
+            PauseAnimation { duration: 530 }
+            NumberAnimation { to: 0.15; duration: 0 }
+            PauseAnimation { duration: 430 }
+        }
+    }
+
     MoneroComponents.ContextMenu {
         cursorShape: Qt.IBeamCursor
         onCut: textField.cut();

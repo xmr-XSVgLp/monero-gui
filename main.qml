@@ -315,6 +315,7 @@ ApplicationWindow {
         currentWallet.deviceButtonRequest.disconnect(onDeviceButtonRequest);
         currentWallet.deviceButtonPressed.disconnect(onDeviceButtonPressed);
         currentWallet.walletPassphraseNeeded.disconnect(onWalletPassphraseNeededWallet);
+        currentWallet.walletPairingCodeNeeded.disconnect(onWalletPairingCodeNeededWallet);
         currentWallet.transactionCommitted.disconnect(onTransactionCommitted);
         middlePanel.paymentClicked.disconnect(handlePayment);
         middlePanel.sweepUnmixableClicked.disconnect(handleSweepUnmixable);
@@ -366,6 +367,7 @@ ApplicationWindow {
         currentWallet.deviceButtonRequest.connect(onDeviceButtonRequest);
         currentWallet.deviceButtonPressed.connect(onDeviceButtonPressed);
         currentWallet.walletPassphraseNeeded.connect(onWalletPassphraseNeededWallet);
+        currentWallet.walletPairingCodeNeeded.connect(onWalletPairingCodeNeededWallet);
         currentWallet.transactionCommitted.connect(onTransactionCommitted);
         currentWallet.proxyAddress = Qt.binding(persistentSettings.getWalletProxyAddress);
         middlePanel.paymentClicked.connect(handlePayment);
@@ -492,6 +494,7 @@ ApplicationWindow {
     }
 
     function onDeviceButtonRequest(code){
+        devicePrompt.show(txConfirmationPopup.visible);
         if (txConfirmationPopup.visible) {
             txConfirmationPopup.bottomTextAnimation.running = true
             if (!txConfirmationPopup.errorText.visible) {
@@ -507,6 +510,7 @@ ApplicationWindow {
     }
 
     function onDeviceButtonPressed(){
+        devicePrompt.hide();
         if (txConfirmationPopup.visible) {
             txConfirmationPopup.bottomTextAnimation.running = false;
             txConfirmationPopup.bottomText.text  = qsTr("Signing transaction in the device...") + translationManager.emptyString;
@@ -602,6 +606,31 @@ ApplicationWindow {
         }
 
         devicePassphraseDialog.open(on_device)
+    }
+
+    function onWalletPairingCodeNeededManager(){
+        onWalletPairingCodeNeeded(walletManager)
+    }
+
+    function onWalletPairingCodeNeededWallet(){
+        onWalletPairingCodeNeeded(currentWallet)
+    }
+
+    // Trezor Safe 7 and newer pair with the computer once: the device shows a 6-digit code
+    function onWalletPairingCodeNeeded(handler){
+        hideProcessingSplash();
+        console.log(">>> device pairing code needed")
+        inputDialog.labelText = qsTr("Pair your Trezor with this computer.\nEnter the 6-digit code shown on the device:") + translationManager.emptyString;
+        inputDialog.onAcceptedCallback = function() {
+            var code = inputDialog.inputText.replace(/[^0-9]/g, "");
+            handler.onPairingCodeEntered(code, false);
+            appWindow.onWalletOpening();
+        }
+        inputDialog.onRejectedCallback = function() {
+            handler.onPairingCodeEntered("", true);
+            appWindow.onWalletOpening();
+        }
+        inputDialog.open("")
     }
 
     function onWalletUpdate(stoppedBackgroundSync) {
@@ -1079,7 +1108,7 @@ ApplicationWindow {
             // Clear tx fields
             middlePanel.transferView.clearFields()
             txConfirmationPopup.clearFields()
-            successfulTxPopup.open(txid)
+            txBroadcastFx.play(function() { successfulTxPopup.open(txid) })
         }
         currentWallet.refresh()
         currentWallet.disposeTransaction(transaction)
@@ -1188,6 +1217,12 @@ ApplicationWindow {
         informationPopup.open()
     }
 
+    // Matrix FX: optional UI sounds
+    function playFx(name) {
+        if (persistentSettings.fxSounds && soundFxLoader.item)
+            soundFxLoader.item.play(name);
+    }
+
     function showProcessingSplash(message) {
         console.log("Displaying processing splash")
         if (typeof message != 'undefined') {
@@ -1201,6 +1236,7 @@ ApplicationWindow {
     }
 
     function hideProcessingSplash() {
+        devicePrompt.hide();
         console.log("Hiding processing splash")
         splash.close();
 
@@ -1430,6 +1466,7 @@ ApplicationWindow {
         walletManager.deviceButtonPressed.connect(onDeviceButtonPressed);
         walletManager.checkUpdatesComplete.connect(onWalletCheckUpdatesComplete);
         walletManager.walletPassphraseNeeded.connect(onWalletPassphraseNeededManager);
+        walletManager.walletPairingCodeNeeded.connect(onWalletPairingCodeNeededManager);
         IPC.uriHandler.connect(onUriHandler);
 
         if(typeof daemonManager != "undefined") {
@@ -1546,6 +1583,12 @@ ApplicationWindow {
         property int kdfRounds: 1
         property bool displayWalletNameInTitleBar: true
         property bool hideBalance: false
+
+        // Matrix FX
+        property bool fxMatrixRain: true
+        property bool fxBootScreen: true
+        property bool fxPageGlitch: true
+        property bool fxSounds: false
         property bool askPasswordBeforeSending: true
         property bool lockOnUserInActivity: true
         property int walletMode: 2
@@ -2459,6 +2502,97 @@ ApplicationWindow {
             anchors.fill: parent
             hoverEnabled: true
         }
+    }
+
+    // neonWindowFrame: thin neon border + resize from every edge and corner
+    Item {
+        id: neonWindowFrame
+        anchors.fill: parent
+        z: 10000
+        readonly property bool canResize: persistentSettings.customDecorations &&
+            appWindow.visibility !== Window.Maximized && appWindow.visibility !== Window.FullScreen
+        readonly property int grip: 6
+
+        Rectangle {
+            anchors.fill: parent
+            color: "transparent"
+            border.width: 1
+            border.color: MoneroComponents.Style.orange
+            opacity: 0.75
+        }
+
+        component Grip: MouseArea {
+            property bool l: false
+            property bool r: false
+            property bool t: false
+            property bool b: false
+            property point start
+            property rect geo
+            enabled: neonWindowFrame.canResize
+            hoverEnabled: true
+            acceptedButtons: Qt.LeftButton
+            cursorShape: (l && t) || (r && b) ? Qt.SizeFDiagCursor
+                       : (r && t) || (l && b) ? Qt.SizeBDiagCursor
+                       : (l || r) ? Qt.SizeHorCursor : Qt.SizeVerCursor
+            onPressed: {
+                start = globalCursor.getPosition();
+                geo = Qt.rect(appWindow.x, appWindow.y, appWindow.width, appWindow.height);
+            }
+            onPositionChanged: {
+                if (!pressed) return;
+                var p = globalCursor.getPosition();
+                var dx = p.x - start.x, dy = p.y - start.y;
+                var minW = 326, minH = 400;
+                if (r) appWindow.width = Math.max(minW, geo.width + dx);
+                if (b) appWindow.height = Math.max(minH, geo.height + dy);
+                if (l) {
+                    var w = Math.max(minW, geo.width - dx);
+                    appWindow.x = geo.x + geo.width - w;
+                    appWindow.width = w;
+                }
+                if (t) {
+                    var h = Math.max(minH, geo.height - dy);
+                    appWindow.y = geo.y + geo.height - h;
+                    appWindow.height = h;
+                }
+            }
+        }
+
+        Grip { l: true; anchors.left: parent.left; anchors.top: parent.top; anchors.bottom: parent.bottom; anchors.topMargin: 12; anchors.bottomMargin: 12; width: neonWindowFrame.grip }
+        Grip { r: true; anchors.right: parent.right; anchors.top: parent.top; anchors.bottom: parent.bottom; anchors.topMargin: 12; anchors.bottomMargin: 12; width: neonWindowFrame.grip }
+        Grip { t: true; anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right; anchors.leftMargin: 12; anchors.rightMargin: 12; height: 4 }
+        Grip { b: true; anchors.bottom: parent.bottom; anchors.left: parent.left; anchors.right: parent.right; anchors.leftMargin: 12; anchors.rightMargin: 12; height: neonWindowFrame.grip }
+        Grip { l: true; t: true; anchors.left: parent.left; anchors.top: parent.top; width: 12; height: 12 }
+        Grip { r: true; t: true; anchors.right: parent.right; anchors.top: parent.top; width: 12; height: 12 }
+        Grip { l: true; b: true; anchors.left: parent.left; anchors.bottom: parent.bottom; width: 12; height: 12 }
+        Grip { r: true; b: true; anchors.right: parent.right; anchors.bottom: parent.bottom; width: 12; height: 12 }
+    }
+
+    // Matrix FX overlays
+    Loader {
+        id: soundFxLoader
+        active: persistentSettings.fxSounds
+        source: "components/SoundFx.qml"
+    }
+
+    MoneroComponents.TxBroadcastFx {
+        id: txBroadcastFx
+        anchors.fill: parent
+        z: 9000
+    }
+
+    MoneroComponents.DevicePrompt {
+        id: devicePrompt
+        anchors.fill: parent
+        z: 9001
+    }
+
+    MoneroComponents.BootScreen {
+        id: bootScreen
+        anchors.fill: parent
+        z: 20000
+        active: persistentSettings.fxBootScreen
+        Component.onCompleted: Qt.callLater(start)
     }
 
     // borders on white theme + linux
