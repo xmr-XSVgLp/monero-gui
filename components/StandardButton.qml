@@ -55,7 +55,7 @@ Item {
     property alias tooltipPopup: tooltip.tooltipPopup
     signal clicked()
 
-    readonly property color accent: MoneroComponents.Style.orange
+    property color accent: MoneroComponents.Style.orange
     readonly property color ink: MoneroComponents.Style.blackTheme ? "#000000" : "#FFFFFF"
     readonly property bool hovered: button.enabled && (buttonArea.containsMouse || button.focus)
     readonly property bool lit: hovered || buttonArea.pressed

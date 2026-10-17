@@ -2,6 +2,7 @@
 
 #include <mutex>
 
+#include <QThread>
 #include <QThreadPool>
 
 FutureScheduler::FutureScheduler(QObject *parent)
@@ -9,7 +10,9 @@ FutureScheduler::FutureScheduler(QObject *parent)
 {
     static std::once_flag once;
     std::call_once(once, []() {
-        QThreadPool::globalInstance()->setMaxThreadCount(4);
+        // most tasks just wait on the network (up to 60 s through NYM), so 4 threads filled up
+        // during sync and everything else queued behind them
+        QThreadPool::globalInstance()->setMaxThreadCount(qMax(12, QThread::idealThreadCount()));
     });
 }
 

@@ -33,6 +33,7 @@ import moneroComponents.NetworkType 1.0
 import moneroComponents.Clipboard 1.0
 
 import "components" as MoneroComponents
+import "js/Utils.js" as Utils
 import "components/effects/" as MoneroEffects
 
 Rectangle {
@@ -60,6 +61,9 @@ Rectangle {
     signal settingsClicked()
     signal addressBookClicked()
     signal accountClicked()
+    signal swapsClicked()
+    signal tradingClicked()
+    signal notesClicked()
 
     function selectItem(pos) {
         menuColumn.previousButton.checked = false
@@ -70,6 +74,9 @@ Rectangle {
         else if(pos === "Settings") menuColumn.previousButton = settingsButton
         else if(pos === "Advanced") menuColumn.previousButton = advancedButton
         else if(pos === "Account") menuColumn.previousButton = accountButton
+        else if(pos === "Swaps") menuColumn.previousButton = swapsButton
+        else if(pos === "Trading") menuColumn.previousButton = tradingButton
+        else if(pos === "Notes") menuColumn.previousButton = notesButton
         menuColumn.previousButton.checked = true
     }
 
@@ -253,7 +260,7 @@ Rectangle {
                 MoneroComponents.TextPlain {
                     id: balancePart1
                     text: balancePart1Fx.output
-                    MoneroComponents.DecryptFx { id: balancePart1Fx; source: balancePart1.realText }
+                    MoneroComponents.DecryptFx { id: balancePart1Fx; source: Utils.prettyAmount(balancePart1.realText) }
                     themeTransition: false
                     anchors.left: parent.left
                     anchors.leftMargin: 58
@@ -272,7 +279,7 @@ Rectangle {
                     }
                     font.pixelSize: {
                         var defaultSize = 29;
-                        var digits = (balancePart1.text.length - 1)
+                        var digits = (balancePart1.realText.length - 1)
                         if (digits > 2 && !(persistentSettings.fiatPriceEnabled && persistentSettings.fiatPriceToggle)) {
                             return defaultSize - 1.1 * digits
                         } else {
@@ -294,7 +301,7 @@ Rectangle {
                 MoneroComponents.TextPlain {
                     id: balancePart2
                     text: balancePart2Fx.output
-                    MoneroComponents.DecryptFx { id: balancePart2Fx; source: balancePart2.realText }
+                    MoneroComponents.DecryptFx { id: balancePart2Fx; source: String(balancePart2.realText).slice(0, 3) }
                     themeTransition: false
                     anchors.left: balancePart1.right
                     anchors.leftMargin: 2
@@ -310,6 +317,22 @@ Rectangle {
                     font.pixelSize: 16
                     MouseArea {
                         id: balancePart2MouseArea
+                        hoverEnabled: true
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: (mouse) => balancePart1MouseArea.clicked(mouse)
+                    }
+                }
+                MoneroComponents.TextPlain {
+                    id: balancePart3
+                    text: balancePart3Fx.output
+                    MoneroComponents.DecryptFx { id: balancePart3Fx; source: String(balancePart2.realText).slice(3) }
+                    themeTransition: false
+                    anchors.left: balancePart2.right
+                    anchors.baseline: currencyLabel.baseline
+                    color: balancePart1.color
+                    font.pixelSize: 11
+                    MouseArea {
                         hoverEnabled: true
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
@@ -339,7 +362,7 @@ Rectangle {
             id:flicker
             contentHeight: menuColumn.height
             anchors.top: parent.top
-            anchors.bottom: progressBar.visible ? progressBar.top : networkStatus.top
+            anchors.bottom: tradingColumn.top
             width: parent.width
             boundsBehavior: isMac ? Flickable.DragAndOvershootBounds : Flickable.StopAtBounds
             clip: true
@@ -514,6 +537,83 @@ Rectangle {
         } // Column
 
         } // Flickable
+
+        // Trading data (+ Swaps under it) pinned at the bottom of the menu, above the sync status.
+        // Only with "Price conversion" on (Settings > Node / Network): off means no requests at all
+        Column {
+            id: tradingColumn
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: separator.top
+            height: implicitHeight
+
+            MoneroComponents.MenuButtonDivider {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.leftMargin: 20
+            }
+
+            MoneroComponents.MenuButton {
+                id: tradingButton
+                anchors.left: parent.left
+                anchors.right: parent.right
+                // price charts and swaps need the price connections; Notes stays available
+                visible: persistentSettings.fiatPriceEnabled
+                moneroOrange: true
+                text: qsTr("Trading data") + translationManager.emptyString
+                onClicked: {
+                    menuColumn.previousButton.checked = false
+                    menuColumn.previousButton = tradingButton
+                    panel.tradingClicked()
+                }
+            }
+
+            MoneroComponents.MenuButtonDivider {
+                visible: swapsButton.visible && swapsButton.present
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.leftMargin: 20
+            }
+
+            // ------------- Swaps tab (subsection of Trading data) ---------------
+            MoneroComponents.MenuButton {
+                id: swapsButton
+                anchors.left: parent.left
+                anchors.right: parent.right
+                moneroOrange: true
+                text: qsTr("Swaps") + translationManager.emptyString
+                visible: persistentSettings.fiatPriceEnabled
+                under: tradingButton
+                onClicked: {
+                    menuColumn.previousButton.checked = false
+                    menuColumn.previousButton = swapsButton
+                    panel.swapsClicked()
+                }
+            }
+
+            MoneroComponents.MenuButtonDivider {
+                visible: notesButton.present
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.leftMargin: 20
+            }
+
+            // ------------- Notes tab (subsection of Trading data, encrypted) ---------------
+            MoneroComponents.MenuButton {
+                id: notesButton
+                anchors.left: parent.left
+                anchors.right: parent.right
+                moneroOrange: true
+                text: qsTr("Notes") + translationManager.emptyString
+                // without price conversion the Trading button is hidden, so Notes stands on its own
+                under: persistentSettings.fiatPriceEnabled ? tradingButton : null
+                onClicked: {
+                    menuColumn.previousButton.checked = false
+                    menuColumn.previousButton = notesButton
+                    panel.notesClicked()
+                }
+            }
+        }
 
         Rectangle {
             id: separator

@@ -33,11 +33,12 @@ import QtQuick.Layouts
 import "../components" as MoneroComponents
 import "effects/" as MoneroEffects
 
+// Information / confirmation dialog: a centered card over the tinted (and blurred) window.
 Rectangle {
     id: root
     color: "transparent"
     visible: false
-    property alias title: dialogTitle.text
+    property alias title: card.title
     property alias text: dialogContent.text
     property alias content: root.text
     property alias cancelVisible: cancelButton.visible
@@ -46,45 +47,43 @@ Rectangle {
     property alias okText: okButton.text
     property alias cancelText: cancelButton.text
     property alias closeVisible: closeButton.visible
+    // picture: tx, tag, key, info, warning, node; empty = chosen from the title (error/warning or info)
+    property string kind: ""
+    readonly property bool dark: MoneroComponents.Style.blackTheme
 
     // same signals as Dialog has
     signal accepted()
     signal rejected()
     signal closeCallback();
 
-    // background
-    MoneroEffects.GradientBackground {
-        anchors.fill: parent
-        fallBackColor: MoneroComponents.Style.middlePanelBackgroundColor
-        initialStartColor: MoneroComponents.Style.middlePanelBackgroundGradientStart
-        initialStopColor: MoneroComponents.Style.middlePanelBackgroundGradientStop
-        blackColorStart: MoneroComponents.Style._b_middlePanelBackgroundGradientStart
-        blackColorStop: MoneroComponents.Style._b_middlePanelBackgroundGradientStop
-        whiteColorStart: MoneroComponents.Style._w_middlePanelBackgroundGradientStart
-        whiteColorStop: MoneroComponents.Style._w_middlePanelBackgroundGradientStop
-        start: Qt.point(0, 0)
-        end: Qt.point(height, width)
-    }
-
-    // Make window draggable
-    MouseArea {
-        anchors.fill: parent
-        property point lastMousePos: Qt.point(0, 0)
-        onPressed: { lastMousePos = Qt.point(mouseX, mouseY); }
-        onMouseXChanged: root.x += (mouseX - lastMousePos.x)
-        onMouseYChanged: root.y += (mouseY - lastMousePos.y)
+    function _autoKind() {
+        if (kind !== "")
+            return kind;
+        var t = (card.title || "").toLowerCase();
+        var warn = [qsTr("Error"), qsTr("Warning"), "error", "warning"];
+        for (var i = 0; i < warn.length; i++)
+            if (t.indexOf(String(warn[i]).toLowerCase()) >= 0)
+                return "warning";
+        return "info";
     }
 
     function open() {
-        // Center
-        root.x = parent.width/2 - root.width/2
-        root.y = 100
+        // always over the whole window, also when declared inside a page
+        if (Overlay.overlay && root.parent !== Overlay.overlay && root.parent !== appWindow.contentItem)
+            root.parent = Overlay.overlay;
         root.z = 11
+        card.kind = _autoKind();
+        flickable.contentY = 0;
         root.visible = true;
+        appWindow.modalDialogs++;
+        root.forceActiveFocus();
     }
 
     function close() {
+        if (root.visible)
+            appWindow.modalDialogs = Math.max(0, appWindow.modalDialogs - 1);
         root.visible = false;
+        kind = "";
         // reset button text
         okButton.text = qsTr("OK")
         cancelButton.text = qsTr("Cancel")
@@ -92,84 +91,76 @@ Rectangle {
         closeCallback();
     }
 
-    // TODO: implement without hardcoding sizes
-    width: 520
-    height: 380
+    width: parent ? parent.width : 520
+    height: parent ? parent.height : 380
 
-    ColumnLayout {
-        id: mainLayout
-        spacing: 10
-        anchors.fill: parent
-        anchors.margins: 20
+    Keys.onEscapePressed: {
+        root.close()
+        root.rejected()
+    }
 
-        RowLayout {
-            id: column
-            Layout.topMargin: 14
+    MoneroComponents.ModalTint { }
+
+    MoneroComponents.ModalCard {
+        id: card
+        imageSize: 150
+
+        Flickable {
+            id: flickable
             Layout.fillWidth: true
-
-            MoneroComponents.Label {
-                id: dialogTitle
-                fontSize: 18
-                fontFamily: "Arial"
-                color: MoneroComponents.Style.defaultFontColor
+            Layout.preferredHeight: Math.min(dialogContent.paintedHeight + 4, root.height * 0.55)
+            contentWidth: width
+            contentHeight: dialogContent.paintedHeight + 4
+            clip: true
+            ScrollBar.vertical: MoneroComponents.NeonScrollBar {
+                onActiveChanged: if (!active && !isMac) active = true
+                palette.mid: "#8E8E93"
+                palette.dark: "#B8B8BD"
             }
-        }
+            boundsBehavior: isMac ? Flickable.DragAndOvershootBounds : Flickable.StopAtBounds
 
-        Item {
-            Layout.fillHeight: true
-            Layout.fillWidth: true
-            Layout.preferredHeight: 240
+            TextEdit {
+                id: dialogContent
+                width: flickable.width - 14
+                renderType: Text.QtRendering
+                font.family: MoneroComponents.Style.fontRegular.name
+                textFormat: TextEdit.AutoText
+                readOnly: true
+                font.pixelSize: 14
+                selectByMouse: false
+                wrapMode: TextEdit.Wrap
+                color: MoneroComponents.Style.defaultFontColor
 
-            Flickable {
-                id: flickable
-                anchors.fill: parent
-                ScrollBar.vertical: MoneroComponents.NeonScrollBar {
-                    onActiveChanged: if (!active && !isMac) active = true
-                    palette.mid: "#8E8E93"
-                    palette.dark: "#B8B8BD"
-                }
-                boundsBehavior: isMac ? Flickable.DragAndOvershootBounds : Flickable.StopAtBounds
-
-                TextArea.flickable: TextArea {
-                    id: dialogContent
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    renderType: Text.QtRendering
-                    font.family: MoneroComponents.Style.fontLight.name
-                    textFormat: TextEdit.AutoText
-                    readOnly: true
-                    font.pixelSize: 14
-                    selectByMouse: false
-                    wrapMode: TextEdit.Wrap
-                    color: MoneroComponents.Style.defaultFontColor
-                    background: null
-
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: {
-                            appWindow.showStatusMessage(qsTr("Double tap to copy"),3)
-                        }
-                        onDoubleClicked: {
-                            parent.selectAll()
-                            parent.copy()
-                            parent.deselect()
-                            console.log("copied to clipboard");
-                            appWindow.showStatusMessage(qsTr("Content copied to clipboard"),3)
-                        }
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: {
+                        appWindow.showStatusMessage(qsTr("Double tap to copy"),3)
+                    }
+                    onDoubleClicked: {
+                        parent.selectAll()
+                        parent.copy()
+                        parent.deselect()
+                        console.log("copied to clipboard");
+                        appWindow.showStatusMessage(qsTr("Content copied to clipboard"),3)
                     }
                 }
             }
         }
 
-        // Ok/Cancel buttons
+        // Cancel (grey) / OK (green)
         RowLayout {
             id: buttons
-            spacing: 60
-            Layout.alignment: Qt.AlignHCenter
+            Layout.topMargin: 6
+            Layout.fillWidth: true
+            spacing: 14
+
+            Item { Layout.fillWidth: true }
 
             MoneroComponents.StandardButton {
                 id: cancelButton
-                primary: false
+                small: true
+                accent: root.dark ? "#8C8C8C" : "#6B6B6B"
+                textColor: root.dark ? "#D0D0D0" : "#4A4A4A"
                 text: qsTr("Cancel") + translationManager.emptyString
                 onClicked: {
                     root.close()
@@ -179,6 +170,8 @@ Rectangle {
 
             MoneroComponents.StandardButton {
                 id: okButton
+                small: true
+                accent: root.dark ? "#5FD08F" : "#1E8E4E"
                 text: qsTr("OK") + translationManager.emptyString
                 KeyNavigation.tab: cancelButton
                 onClicked: {
@@ -189,19 +182,19 @@ Rectangle {
         }
     }
 
-    // close icon
+    // close icon, top right corner of the card
     Rectangle {
         id: closeButton
-        anchors.top: parent.top
-        anchors.right: parent.right
-        width: 48
-        height: 48
+        x: card.x + card.width - width - 6
+        y: card.y + 6
+        width: 36
+        height: 36
         color: "transparent"
 
         MoneroEffects.ImageMask {
             anchors.centerIn: parent
-            width: 16
-            height: 16
+            width: 14
+            height: 14
             image: MoneroComponents.Style.titleBarCloseSource
             color: MoneroComponents.Style.defaultFontColor
             opacity: 0.75
@@ -209,46 +202,14 @@ Rectangle {
 
         MouseArea {
             anchors.fill: parent
+            hoverEnabled: true
             onClicked: {
                 root.close()
                 root.rejected()
             }
             cursorShape: Qt.PointingHandCursor
-            onEntered: closeButton.color = "#262626";
+            onEntered: closeButton.color = root.dark ? "#262626" : "#D8DED9";
             onExited: closeButton.color = "transparent";
         }
-    }
-
-    // window borders
-    Rectangle{
-        width: 1
-        color: MoneroComponents.Style.grey
-        anchors.left: parent.left
-        anchors.top: parent.top
-        anchors.bottom: parent.bottom
-    }
-
-    Rectangle{
-        width: 1
-        color: MoneroComponents.Style.grey
-        anchors.right: parent.right
-        anchors.top: parent.top
-        anchors.bottom: parent.bottom
-    }
-
-    Rectangle{
-        height: 1
-        color: MoneroComponents.Style.grey
-        anchors.left: parent.left
-        anchors.top: parent.top
-        anchors.right: parent.right
-    }
-
-    Rectangle{
-        height: 1
-        color: MoneroComponents.Style.grey
-        anchors.left: parent.left
-        anchors.bottom: parent.bottom
-        anchors.right: parent.right
     }
 }

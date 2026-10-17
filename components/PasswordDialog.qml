@@ -143,17 +143,24 @@ FocusScope {
         }
     }
 
-    ColumnLayout {
-        id: mainLayout
-        spacing: 10
-        anchors { fill: parent; margins: 35 }
+    readonly property bool dark: MoneroComponents.Style.blackTheme
+
+    // centered card over the tinted, blurred window
+    MoneroComponents.ModalTint { }
+
+    MoneroComponents.ModalCard {
+        id: card
+        kind: "key"
+        maxWidth: 700
+        imageSize: 150
+        title: (newPasswordDialogMode ? qsTr("New password")
+                : passphraseDialogMode ? qsTr("Device passphrase")
+                : qsTr("Wallet password")) + translationManager.emptyString
 
         ColumnLayout {
             id: column
-
             Layout.fillWidth: true
-            Layout.alignment: Qt.AlignHCenter
-            Layout.maximumWidth: 400
+            spacing: 8
 
             Label {
                 text: {
@@ -165,9 +172,10 @@ FocusScope {
                     }
                 }
                 Layout.fillWidth: true
+                wrapMode: Text.Wrap
 
-                font.pixelSize: 16
-                font.family: MoneroComponents.Style.fontLight.name
+                font.pixelSize: 15
+                font.family: MoneroComponents.Style.fontRegular.name
 
                 color: MoneroComponents.Style.defaultFontColor
             }
@@ -272,17 +280,20 @@ FocusScope {
                 color: "black"
             }
 
-            // Ok/Cancel buttons
+            // Cancel (grey) / OK (green)
             RowLayout {
                 id: buttons
-                spacing: 16
-                Layout.topMargin: 16
-                Layout.alignment: Qt.AlignRight
+                spacing: 14
+                Layout.topMargin: 10
+                Layout.fillWidth: true
+
+                Item { Layout.fillWidth: true }
 
                 MoneroComponents.StandardButton {
                     id: cancelButton
-                    primary: false
                     small: true
+                    accent: root.dark ? "#8C8C8C" : "#6B6B6B"
+                    textColor: root.dark ? "#D0D0D0" : "#4A4A4A"
                     text: qsTr("Cancel") + translationManager.emptyString
                     KeyNavigation.tab: passwordInput1
                     onClicked: onCancel()
@@ -290,6 +301,7 @@ FocusScope {
 
                 MoneroComponents.StandardButton {
                     id: okButton
+                    accent: root.dark ? "#5FD08F" : "#1E8E4E"
                     fontAwesomeIcon: true
                     rightIcon: okButtonIcon
                     small: true

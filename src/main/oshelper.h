@@ -29,6 +29,7 @@
 #ifndef OSHELPER_H
 #define OSHELPER_H
 
+#include <QJSValue>
 #include <QList>
 #include <QObject>
 #include <QString>
@@ -50,6 +51,24 @@ public:
     Q_INVOKABLE bool openContainingFolder(const QString &filePath) const;
     Q_INVOKABLE QString openSaveFileDialog(const QString &title, const QString &folder, const QString &filename) const;
     Q_INVOKABLE QString temporaryPath() const;
+    Q_INVOKABLE QString swapsLogPath() const;
+    Q_INVOKABLE bool appendCsv(const QString &path, const QString &header, const QString &lines) const;
+    Q_INVOKABLE bool openFolder(const QString &dirPath) const;
+    Q_INVOKABLE QString readTextFile(const QString &path) const;
+    Q_INVOKABLE bool writeTextFile(const QString &path, const QString &text) const;
+    Q_INVOKABLE void notify(const QString &title, const QString &message) const;
+    // NymVPN command line client (nym-vpnc): path, and an async run with callback(exitCode, output)
+    Q_INVOKABLE QString nymVpncPath() const;
+    Q_INVOKABLE void runNymVpnc(const QStringList &args, const QJSValue &callback);
+    // restarts the NymVPN daemon: with sudo -n (no prompt, needs a sudoers rule) or, with askPassword,
+    // through the macOS administrator password dialog; callback(exitCode, output)
+    Q_INVOKABLE void restartNymVpnDaemon(bool askPassword, const QJSValue &callback);
+    // on quit: disable the SOCKS5 proxy and restart the daemon in a process that outlives the app
+    Q_INVOKABLE void stopNymVpnDetached() const;
+    // ends the process after `seconds` if the graceful shutdown has not finished by then
+    Q_INVOKABLE void armShutdownWatchdog(int seconds) const;
+    // end of the NymVPN daemon log (it names the entry gateway and the exit Network Requester); "" if unreadable
+    Q_INVOKABLE QString nymVpnLogTail() const;
     Q_INVOKABLE bool isWritableDirectory(const QString &path) const;
     Q_INVOKABLE QString randomPassword(int numBytes = 32) const;
     Q_INVOKABLE bool isCapsLock() const;
@@ -59,6 +78,7 @@ public:
 
     static std::pair<quint8, QString> getNetworkTypeAndAddressFromFile(const QString &wallet);
 private:
+    void runProcess(const QString &program, const QStringList &args, const QJSValue &callback, int timeoutMs);
 
 signals:
 

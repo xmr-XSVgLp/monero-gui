@@ -44,6 +44,7 @@ Item {
     property int imgHeight: 13
     property bool toggleOnClick: true
     property bool checked: false
+    property color accent: MoneroComponents.Style.orange
     property alias background: backgroundRect.color
     property bool border: true
     property int fontSize: 14
@@ -88,6 +89,7 @@ Item {
             MoneroComponents.NeonFrame {
                 anchors.fill: parent
                 visible: checkBox.border
+                accent: checkBox.accent
                 cut: 6
                 ticks: false
                 fillOpacity: checkBox.checked ? 0.16 : 0.03
@@ -106,6 +108,8 @@ Item {
                 visible: active && progress > 0
                 anchors.fill: parent
                 anchors.margins: 5
+                property color tickColor: checkBox.accent
+                onTickColorChanged: requestPaint()
                 onProgressChanged: requestPaint()
                 onPaint: {
                     var ctx = getContext("2d"), w = width, h = height;
@@ -116,7 +120,7 @@ Item {
                     var len = (l1 + l2) * progress;
                     ctx.lineWidth = 2.4;
                     ctx.lineCap = "square";
-                    ctx.strokeStyle = MoneroComponents.Style.orange;
+                    ctx.strokeStyle = tickColor;
                     ctx.beginPath();
                     ctx.moveTo(p[0][0]*w, p[0][1]*h);
                     if (len <= l1) {
@@ -137,7 +141,7 @@ Item {
                 anchors.centerIn: parent
                 width: checkBox.imgWidth
                 height: checkBox.imgHeight
-                color: MoneroComponents.Style.orange
+                color: checkBox.accent
                 fontAwesomeFallbackIcon: checkBox.fontAwesomeIcons ? getIcon() : FontAwesome.plus
                 fontAwesomeFallbackSize: 14
                 image: checkBox.fontAwesomeIcons ? "" : getIcon()

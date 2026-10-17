@@ -65,8 +65,7 @@ ColumnLayout {
         }
         MoneroComponents.NavbarItem {
             active: settingsStateView.state == "Node"
-            text: qsTr("Node") + translationManager.emptyString
-            visible: appWindow.walletMode >= 2
+            text: qsTr("Node / Network") + translationManager.emptyString
             onSelected: settingsStateView.state = "Node"
         }
         MoneroComponents.NavbarItem {

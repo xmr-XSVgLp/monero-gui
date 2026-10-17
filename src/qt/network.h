@@ -83,13 +83,16 @@ public:
 public:
     Q_INVOKABLE void get(const QString &url, const QJSValue &callback, const QString &contentType = {}) const;
     Q_INVOKABLE void getJSON(const QString &url, const QJSValue &callback) const;
+    Q_INVOKABLE void postJSON(const QString &url, const QString &body, const QJSValue &callback) const;
 
     std::string get(const QString &url, const QString &contentType = {}) const;
     QString get(
         std::shared_ptr<epee::net_utils::http::abstract_http_client> httpClient,
         const QString &url,
         std::string &response,
-        const QString &contentType = {}) const;
+        const QString &contentType = {},
+        const std::string &method = "GET",
+        const std::string &body = {}) const;
 
 signals:
     void proxyAddressChanged() const;

@@ -57,12 +57,13 @@ import "version.js" as Version
 ApplicationWindow {
     id: appWindow
     signal gracefulShutdownComplete()
-    title: "Monero" +
+    title: "XMR Wallet+" +
         (persistentSettings.displayWalletNameInTitleBar && walletName
         ? " - " + walletName
         : "")
-    minimumWidth: 750
-    minimumHeight: 450
+    // the redesigned pages (cards, side panel, NYM panel) need room: below this they overlap
+    minimumWidth: (isAndroid || isIOS) ? 750 : Math.min(1100, screenAvailableWidth)
+    minimumHeight: (isAndroid || isIOS) ? 450 : Math.min(720, screenAvailableHeight)
 
     property var currentItem
     property var previousActiveFocusItem
@@ -84,6 +85,7 @@ ApplicationWindow {
     property int daemonStartStopInProgress: 0
     property alias toolTip: toolTip
     property string walletName
+    property string walletDeviceLabel: ""   // Trezor name shown in the title bar
     property bool viewOnly: false
     property bool foundNewBlock: false
     property bool qrScannerEnabled: (typeof builtWithScanner != "undefined") && builtWithScanner
@@ -105,6 +107,10 @@ ApplicationWindow {
     property bool themeTransition: false
     property int backgroundSyncType: Wallet.BackgroundSync_Off;
     property bool isQuitting: false
+    // open StandardDialogs (information, confirmation, page popups): the window behind is blurred
+    property int modalDialogs: 0
+    // "Keep it running" on close: the local node goes on syncing through Nym, so NymVPN stays up too
+    property bool keepNymVpnOnClose: false
 
     // fiat price conversion
     property real fiatPrice: 0
@@ -113,6 +119,447 @@ ApplicationWindow {
     property real fiatRatesTimestamp: 0
     readonly property real fiatRatesMaxAge: 60 * 60 * 1000
     readonly property string fiatRatesAPI: "https://api.frankfurter.dev/v1/latest?base=USD"
+    // 7-day price change shown on the Account page
+    property real fiatPriceUSD7d: 0
+    property real fiatHistoryTimestamp: 0
+    property var fiatRates7d: ({"USD": 1})
+    property string fiatRates7dDate: ""
+    property real fiatChange7d: NaN // percent, NaN while unknown
+    property real fiatPriceUSD24h: 0
+    property real fiatChange24h: NaN
+    property real priceBtc: 0             // BTC received for 1 XMR (Wagyu swap quote, fee included)
+    property double priceBtcTimestamp: 0
+
+    // NymVPN: the app's own traffic goes through the SOCKS5 proxy of the NymVPN daemon (mixnet),
+    // driven with the nym-vpnc command line client. States: off, missing, working, ready, connected, error
+    property string nymVpnState: "off"
+    property string nymVpnMessage: ""
+    property string nymVpnLog: ""
+    // route info: public IP seen through the proxy, and the entry / exit gateways from the daemon log
+    property string nymVpnIp: ""
+    property string nymVpnIpPlace: ""
+    property string nymVpnEntryId: ""
+    property string nymVpnExitId: ""
+    property string nymVpnRouteNote: ""
+    property bool nymVpnInfoLoading: false
+    // kill switch: while restarting, every proxied request goes to a dead address (see getProxyAddress)
+    property bool nymVpnRestarting: false
+    // installed nym-vpnc: "" = not checked yet, "none" = not found, otherwise its version
+    readonly property string nymVpncRequired: "2026.13.0"
+    property string nymVpncVersion: ""
+    readonly property bool nymVpncOk: nymVpncVersion !== "" && nymVpncVersion !== "none"
+                                      && nymVpnVersionAtLeast(nymVpncVersion, nymVpncRequired)
+
+    function nymVpnVersionAtLeast(v, min) {
+        var a = v.split("."), b = min.split(".");
+        for (var i = 0; i < 3; i++) {
+            var x = parseInt(a[i]) || 0, y = parseInt(b[i]) || 0;
+            if (x !== y) return x > y;
+        }
+        return true;
+    }
+
+    // runs `nym-vpnc --version` (works without the daemon) and updates nymVpncVersion
+    function nymVpnCheckInstall(callback) {
+        if (oshelper.nymVpncPath() === "") {
+            nymVpncVersion = "none";
+            if (callback) callback();
+            return;
+        }
+        oshelper.runNymVpnc(["--version"], function(code, output) {
+            var m = /(\d+\.\d+\.\d+)/.exec(output || "");
+            nymVpncVersion = code === 0 && m ? m[1] : "none";
+            if (nymVpnState === "missing" && nymVpncOk) {
+                nymVpnState = "off";
+                nymVpnMessage = "";
+            } else if (!nymVpncOk && nymVpnState === "off") {
+                nymVpnState = "missing";
+            }
+            if (callback) callback();
+        });
+    }
+    property var nymVpnGateways: ({})   // identity key -> { name, place }
+
+    // public IP services, asked at the same time; each request goes through the proxy, so it shows the exit IP
+    readonly property var nymVpnIpServices: ["https://ipwho.is/", "https://ipinfo.io/json", "https://api.ipify.org?format=json"]
+    property int nymVpnInfoGen: 0      // ignores answers from an older lookup
+    property int nymVpnIpPending: 0
+    property bool nymVpnDirectoryLoading: false
+
+    function nymVpnParseIp(url, j) {
+        if (url.indexOf("ipwho.is") >= 0)
+            return j.success === false ? null
+                 : { ip: j.ip, place: [j.city, j.country_code].filter(Boolean).join(", ") + (j.connection && j.connection.org ? " · " + j.connection.org : "") };
+        if (url.indexOf("ipinfo.io") >= 0)
+            return { ip: j.ip, place: [j.city, j.country].filter(Boolean).join(", ") + (j.org ? " · " + j.org : "") };
+        return { ip: j.ip, place: "" };
+    }
+
+    function nymVpnLoadInfo() {
+        if (!persistentSettings.nymVpnEnabled) return;
+        nymVpnInfoGen++;
+        nymVpnInfoLoading = true;
+        nymVpnIp = "";
+        nymVpnIpPlace = "";
+        nymVpnInfoWatchdog.restart();
+        nymVpnReadRoute();                 // nodes come from the local log: show them right away
+        nymVpnTryIp(nymVpnInfoGen, 0);
+    }
+
+    // the first requests after a (re)start can fail while the mixnet client starts: up to 3 rounds
+    function nymVpnTryIp(gen, round) {
+        if (gen !== nymVpnInfoGen) return;
+        nymVpnIpPending = nymVpnIpServices.length;
+        for (var i = 0; i < nymVpnIpServices.length; i++) {
+            (function(url) {
+                network.getJSON(url, function(u, resp, error) {
+                    if (gen !== nymVpnInfoGen || nymVpnIp !== "") return;
+                    var info = null;
+                    try {
+                        if (!error) info = nymVpnParseIp(url, JSON.parse(resp));
+                    } catch (e) {}
+                    if (info && info.ip) {
+                        nymVpnIp = info.ip;
+                        nymVpnIpPlace = info.place + "  (" + url.split("/")[2] + ")";
+                        nymVpnInfoLoading = false;
+                        nymVpnReadRoute();   // the IP request started the mixnet client: its log lines exist now
+                        return;
+                    }
+                    console.log("NymVPN: IP lookup via " + url + " failed: " + (error || "bad answer"));
+                    nymVpnIpPending--;
+                    if (nymVpnIpPending > 0) return;
+                    if (round + 1 < 2) {
+                        nymVpnIpRetryTimer.gen = gen;
+                        nymVpnIpRetryTimer.round = round + 1;
+                        nymVpnIpRetryTimer.restart();
+                    } else {
+                        nymVpnIpPlace = qsTr("Could not get the IP through Nym") + translationManager.emptyString;
+                        nymVpnInfoLoading = false;
+                        nymVpnReadRoute();
+                    }
+                });
+            })(nymVpnIpServices[i]);
+        }
+    }
+
+    Timer {
+        id: nymVpnIpRetryTimer
+        property int gen: 0
+        property int round: 0
+        interval: 3000
+        onTriggered: appWindow.nymVpnTryIp(gen, round)
+    }
+
+    // never leave the panel loading: after 150 s show what we have
+    Timer {
+        id: nymVpnInfoWatchdog
+        interval: 150000
+        onTriggered: {
+            if (!appWindow.nymVpnInfoLoading) return;
+            appWindow.nymVpnInfoGen++;
+            if (appWindow.nymVpnIp === "")
+                appWindow.nymVpnIpPlace = qsTr("Could not get the IP through Nym") + translationManager.emptyString;
+            appWindow.nymVpnInfoLoading = false;
+            appWindow.nymVpnReadRoute();
+        }
+    }
+
+    function nymVpnLastMatch(text, re) {
+        var m, last = "";
+        while ((m = re.exec(text)) !== null) last = m[1];
+        return last;
+    }
+
+    function nymVpnReadRoute() {
+        var log = oshelper.nymVpnLogTail();
+        if (log === "") {
+            nymVpnRouteNote = qsTr("The NymVPN log (/var/log/nym-vpnd) can't be read, so the entry and exit nodes are unknown") + translationManager.emptyString;
+            return;
+        }
+        // Do not combine an old route with a newly enabled proxy.
+        var sessionStart = log.lastIndexOf("Enabling SOCKS5 client:");
+        if (sessionStart >= 0) log = log.slice(sessionStart);
+        nymVpnRouteNote = "";
+        // Nym addresses are client.key@gateway: the gateway after @ is the node
+        nymVpnEntryId = nymVpnLastMatch(log, /SOCKS5 mixnet backend connected \(address: [^@\s]*@([1-9A-HJ-NP-Za-km-z]+)\)/g);
+        nymVpnExitId = nymVpnLastMatch(log, /Using Network Requester: [^@\s]*@([1-9A-HJ-NP-Za-km-z]+)/g);
+        // when the NymVPN app is connected in anonymous (mixnet) mode, nym-vpnd sends SOCKS5
+        // connections through that tunnel instead of its own Network Requester, so the exit is
+        // the tunnel's exit gateway: take the nodes from `nym-vpnc status`
+        if (nymVpnLastMatch(log, /Routing connection from \S+ via (existing|new) Mixnet tunnel/g) === "existing")
+            nymVpnReadTunnelRoute();
+        // the new route's internal SOCKS5 server could not bind: traffic still leaves through an older exit
+        var nrAt = log.lastIndexOf("Using Network Requester:");
+        if (nrAt >= 0 && log.indexOf("Failed to bind to address", nrAt) >= 0)
+            nymVpnRouteNote = qsTr("NymVPN kept an older internal proxy running, so traffic may still leave through a previous exit node and not the one shown. Press Restart to restart the NymVPN service.") + translationManager.emptyString;
+        nymVpnLoadDirectory();
+    }
+
+    function nymVpnReadTunnelRoute() {
+        oshelper.runNymVpnc(["status"], function(code, output) {
+            // State: Connected mix to <ip> [ENTRY] → <ip> [EXIT]
+            var m = /Connected mix to \S+ \[([1-9A-HJ-NP-Za-km-z]+)\] \S+ \S+ \[([1-9A-HJ-NP-Za-km-z]+)\]/.exec(output || "");
+            if (code !== 0 || !m) return;
+            nymVpnEntryId = m[1];
+            nymVpnExitId = m[2];
+            nymVpnRouteNote = qsTr("The NymVPN app is connected in anonymous mode, so this app goes out through that tunnel (its exit node), not through a separate SOCKS5 node. Restart only changes the route when the NymVPN app is disconnected or in fast mode.") + translationManager.emptyString;
+            nymVpnLoadDirectory();
+        });
+    }
+
+    function nymVpnLoadDirectory() {
+        if (Object.keys(nymVpnGateways).length > 0 || nymVpnDirectoryLoading)
+            return;
+        nymVpnDirectoryLoading = true;   // names arrive later; the ids are already shown
+        network.getJSON("https://nymvpn.com/api/public/v1/directory/gateways", function(url, resp, error) {
+            try {
+                if (error) throw error;
+                var list = JSON.parse(resp), map = {};
+                for (var i = 0; i < list.length; i++) {
+                    var g = list[i], loc = g.location || {};
+                    map[g.identity_key] = { name: g.name || "",
+                                            place: [loc.city, loc.two_letter_iso_country_code].filter(Boolean).join(", ") };
+                }
+                nymVpnGateways = map;
+            } catch (e) {
+                console.log("NymVPN: gateway directory failed: " + e);
+            }
+            nymVpnDirectoryLoading = false;
+        });
+    }
+
+    function nymVpnDescribeGateway(id) {
+        if (id === "") return "";
+        var g = nymVpnGateways[id];
+        return g ? (g.name + (g.place !== "" ? " · " + g.place : "")) : id.slice(0, 10) + "…";
+    }
+
+    function nymVpnRun(args, callback) {
+        // never log the account words, only the command
+        var label = args.slice(0, 2).join(" ");
+        oshelper.runNymVpnc(args, function(code, output) {
+            console.log("NymVPN: nym-vpnc " + label + " -> " + code);
+            nymVpnLog = "$ nym-vpnc " + label + "\n" + output;
+            callback(code, output);
+        });
+    }
+
+    function nymVpnFail(message) {
+        if (nymVpnRestarting) {
+            nymVpnRestarting = false;
+            message += "\n" + qsTr("App traffic stays blocked (it still points at the Nym proxy). Press Restart again or Disconnect.") + translationManager.emptyString;
+        }
+        nymVpnState = message === "nym-vpnc not found" ? "missing" : "error";
+        nymVpnMessage = nymVpnState === "missing"
+            ? qsTr("NymVPN command line client (nym-vpnc) not found") + translationManager.emptyString
+            : message;
+    }
+
+    function nymVpnParseStatus(output) {
+        var state = (/State:\s*(\w+)/.exec(output) || [])[1] || "";
+        var address = (/SOCKS5 Listen Address:\s*Some\(([^)]+)\)/.exec(output) || [])[1] || "";
+        var error = (/Error:\s*(.+)/.exec(output) || [])[1] || "";
+        return { state: state, address: address, error: error === "None" ? "" : error };
+    }
+
+    // words: the account recovery phrase, or "" to use the account already stored in NymVPN
+    // fresh: start a new route (used at startup, so a reopened app never reuses the last exit)
+    function nymVpnConnect(words, fresh) {
+        nymVpnState = "working";
+        nymVpnMessage = qsTr("Connecting to NymVPN…") + translationManager.emptyString;
+        words = (words || "").trim().replace(/\s+/g, " ");
+        if (words !== "") {
+            // a stored account must be forgotten before another one is set
+            nymVpnRun(["account", "forget"], function() {
+                nymVpnRun(["account", "set", words], function(code, output) {
+                    if (code !== 0) { nymVpnFail(output || qsTr("Could not set the NymVPN account") + translationManager.emptyString); return; }
+                    nymVpnEnableSocks();
+                });
+            });
+        } else {
+            nymVpnRun(["account", "get"], function(code, output) {
+                if (code !== 0) { nymVpnFail(output); return; }
+                if (/Account identity:\s*unset/.test(output)) {
+                    nymVpnFail(qsTr("Enter the recovery phrase of your NymVPN account") + translationManager.emptyString);
+                    return;
+                }
+                if (fresh) nymVpnFreshStart(); else nymVpnEnableSocks();
+            });
+        }
+    }
+
+    function nymVpnEnableSocks() {
+        var address = persistentSettings.nymVpnSocksAddress;
+        nymVpnRun(["socks5", "status"], function(code, output) {
+            if (code !== 0) { nymVpnFail(output); return; }
+            var st = nymVpnParseStatus(output);
+            if (st.state !== "Disabled" && st.state !== "Error" && st.address === address) {
+                nymVpnApplyProxy(st.state);
+                return;
+            }
+            var enable = function() {
+                var args = ["socks5", "enable", "--socks5-address", address, "--exit-random"];
+                nymVpnRun(args, function(code2, output2) {
+                    if (code2 !== 0) { nymVpnFail(output2); return; }
+                    nymVpnPoll(0);
+                });
+            };
+            if (st.state !== "Disabled")
+                nymVpnRun(["socks5", "disable"], enable);
+            else
+                enable();
+        });
+    }
+
+    function nymVpnPoll(attempt) {
+        nymVpnRun(["socks5", "status"], function(code, output) {
+            var st = nymVpnParseStatus(output);
+            if (code === 0 && (st.state === "Idle" || st.state === "Connected")) {
+                nymVpnApplyProxy(st.state);
+            } else if (st.state === "Error") {
+                nymVpnFail(st.error || output);
+            } else if (attempt < 15) {
+                nymVpnPollTimer.attempt = attempt + 1;
+                nymVpnPollTimer.restart();
+            } else {
+                nymVpnFail(qsTr("NymVPN did not start the SOCKS5 proxy") + translationManager.emptyString);
+            }
+        });
+    }
+
+    function nymVpnApplyProxy(state) {
+        if (!persistentSettings.nymVpnEnabled) {
+            persistentSettings.nymVpnPrevProxyEnabled = persistentSettings.proxyEnabled;
+            persistentSettings.nymVpnPrevProxyAddress = persistentSettings.proxyAddress;
+        }
+        persistentSettings.nymVpnEnabled = true;
+        persistentSettings.proxyAddress = persistentSettings.nymVpnSocksAddress;
+        persistentSettings.proxyEnabled = true;
+        nymVpnState = state === "Connected" ? "connected" : "ready";
+        nymVpnRestarting = false;
+        nymVpnMessage = qsTr("The app goes through the Nym mixnet (SOCKS5 %1)").arg(persistentSettings.nymVpnSocksAddress) + translationManager.emptyString;
+        if (nymVpnIp === "")
+            Qt.callLater(nymVpnLoadInfo);
+    }
+
+    // disconnect and connect again (new route); app traffic stays blocked until the proxy is back
+    function nymVpnRestart() {
+        if (!persistentSettings.nymVpnEnabled || nymVpnState === "working") return;
+        nymVpnRestarting = true;
+        persistentSettings.proxyAddress = persistentSettings.nymVpnSocksAddress;
+        persistentSettings.proxyEnabled = true;
+        nymVpnIp = ""; nymVpnIpPlace = ""; nymVpnEntryId = ""; nymVpnExitId = ""; nymVpnRouteNote = "";
+        nymVpnInfoGen++;
+        nymVpnState = "working";
+        nymVpnMessage = qsTr("Restarting… app traffic is blocked until Nym is back") + translationManager.emptyString;
+        nymVpnRun(["socks5", "disable"], function() {
+            // nym-vpnd keeps its old internal SOCKS5 server alive, so a new route only takes effect
+            // after restarting the daemon (macOS asks for the administrator password)
+            nymVpnRestartDaemon(function(code, output) {
+                if (code !== 0) {
+                    nymVpnFail(qsTr("The NymVPN service was not restarted: ") + output + translationManager.emptyString);
+                    return;
+                }
+                nymVpnMessage = qsTr("Waiting for the NymVPN service…") + translationManager.emptyString;
+                nymVpnWaitDaemon(0);
+            });
+        });
+    }
+
+    // disable + restart the daemon (frees the old internal SOCKS5 server), then enable: new entry, exit and IP
+    function nymVpnFreshStart() {
+        nymVpnMessage = qsTr("Starting a new Nym route…") + translationManager.emptyString;
+        nymVpnRun(["socks5", "disable"], function() {
+            nymVpnRestartDaemon(function(code, output) {
+                if (code !== 0) { nymVpnEnableSocks(); return; }   // could not restart: connect anyway
+                nymVpnMessage = qsTr("Waiting for the NymVPN service…") + translationManager.emptyString;
+                nymVpnWaitDaemon(0);
+            });
+        });
+    }
+
+    // first without a prompt (works once the sudoers rule is installed), else ask for the password
+    function nymVpnRestartDaemon(callback) {
+        oshelper.restartNymVpnDaemon(false, function(code, output) {
+            if (code === 0) { callback(code, output); return; }
+            nymVpnMessage = qsTr("Restarting the NymVPN service (macOS will ask for your password)… app traffic is blocked") + translationManager.emptyString;
+            oshelper.restartNymVpnDaemon(true, callback);
+        });
+    }
+
+    // the daemon takes a few seconds to answer again after a restart
+    function nymVpnWaitDaemon(attempt) {
+        nymVpnRun(["socks5", "status"], function(code, output) {
+            if (code === 0) { nymVpnEnableSocks(); return; }
+            if (attempt >= 20) { nymVpnFail(output); return; }
+            nymVpnDaemonTimer.attempt = attempt + 1;
+            nymVpnDaemonTimer.restart();
+        });
+    }
+
+    Timer {
+        id: nymVpnDaemonTimer
+        property int attempt: 0
+        interval: 1500
+        onTriggered: appWindow.nymVpnWaitDaemon(attempt)
+    }
+
+    function nymVpnProxyUp() {
+        return persistentSettings.nymVpnEnabled && !nymVpnRestarting
+               && (nymVpnState === "ready" || nymVpnState === "connected");
+    }
+
+    function nymVpnDisconnect() {
+        nymVpnState = "working";
+        nymVpnMessage = qsTr("Disconnecting…") + translationManager.emptyString;
+        nymVpnRun(["socks5", "disable"], function(code, output) {
+            // restart the daemon too, so it does not keep the old internal SOCKS5 server (and exit) alive
+            nymVpnRestartDaemon(function(code2, output2) {
+                var note = code2 !== 0 ? qsTr("The NymVPN service was not restarted: ") + output2 + translationManager.emptyString : "";
+                nymVpnFinishDisconnect(code, output, note);
+            });
+        });
+    }
+
+    function nymVpnFinishDisconnect(code, output, note) {
+        if (persistentSettings.nymVpnEnabled) {
+            persistentSettings.proxyEnabled = persistentSettings.nymVpnPrevProxyEnabled;
+            persistentSettings.proxyAddress = persistentSettings.nymVpnPrevProxyAddress;
+        }
+        persistentSettings.nymVpnEnabled = false;
+        nymVpnIp = ""; nymVpnIpPlace = ""; nymVpnEntryId = ""; nymVpnExitId = ""; nymVpnRouteNote = "";
+        nymVpnInfoGen++;
+        nymVpnState = code === 0 ? "off" : "error";
+        nymVpnMessage = [code === 0 ? "" : output, note].filter(Boolean).join("\n");
+    }
+
+    // keeps the state shown in the panel up to date while NymVPN is on
+    function nymVpnRefreshStatus() {
+        if (!persistentSettings.nymVpnEnabled || nymVpnState === "working") return;
+        nymVpnRun(["socks5", "status"], function(code, output) {
+            if (nymVpnState === "working") return;
+            var st = nymVpnParseStatus(output);
+            if (code !== 0) nymVpnFail(output);
+            else if (st.state === "Connected") { nymVpnState = "connected"; if (nymVpnEntryId === "") nymVpnReadRoute(); }
+            else if (st.state === "Idle") nymVpnState = "ready";
+            else if (st.state === "Error") nymVpnFail(st.error);
+            else nymVpnConnect("");   // the daemon dropped the proxy (e.g. after a restart): enable it again
+        });
+    }
+
+    Timer {
+        id: nymVpnPollTimer
+        property int attempt: 0
+        interval: 2000
+        onTriggered: appWindow.nymVpnPoll(attempt)
+    }
+
+    Timer {
+        interval: 30000
+        repeat: true
+        running: persistentSettings.nymVpnEnabled
+        onTriggered: appWindow.nymVpnRefreshStatus()
+    }
     readonly property var fiatCurrencies: [
         "USD", "EUR", "GBP", "AUD", "BRL", "CAD", "CHF", "CNY", "CZK", "DKK",
         "HKD", "HUF", "IDR", "ILS", "INR", "ISK", "JPY", "KRW", "MXN", "MYR",
@@ -255,8 +702,8 @@ ApplicationWindow {
             console.log("Daemon change - closing " + currentWallet)
             closeWallet();
         } else if (!walletInitialized) {
-            // set page to transfer if not changing daemon
-            middlePanel.state = "Transfer";
+            // start on the Account page if not changing daemon
+            middlePanel.state = "Account";
             leftPanel.selectItem(middlePanel.state)
         }
 
@@ -323,6 +770,7 @@ ApplicationWindow {
         middlePanel.checkProofClicked.disconnect(handleCheckProof);
 
         appWindow.walletName = "";
+        appWindow.walletDeviceLabel = "";
         currentWallet = undefined;
 
         appWindow.showProcessingSplash(qsTr("Closing wallet..."));
@@ -341,6 +789,7 @@ ApplicationWindow {
         currentWallet = wallet
 
         walletName = usefulName(wallet.path)
+        walletDeviceLabel = wallet.isTrezor() ? wallet.deviceLabel() : ""
 
         viewOnly = currentWallet.viewOnly;
         backgroundSyncType = currentWallet.getBackgroundSyncType();
@@ -476,8 +925,10 @@ ApplicationWindow {
         // If wallet isnt connected, advanced wallet mode and no daemon is running - Ask
         if (appWindow.walletMode >= 2 && !persistentSettings.useRemoteNode && !walletInitialized && disconnected) {
             daemonManager.runningAsync(persistentSettings.nettype, persistentSettings.blockchainDataDir, function(running) {
-                if (!running) {
-                    daemonManagerDialog.open();
+                // start the local node right away (no "starting in 10 seconds" window);
+                // skip if a start or stop is already under way
+                if (!running && daemonStartStopInProgress === 0) {
+                    appWindow.startDaemon(persistentSettings.daemonFlags);
                 }
             });
         }
@@ -569,6 +1020,10 @@ ApplicationWindow {
 
         // wallet opened successfully, subscribing for wallet updates
         connectWallet(wallet)
+
+        // the start page (Account) was shown before the wallet existed: fill it now
+        if (middlePanel.state === "Account")
+            middlePanel.accountView.onPageCompleted();
 
         // Force switch normal view
         rootItem.state = "normal";
@@ -817,6 +1272,11 @@ ApplicationWindow {
 
         // Pause refresh while starting daemon
         currentWallet.pauseRefresh();
+
+        // with NymVPN on (or "Nym required") monerod also reaches its peers through the Nym SOCKS5 proxy
+        flags = (flags || "").trim();
+        if ((persistentSettings.nymVpnEnabled || persistentSettings.nymVpnRequired) && flags.indexOf("--proxy") < 0)
+            flags = (flags !== "" ? flags + " " : "") + "--proxy " + persistentSettings.nymVpnSocksAddress;
 
         const noSync = appWindow.walletMode === 0;
         const bootstrapNodeAddress = persistentSettings.walletMode < 2 ? "auto" : persistentSettings.bootstrapNodeAddress
@@ -1270,14 +1730,17 @@ ApplicationWindow {
 
     objectName: "appWindow"
     visible: true
-    width: screenAvailableWidth > 980
-        ? 980
-        : Math.min(screenAvailableWidth, 800)
-    height: screenAvailableHeight > maxWindowHeight
-        ? maxWindowHeight
-        : Math.min(screenAvailableHeight, 700)
+    width: (isAndroid || isIOS)
+        ? Math.min(screenAvailableWidth, 800)
+        : Math.max(minimumWidth, Math.min(1320, screenAvailableWidth - 40))
+    height: (isAndroid || isIOS)
+        ? Math.min(screenAvailableHeight, maxWindowHeight)
+        : Math.max(minimumHeight, Math.min(880, screenAvailableHeight - 40))
     color: MoneroComponents.Style.appWindowBackgroundColor
     flags: persistentSettings.customDecorations ? Windows.flagsCustomDecorations : Windows.flags
+    // custom decorations resize the window from QML, so the minimum is enforced here too
+    onWidthChanged: if (visibility === Window.Windowed && width < minimumWidth) width = minimumWidth
+    onHeightChanged: if (visibility === Window.Windowed && height < minimumHeight) height = minimumHeight
 
     Timer {
         id: fiatPriceTimer
@@ -1311,6 +1774,12 @@ ApplicationWindow {
                 appWindow.fiatApiError("CoinPaprika API has error(s)");
                 return;
             }
+            const pct7d = Number(resp.quotes["USD"]["percent_change_7d"]);
+            if (isFinite(pct7d) && pct7d > -100)
+                appWindow.fiatPriceUSD7d = resp.quotes["USD"]["price"] / (1 + pct7d / 100);
+            const pct24h = Number(resp.quotes["USD"]["percent_change_24h"]);
+            if (isFinite(pct24h) && pct24h > -100)
+                appWindow.fiatPriceUSD24h = resp.quotes["USD"]["price"] / (1 + pct24h / 100);
             return resp.quotes["USD"]["price"];
         }
     }
@@ -1370,12 +1839,105 @@ ApplicationWindow {
         appWindow.fiatApiUpdatePrice();
     }
 
+    function fiatApiHistoryReceived(url, resp, error) {
+        if (error) {
+            appWindow.fiatApiError(error);
+            return;
+        }
+
+        try {
+            resp = JSON.parse(resp);
+        } catch (e) {
+            appWindow.fiatApiError("bad JSON: " + e);
+            return;
+        }
+
+        // Kraken hourly OHLC: [time, open, high, low, close, vwap, volume, count]
+        const candles = (resp.result && resp.result["XXMRZUSD"]) || [];
+        function closeAt(secondsAgo) {
+            const target = Date.now() / 1000 - secondsAgo;
+            for (var i = candles.length - 1; i >= 0; i--) {
+                if (candles[i][0] <= target)
+                    return parseFloat(candles[i][4]);
+            }
+            return 0;
+        }
+        const price7d = closeAt(7 * 24 * 3600);
+        const price24h = closeAt(24 * 3600);
+        if (!(price7d > 0) || !(price24h > 0)) {
+            appWindow.fiatApiError("Kraken OHLC has no price from 7 days / 24 hours ago");
+            return;
+        }
+
+        appWindow.fiatPriceUSD7d = price7d;
+        appWindow.fiatPriceUSD24h = price24h;
+        appWindow.fiatHistoryTimestamp = Date.now();
+        appWindow.fiatApiUpdatePrice();
+    }
+
+    function fiatApiRates7dReceived(url, resp, error) {
+        if (error) {
+            appWindow.fiatApiError(error);
+            return;
+        }
+
+        try {
+            resp = JSON.parse(resp);
+        } catch (e) {
+            appWindow.fiatApiError("bad JSON: " + e);
+            return;
+        }
+
+        if (resp.base !== "USD" || typeof resp.rates !== "object" || resp.rates === null) {
+            appWindow.fiatApiError("fiat rates API has error(s)");
+            return;
+        }
+
+        var rates = {"USD": 1};
+        for (var code in resp.rates) {
+            const rate = Number(resp.rates[code]);
+            if (isFinite(rate) && rate > 0)
+                rates[code] = rate;
+        }
+
+        appWindow.fiatRates7d = rates;
+        appWindow.fiatRates7dDate = url.split("/").pop().split("?")[0];
+        appWindow.fiatApiUpdatePrice();
+    }
+
     function fiatApiUpdatePrice() {
         const symbol = appWindow.fiatApiCurrencySymbol();
         const rate = appWindow.fiatRates.hasOwnProperty(symbol) ? appWindow.fiatRates[symbol] : 0;
         appWindow.fiatPrice = (appWindow.fiatPriceUSD > 0 && rate > 0) ? appWindow.fiatPriceUSD * rate : 0;
 
+        const rate7d = appWindow.fiatRates7d.hasOwnProperty(symbol) ? appWindow.fiatRates7d[symbol] : 0;
+        appWindow.fiatChange7d = (appWindow.fiatPrice > 0 && appWindow.fiatPriceUSD7d > 0 && rate7d > 0)
+            ? (appWindow.fiatPrice / (appWindow.fiatPriceUSD7d * rate7d) - 1) * 100
+            : NaN;
+        // FX moves little in a day: the 24h change uses today's rate on both sides
+        appWindow.fiatChange24h = (appWindow.fiatPriceUSD > 0 && appWindow.fiatPriceUSD24h > 0)
+            ? (appWindow.fiatPriceUSD / appWindow.fiatPriceUSD24h - 1) * 100
+            : NaN;
+
         appWindow.updateBalance();
+    }
+
+    function priceBtcReceived(url, resp, error) {
+        console.log("Wagyu quote: " + (error ? "error " + error : "") + " " + String(resp).substring(0, 400));
+        if (error) {
+            appWindow.fiatApiError(error);
+            return;
+        }
+        try {
+            var q = JSON.parse(resp);
+            var p = parseFloat(q.toAmount) / 1e8;    // satoshis -> BTC
+            if (p > 0) {
+                appWindow.priceBtc = p;
+                appWindow.priceBtcTimestamp = Date.now();
+            }
+        } catch (e) {
+            appWindow.fiatApiError("bad Wagyu quote: " + e);
+        }
     }
 
     function fiatApiRefresh(){
@@ -1390,6 +1952,19 @@ ApplicationWindow {
         }
 
         network.getJSON(appWindow.fiatPriceAPIs[userProvider], fiatApiJsonReceived);
+        // XMR -> BTC quote for 1 XMR from Wagyu (no API key), at most every 5 minutes
+        if (Date.now() - appWindow.priceBtcTimestamp > 5 * 60 * 1000)
+            network.postJSON("https://api-beta.wagyu.xyz/v2/swaps/quote",
+                             JSON.stringify({ fromChainId: 0, fromToken: "XMR",
+                                              toChainId: 20000000000001, toToken: "bitcoin",
+                                              fromAmount: "1000000000000" }),
+                             priceBtcReceived);
+
+        // price from 7 days ago (CoinPaprika sends it with the ticker)
+        if (userProvider === "kraken" && Date.now() - appWindow.fiatHistoryTimestamp > 15 * 60 * 1000)
+            network.getJSON("https://api.kraken.com/0/public/OHLC?pair=XMRUSD&interval=60", fiatApiHistoryReceived);
+        if (userProvider !== "kraken")
+            appWindow.fiatHistoryTimestamp = 0;
 
         if(appWindow.fiatApiCurrencySymbol() !== "USD"){
             if(!persistentSettings.fiatRatesConsentGiven){
@@ -1399,6 +1974,10 @@ ApplicationWindow {
 
             if(Date.now() - appWindow.fiatRatesTimestamp > appWindow.fiatRatesMaxAge)
                 network.getJSON(appWindow.fiatRatesAPI, fiatApiRatesReceived);
+
+            const date7d = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+            if (appWindow.fiatRates7dDate !== date7d)
+                network.getJSON("https://api.frankfurter.dev/v1/" + date7d + "?base=USD", fiatApiRates7dReceived);
         }
     }
 
@@ -1438,6 +2017,21 @@ ApplicationWindow {
         leftPanel.balanceFiatString = bFiat;
     }
 
+    // same as picking the currency in Settings: USD <-> last non-USD currency
+    function fiatApiToggleUsd() {
+        if (persistentSettings.fiatPriceCurrency === "xmrusd") {
+            persistentSettings.fiatPriceCurrency = persistentSettings.fiatPriceCurrencyOther;
+        } else {
+            persistentSettings.fiatPriceCurrencyOther = persistentSettings.fiatPriceCurrency;
+            persistentSettings.fiatPriceCurrency = "xmrusd";
+        }
+
+        if (persistentSettings.fiatPriceEnabled) {
+            appWindow.fiatApiUpdatePrice();
+            appWindow.fiatApiRefresh();
+        }
+    }
+
     function fiatApiError(msg){
         console.log("fiatPriceError: " + msg);
     }
@@ -1459,6 +2053,10 @@ ApplicationWindow {
         translationManager.setLanguage(persistentSettings.locale.split("_")[0]);
 
         applyWalletMode(persistentSettings.walletMode);
+
+        // NymVPN was on last time, or is required: make sure its SOCKS5 proxy is running again
+        if (persistentSettings.nymVpnEnabled || persistentSettings.nymVpnRequired)
+            nymVpnConnect("", true);
 
         //
         walletManager.walletOpened.connect(onWalletOpened);
@@ -1600,14 +2198,29 @@ ApplicationWindow {
         property bool pruneBlockchain: false
 
         property bool fiatPriceEnabled: false
+        property string priceAlerts: "[]"       // Trading data alerts: [{ pair, above, price, fired, firedAt, firedPrice }]
+        property bool tradingShowBalance: true   // Trading data: chart of the wallet's value
         property bool fiatPriceToggle: false
+        property string fiatPriceCurrencyOther: "xmreur" // restored when leaving USD
         property string fiatPriceProvider: "kraken"
         property string fiatPriceCurrency: "xmrusd"
         property bool fiatRatesConsentGiven: false
 
         property string proxyAddress: "127.0.0.1:9050"
         property bool proxyEnabled: isTails
+        property bool nymVpnEnabled: false
+        property bool nymVpnRequired: false   // "Nym required": nothing leaves the app outside NymVPN
+        property string nymVpnSocksAddress: "127.0.0.1:1080"
+        property bool nymVpnPrevProxyEnabled: false
+        property string nymVpnPrevProxyAddress: "127.0.0.1:9050"
         function getProxyAddress() {
+            if (nymVpnRequired) {
+                // only through NymVPN; while it is not up every proxied request fails
+                return appWindow.nymVpnProxyUp() ? "socks5://" + nymVpnSocksAddress : "socks5://127.0.0.1:0";
+            }
+            if (appWindow.nymVpnRestarting) {
+                return "socks5://127.0.0.1:0";   // NymVPN restarting: block everything
+            }
             if (socksProxyFlagSet) {
                 return socksProxyFlag == "" ? "" : "socks5://" + socksProxyFlag;
             }
@@ -1779,6 +2392,10 @@ ApplicationWindow {
     SuccessfulTxDialog {
         id: successfulTxPopup
         z: parent.z + 1
+    }
+
+    MoneroComponents.DaemonRunningDialog {
+        id: daemonRunningDialog
     }
 
     StandardDialog {
@@ -2007,6 +2624,25 @@ ApplicationWindow {
                     middlePanel.flickable.contentY = 0;
                     updateBalance();
                 }
+
+                onSwapsClicked: {
+                    if (!persistentSettings.fiatPriceEnabled)
+                        return;
+                    middlePanel.state = "Swaps";
+                    middlePanel.flickable.contentY = 0;
+                }
+
+                onTradingClicked: {
+                    if (!persistentSettings.fiatPriceEnabled)
+                        return;
+                    middlePanel.state = "Trading";
+                    middlePanel.flickable.contentY = 0;
+                }
+
+                onNotesClicked: {
+                    middlePanel.state = "Notes";
+                    middlePanel.flickable.contentY = 0;
+                }
             }
 
             MiddlePanel {
@@ -2039,12 +2675,12 @@ ApplicationWindow {
             autoPaddingEnabled: false
             visible: passwordDialog.visible || inputDialog.visible || splash.visible || updateDialog.visible ||
                 devicePassphraseDialog.visible || txConfirmationPopup.visible || successfulTxPopup.visible ||
-                remoteNodeDialog.visible
+                remoteNodeDialog.visible || daemonRunningDialog.visible || modalDialogs > 0
         }
 
 
-        property int minWidth: 326
-        property int minHeight: 400
+        property int minWidth: appWindow.minimumWidth
+        property int minHeight: appWindow.minimumHeight
         MouseArea {
             id: resizeArea
             enabled: persistentSettings.customDecorations
@@ -2093,6 +2729,8 @@ ApplicationWindow {
             id: titleBar
             visible: persistentSettings.customDecorations && middlePanel.state !== "Merchant"
             walletName: persistentSettings.displayWalletNameInTitleBar && rootItem.state != "wizard" ? appWindow.walletName : ""
+            deviceLabel: appWindow.walletDeviceLabel
+            hardwareWallet: currentWallet !== undefined && currentWallet !== null && currentWallet.isTrezor()
             anchors.left: parent.left
             anchors.right: parent.right
             onCloseClicked: appWindow.close();
@@ -2240,24 +2878,8 @@ ApplicationWindow {
         onTriggered: appWindow.checkSimpleModeConnection()
     }
 
-    Rectangle {
+    MoneroComponents.StatusToast {
         id: statusMessage
-        z: 99
-        visible: false
-        property alias text: statusMessageText.text
-        anchors.bottom: parent.bottom
-        width: statusMessageText.contentWidth + 20
-        anchors.horizontalCenter: parent.horizontalCenter
-        color: MoneroComponents.Style.blackTheme ? "black" : "white"
-        height: 40
-        MoneroComponents.TextPlain {
-            id: statusMessageText
-            anchors.fill: parent
-            anchors.margins: 10
-            font.pixelSize: 14
-            color: MoneroComponents.Style.defaultFontColor
-            themeTransition: false
-        }
     }
 
     function resetAndroidClose() {
@@ -2270,23 +2892,16 @@ ApplicationWindow {
         console.log("showing status message")
         statusMessageTimer.interval = timeout * 1000;
         statusMessageTimer.start()
-        statusMessageText.text = msg;
+        statusMessage.text = msg;
+        statusMessage.duration = timeout * 1000;
+        if (statusMessage.visible) statusMessage.flash();
         statusMessage.visible = true
     }
 
     function showDaemonIsRunningDialog(onClose) {
-        // Show confirmation dialog
-        confirmationDialog.title = qsTr("Local node is running") + translationManager.emptyString;
-        confirmationDialog.text  = qsTr("Do you want to stop local node or keep it running in the background?") + translationManager.emptyString;
-        confirmationDialog.cancelText = qsTr("Force stop") + translationManager.emptyString;
-        confirmationDialog.okText = qsTr("Keep it running") + translationManager.emptyString;
-        confirmationDialog.onAcceptedCallback = function() {
-            onClose();
-        }
-        confirmationDialog.onRejectedCallback = function() {
-            stopDaemon(onClose);
-        };
-        confirmationDialog.open();
+        // small card with "Force stop" / "Keep it running" (Cancel or Esc keeps the app open)
+        daemonRunningDialog.open(function() { stopDaemon(onClose); },
+                                 function() { keepNymVpnOnClose = true; onClose(); });
     }
 
     onClosing: function(close) {
@@ -2337,6 +2952,12 @@ ApplicationWindow {
             return;
         isQuitting = true;
         console.log("close accepted");
+        // closing never waits more than 20 s (slow requests through the Nym mixnet)
+        oshelper.armShutdownWatchdog(20);
+        // don't leave NymVPN running the app's route after quitting, unless the local node
+        // was left running and needs it (the next start asks for a new route anyway)
+        if (persistentSettings.nymVpnEnabled && !keepNymVpnOnClose)
+            oshelper.stopNymVpnDetached();
         daemonManager.exit();
         p2poolManager.exit();
         closeWallet(function() {
@@ -2424,6 +3045,9 @@ ApplicationWindow {
         // prompt password after X seconds of inactivity
         var inactivity = Utils.epoch() - appWindow.userLastActive;
         if(inactivity < (persistentSettings.lockOnUserInActivityInterval * 60)) return;
+
+        // encrypted notes need the password again after the lock
+        middlePanel.notesView.lockNotes();
 
         if (inputDialogVisible) inputDialog.close()
         remoteNodeDialog.close();
@@ -2542,7 +3166,7 @@ ApplicationWindow {
                 if (!pressed) return;
                 var p = globalCursor.getPosition();
                 var dx = p.x - start.x, dy = p.y - start.y;
-                var minW = 326, minH = 400;
+                var minW = appWindow.minimumWidth, minH = appWindow.minimumHeight;
                 if (r) appWindow.width = Math.max(minW, geo.width + dx);
                 if (b) appWindow.height = Math.max(minH, geo.height + dy);
                 if (l) {
@@ -2591,7 +3215,9 @@ ApplicationWindow {
         id: bootScreen
         anchors.fill: parent
         z: 20000
-        active: persistentSettings.fxBootScreen
+        active: true   // the start screen always shows (its option was removed)
+        versionNumber: Version.GUI_VERSION_NUMBER
+        versionTag: Version.GUI_VERSION_TAG
         Component.onCompleted: Qt.callLater(start)
     }
 

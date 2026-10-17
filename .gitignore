@@ -39,3 +39,4 @@ images_original/
 images.zip
 .DS_Store
 images/*.zip
+dist/

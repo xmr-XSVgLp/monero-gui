@@ -2,7 +2,38 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="es">
 <context>
+    <name>BootScreen</name>
+    <message>
+        <source>Secure Monero wallet</source>
+        <translation>Monedero seguro de Monero</translation>
+    </message>
+    <message>
+        <source>Starting…</source>
+        <translation>Iniciando…</translation>
+    </message>
+    <message>
+        <source>Ready</source>
+        <translation>Listo</translation>
+    </message>
+    <message>
+        <source>Version %1</source>
+        <translation>Versión %1</translation>
+    </message>
+</context>
+<context>
     <name>Account</name>
+    <message>
+        <source>Price</source>
+        <translation>Precio</translation>
+    </message>
+    <message>
+        <source>7-day change</source>
+        <translation>Cambio en 7d</translation>
+    </message>
+    <message>
+        <source>24h change</source>
+        <translation>Cambio en 24h</translation>
+    </message>
     <message>
         <location filename="../pages/Account.qml" line="57"/>
         <source>Set the label of the selected account:</source>
@@ -819,6 +850,14 @@ Es recomendable escribirla en la billetera física para mayor seguridad.</transl
         <source>Settings</source>
         <translation>Opciones</translation>
     </message>
+    <message>
+        <source>Trading data</source>
+        <translation>Trading data</translation>
+    </message>
+    <message>
+        <source>Notes</source>
+        <translation>Notas</translation>
+    </message>
 </context>
 <context>
     <name>LineEdit</name>
@@ -1386,6 +1425,18 @@ Minar también te da una posibilidad pequeña de ganar algo de Monero. Tu ordena
         <source>Ok</source>
         <translation>OK</translation>
     </message>
+    <message>
+        <source>New password</source>
+        <translation>Nueva contraseña</translation>
+    </message>
+    <message>
+        <source>Device passphrase</source>
+        <translation>Frase de paso del dispositivo</translation>
+    </message>
+    <message>
+        <source>Wallet password</source>
+        <translation>Contraseña del monedero</translation>
+    </message>
 </context>
 <context>
     <name>ProcessingSplash</name>
@@ -1677,6 +1728,10 @@ Minar también te da una posibilidad pequeña de ganar algo de Monero. Tu ordena
 <context>
     <name>Settings</name>
     <message>
+        <source>Node / Network</source>
+        <translation>Nodo / Red</translation>
+    </message>
+    <message>
         <location filename="../pages/settings/Settings.qml" line="59"/>
         <source>Wallet</source>
         <translation type="unfinished">Monedero</translation>
@@ -1841,6 +1896,16 @@ El archivo de caché anterior del monedero será renombrado y puede ser posterio
         <source>Donation to Monero Core Team</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <location filename="../pages/settings/SettingsInfo.qml" line="0"/>
+        <source>Information</source>
+        <translation>Información</translation>
+    </message>
+    <message>
+        <location filename="../pages/settings/SettingsInfo.qml" line="0"/>
+        <source>Open folder</source>
+        <translation>Abrir carpeta</translation>
+    </message>
 </context>
 <context>
     <name>SettingsLayout</name>
@@ -1974,6 +2039,31 @@ El archivo de caché anterior del monedero será renombrado y puede ser posterio
         <source>Change language</source>
         <translation>Cambiar el lenguaje</translation>
     </message>
+    <message>
+        <location filename="../pages/settings/SettingsLayout.qml" line="0"/>
+        <source>Appearance</source>
+        <translation>Apariencia</translation>
+    </message>
+    <message>
+        <location filename="../pages/settings/SettingsLayout.qml" line="0"/>
+        <source>Security</source>
+        <translation>Seguridad</translation>
+    </message>
+    <message>
+        <location filename="../pages/settings/SettingsLayout.qml" line="0"/>
+        <source>General</source>
+        <translation>General</translation>
+    </message>
+    <message>
+        <location filename="../pages/settings/SettingsLayout.qml" line="0"/>
+        <source>Price conversion</source>
+        <translation>Conversión de precio</translation>
+    </message>
+    <message>
+        <location filename="../pages/settings/SettingsLayout.qml" line="0"/>
+        <source>Network</source>
+        <translation>Red</translation>
+    </message>
 </context>
 <context>
     <name>SettingsLog</name>
@@ -2000,6 +2090,78 @@ El archivo de caché anterior del monedero será renombrado y puede ser posterio
 </context>
 <context>
     <name>SettingsNode</name>
+    <message>
+        <source>NymVPN</source>
+        <translation>NymVPN</translation>
+    </message>
+    <message>
+        <source>No proxy</source>
+        <translation>Sin proxy</translation>
+    </message>
+    <message>
+        <source>Locked while NymVPN is connected or &quot;Nym required&quot; is checked: the app uses the Nym proxy.</source>
+        <translation>Bloqueado mientras NymVPN esté conectado o "Nym obligatorio" esté marcado: la app usa el proxy de Nym.</translation>
+    </message>
+    <message>
+        <source>Enabling price conversion exposes your IP address to the selected price source, and for currencies other than USD, to the exchange rate provider (frankfurter.dev).</source>
+        <translation>Activar la conversión de precios expone tu dirección IP a la fuente de precios elegida y, para monedas distintas del USD, al proveedor de tipos de cambio (frankfurter.dev).</translation>
+    </message>
+    <message>
+        <source>Using a non-USD currency exposes your IP address to the exchange rate provider (frankfurter.dev).</source>
+        <translation>Usar una moneda distinta del USD expone tu dirección IP al proveedor de tipos de cambio (frankfurter.dev).</translation>
+    </message>
+    <message>
+        <source>Confirm</source>
+        <translation>Confirmar</translation>
+    </message>
+    <message>
+        <source>Price conversion</source>
+        <translation>Conversión de precio</translation>
+    </message>
+    <message>
+        <source>Enable displaying balance in other currencies</source>
+        <translation>Habilitar la visualización de saldo en otras monedas</translation>
+    </message>
+    <message>
+        <source>Price source</source>
+        <translation>Fuente de precios</translation>
+    </message>
+    <message>
+        <source>Currency</source>
+        <translation>Moneda</translation>
+    </message>
+    <message>
+        <source>Confirm and enable</source>
+        <translation>Confirmar y habilitar</translation>
+    </message>
+    <message>
+        <source>Network</source>
+        <translation>Red</translation>
+    </message>
+    <message>
+        <source>Socks5 proxy (%1%2)</source>
+        <translation>Proxy socks5 (%1%2)</translation>
+    </message>
+    <message>
+        <source>remote node connections, </source>
+        <translation>conexiones a nodos remotos, </translation>
+    </message>
+    <message>
+        <source>updates downloading, fetching price sources</source>
+        <translation>actualizaciones descargándose, obteniendo fuentes de precios</translation>
+    </message>
+    <message>
+        <source>IP address</source>
+        <translation>Dirección IP</translation>
+    </message>
+    <message>
+        <source>Port</source>
+        <translation>Puerto</translation>
+    </message>
+    <message>
+        <source>Local node options</source>
+        <translation>Opciones del nodo local</translation>
+    </message>
     <message>
         <location filename="../pages/settings/SettingsNode.qml" line="115"/>
         <source>Local node</source>
@@ -2075,6 +2237,74 @@ El archivo de caché anterior del monedero será renombrado y puede ser posterio
         <location filename="../pages/settings/SettingsNode.qml" line="341"/>
         <source>Bootstrap Port</source>
         <translation>Puerto del bootstrap</translation>
+    </message>
+    <message>
+        <location filename="../pages/settings/SettingsNode.qml" line="0"/>
+        <source>Connection</source>
+        <translation>Conexión</translation>
+    </message>
+    <message>
+        <source>Show the balance in other currencies and the swap prices</source>
+        <translation>Mostrar el saldo en otras monedas y los precios de los swaps</translation>
+    </message>
+    <message>
+        <source>Enabling price conversion exposes your IP address to the selected price source, to the swap exchanges listed below, and for currencies other than USD, to the exchange rate provider (frankfurter.dev).</source>
+        <translation>Activar la conversión de precios expone tu dirección IP a la fuente de precios elegida, a los swaps y exchanges de la lista de abajo y, para monedas distintas del USD, al proveedor de tipos de cambio (frankfurter.dev).</translation>
+    </message>
+    <message>
+        <source>Swaps and exchanges used</source>
+        <translation>Swaps y exchanges que se usan</translation>
+    </message>
+    <message>
+        <source>swap quotes, fees included</source>
+        <translation>cotizaciones de swap, comisiones incluidas</translation>
+    </message>
+    <message>
+        <source>exchange order book (bid / ask)</source>
+        <translation>libro de órdenes del exchange (compra / venta)</translation>
+    </message>
+    <message>
+        <source>swap quotes, coming soon</source>
+        <translation>cotizaciones de swap, próximamente</translation>
+    </message>
+    <message>
+        <source>Off</source>
+        <translation>Desactivado</translation>
+    </message>
+    <message>
+        <source>Swaps</source>
+        <translation>Swaps</translation>
+    </message>
+    <message>
+        <source>ChangeNOW API key (optional)</source>
+        <translation>Clave API de ChangeNOW (opcional)</translation>
+    </message>
+    <message>
+        <source>Only if ChangeNOW asks for one</source>
+        <translation>Solo si ChangeNOW la pide</translation>
+    </message>
+</context>
+<context>
+    <name>SettingsRemoteNodeList</name>
+    <message>
+        <location filename="../components/SettingsRemoteNodeList.qml" line="0"/>
+        <source>Trusted daemon</source>
+        <translation>Daemon de confianza</translation>
+    </message>
+    <message>
+        <location filename="../components/SettingsRemoteNodeList.qml" line="0"/>
+        <source>Edit remote node</source>
+        <translation>Editar nodo remoto</translation>
+    </message>
+    <message>
+        <location filename="../components/SettingsRemoteNodeList.qml" line="0"/>
+        <source>Remove remote node</source>
+        <translation>Eliminar nodo remoto</translation>
+    </message>
+    <message>
+        <location filename="../components/SettingsRemoteNodeList.qml" line="0"/>
+        <source>Add remote node</source>
+        <translation>Añadir nodo remoto</translation>
     </message>
 </context>
 <context>
@@ -2225,6 +2455,21 @@ Puedes cambiar la contraseña en las opciones del monedero.</translation>
         <location filename="../pages/settings/SettingsWallet.qml" line="162"/>
         <source>Wrong password</source>
         <translation>Contraseña incorrecta</translation>
+    </message>
+    <message>
+        <location filename="../pages/settings/SettingsWallet.qml" line="0"/>
+        <source>Session</source>
+        <translation>Sesión</translation>
+    </message>
+    <message>
+        <location filename="../pages/settings/SettingsWallet.qml" line="0"/>
+        <source>Security</source>
+        <translation>Seguridad</translation>
+    </message>
+    <message>
+        <location filename="../pages/settings/SettingsWallet.qml" line="0"/>
+        <source>Maintenance</source>
+        <translation>Mantenimiento</translation>
     </message>
 </context>
 <context>
@@ -2664,6 +2909,58 @@ Puedes cambiar la contraseña en las opciones del monedero.</translation>
         <source>Switch to dark theme</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>All the app's traffic goes through NymVPN.</source>
+        <translation>Todo el tráfico de la app va por NymVPN.</translation>
+    </message>
+    <message>
+        <source>Exit: %1</source>
+        <translation>Salida: %1</translation>
+    </message>
+    <message>
+        <source>NymVPN is connecting…</source>
+        <translation>NymVPN se está conectando…</translation>
+    </message>
+    <message>
+        <source>Nym required is on but NymVPN is not connected: nothing goes out.</source>
+        <translation>Nym obligatorio está activo pero NymVPN no está conectado: no sale nada.</translation>
+    </message>
+    <message>
+        <source>NymVPN is off: the app connects directly.</source>
+        <translation>NymVPN está apagado: la app se conecta directamente.</translation>
+    </message>
+    <message>
+        <source>REMOTE</source>
+        <translation>REMOTO</translation>
+    </message>
+    <message>
+        <source>LOCAL</source>
+        <translation>LOCAL</translation>
+    </message>
+    <message>
+        <source>Remote node: %1</source>
+        <translation>Nodo remoto: %1</translation>
+    </message>
+    <message>
+        <source>Local node: %1</source>
+        <translation>Nodo local: %1</translation>
+    </message>
+    <message>
+        <source>disconnected</source>
+        <translation>desconectado</translation>
+    </message>
+    <message>
+        <source>connected</source>
+        <translation>conectado</translation>
+    </message>
+    <message>
+        <source>through Nym</source>
+        <translation>a través de Nym</translation>
+    </message>
+    <message>
+        <source>Hardware wallet: %1. The keys never leave the device.</source>
+        <translation>Monedero hardware: %1. Las claves nunca salen del dispositivo.</translation>
+    </message>
 </context>
 <context>
     <name>Transfer</name>
@@ -2909,7 +3206,7 @@ Confirmation message:
     <message>
         <location filename="../pages/Transfer.qml" line="301"/>
         <source>Scan QR code</source>
-        <translation type="unfinished"></translation>
+        <translation>Escanear código QR</translation>
     </message>
     <message>
         <location filename="../pages/Transfer.qml" line="311"/>
@@ -2924,7 +3221,7 @@ Confirmation message:
     <message>
         <location filename="../pages/Transfer.qml" line="519"/>
         <source>Remove recipient</source>
-        <translation type="unfinished"></translation>
+        <translation>Quitar destinatario</translation>
     </message>
     <message>
         <location filename="../pages/Transfer.qml" line="576"/>
@@ -2934,7 +3231,7 @@ Confirmation message:
     <message>
         <location filename="../pages/Transfer.qml" line="589"/>
         <source>Total</source>
-        <translation type="unfinished"></translation>
+        <translation>Total</translation>
     </message>
     <message>
         <location filename="../pages/Transfer.qml" line="756"/>
@@ -2949,7 +3246,7 @@ Confirmation message:
     <message>
         <location filename="../pages/Transfer.qml" line="902"/>
         <source>Outputs</source>
-        <translation type="unfinished"></translation>
+        <translation>Salidas</translation>
     </message>
     <message>
         <location filename="../pages/Transfer.qml" line="916"/>
@@ -4222,6 +4519,10 @@ Si no tienes la opción de ejecutar tu propio nodo, hay una opción de conectars
 <context>
     <name>main</name>
     <message>
+        <source>Starting a new Nym route…</source>
+        <translation>Abriendo una ruta nueva de Nym…</translation>
+    </message>
+    <message>
         <location filename="../main.qml" line="953"/>
         <location filename="../main.qml" line="1075"/>
         <location filename="../main.qml" line="1690"/>
@@ -4522,6 +4823,708 @@ Si no tienes la opción de ejecutar tu propio nodo, hay una opción de conectars
         <location filename="../main.qml" line="2116"/>
         <source>Tap again to close...</source>
         <translation>Pulse otra vez para cerrar...</translation>
+    </message>
+    <message>
+        <source>NymVPN command line client (nym-vpnc) not found</source>
+        <translation>No se encuentra el cliente de línea de comandos de NymVPN (nym-vpnc)</translation>
+    </message>
+    <message>
+        <source>Connecting to NymVPN…</source>
+        <translation>Conectando con NymVPN…</translation>
+    </message>
+    <message>
+        <source>Could not set the NymVPN account</source>
+        <translation>No se pudo configurar la cuenta de NymVPN</translation>
+    </message>
+    <message>
+        <source>Enter the recovery phrase of your NymVPN account</source>
+        <translation>Escribe la frase de recuperación de tu cuenta de NymVPN</translation>
+    </message>
+    <message>
+        <source>NymVPN did not start the SOCKS5 proxy</source>
+        <translation>NymVPN no ha arrancado el proxy SOCKS5</translation>
+    </message>
+    <message>
+        <source>The app goes through the Nym mixnet (SOCKS5 %1)</source>
+        <translation>La app sale por la mixnet de Nym (SOCKS5 %1)</translation>
+    </message>
+    <message>
+        <source>Disconnecting…</source>
+        <translation>Desconectando…</translation>
+    </message>
+    <message>
+        <source>The NymVPN log (/var/log/nym-vpnd) can't be read, so the entry and exit nodes are unknown</source>
+        <translation>No se puede leer el log de NymVPN (/var/log/nym-vpnd), así que no se saben los nodos de entrada y salida</translation>
+    </message>
+    <message>
+        <source>Restarting the NymVPN service (macOS will ask for your password)… app traffic is blocked</source>
+        <translation>Reiniciando el servicio de NymVPN (macOS te pedirá la contraseña)… el tráfico de la app está bloqueado</translation>
+    </message>
+    <message>
+        <source>The NymVPN service was not restarted: </source>
+        <translation>No se ha reiniciado el servicio de NymVPN: </translation>
+    </message>
+    <message>
+        <source>Waiting for the NymVPN service…</source>
+        <translation>Esperando al servicio de NymVPN…</translation>
+    </message>
+    <message>
+        <source>NymVPN kept an older internal proxy running, so traffic may still leave through a previous exit node and not the one shown. Press Restart to restart the NymVPN service.</source>
+        <translation>NymVPN ha dejado funcionando un proxy interno anterior, así que el tráfico puede seguir saliendo por un nodo de salida antiguo y no por el que se muestra. Pulsa Reiniciar para reiniciar el servicio de NymVPN.</translation>
+    </message>
+    <message>
+        <source>The NymVPN app is connected in anonymous mode, so this app goes out through that tunnel (its exit node), not through a separate SOCKS5 node. Restart only changes the route when the NymVPN app is disconnected or in fast mode.</source>
+        <translation>La app de NymVPN está conectada en modo anónimo, así que esta app sale por ese túnel (su nodo de salida), no por un nodo SOCKS5 propio. Reiniciar solo cambia la ruta si la app de NymVPN está desconectada o en modo rápido.</translation>
+    </message>
+    <message>
+        <source>Restarting… app traffic is blocked until Nym is back</source>
+        <translation>Reiniciando… el tráfico de la app está bloqueado hasta que vuelva Nym</translation>
+    </message>
+    <message>
+        <source>App traffic stays blocked (it still points at the Nym proxy). Press Restart again or Disconnect.</source>
+        <translation>El tráfico de la app sigue bloqueado (apunta al proxy de Nym). Pulsa Reiniciar otra vez o Desconectar.</translation>
+    </message>
+    <message>
+        <source>Could not get the IP through Nym</source>
+        <translation>No se pudo obtener la IP a través de Nym</translation>
+    </message>
+</context>
+<context>
+    <name>Swaps</name>
+    <message>
+        <source>Swaps</source>
+        <translation>Swaps</translation>
+    </message>
+    <message>
+        <source>Updating…</source>
+        <translation>Actualizando…</translation>
+    </message>
+    <message>
+        <source>Updated %1</source>
+        <translation>Actualizado %1</translation>
+    </message>
+    <message>
+        <source>Refresh</source>
+        <translation>Actualizar</translation>
+    </message>
+    <message>
+        <source>What you get for swapping 1 unit of each coin to XMR, for swapping 1 XMR to the coin, and for swapping that result back to XMR. The difference is what you would lose (or gain) on the round trip.</source>
+        <translation>Lo que recibes al cambiar 1 unidad de cada moneda a XMR, al cambiar 1 XMR a esa moneda y al volver a cambiar ese resultado a XMR. La diferencia es lo que perderías (o ganarías) en la ida y vuelta.</translation>
+    </message>
+    <message>
+        <source>Asset</source>
+        <translation>Activo</translation>
+    </message>
+    <message>
+        <source>1 coin → XMR</source>
+        <translation>1 moneda → XMR</translation>
+    </message>
+    <message>
+        <source>1 XMR → coin</source>
+        <translation>1 XMR → moneda</translation>
+    </message>
+    <message>
+        <source>Back to XMR</source>
+        <translation>Vuelta a XMR</translation>
+    </message>
+    <message>
+        <source>Diff.</source>
+        <translation>Dif.</translation>
+    </message>
+    <message>
+        <source>vol. $%1</source>
+        <translation>vol. $%1</translation>
+    </message>
+    <message>
+        <source>Swap quotes with fees included. Each refresh sends %1 requests to Wagyu.</source>
+        <translation>Cotizaciones de swap con comisiones incluidas. Cada actualización envía %1 peticiones a Wagyu.</translation>
+    </message>
+    <message>
+        <source>Best bid and ask of its primary XMR markets (1 request). Trading fees are not included and only small amounts fill at these prices; the difference is the bid/ask spread.</source>
+        <translation>Mejor compra y venta de sus mercados primarios de XMR (1 petición). No incluye las comisiones del exchange y a estos precios solo se cubren cantidades pequeñas; la diferencia es el spread entre compra y venta.</translation>
+    </message>
+    <message>
+        <source>Price history</source>
+        <translation>Historial de precios</translation>
+    </message>
+    <message>
+        <source>Open folder</source>
+        <translation>Abrir carpeta</translation>
+    </message>
+    <message>
+        <source>%1 prices saved</source>
+        <translation>%1 precios guardados</translation>
+    </message>
+    <message>
+        <source>Could not save the price history</source>
+        <translation>No se pudo guardar el historial de precios</translation>
+    </message>
+    <message>
+        <source>Best routes</source>
+        <translation>Mejores rutas</translation>
+    </message>
+    <message>
+        <source>1 XMR → coin → XMR</source>
+        <translation>1 XMR → moneda → XMR</translation>
+    </message>
+    <message>
+        <source>Coin</source>
+        <translation>Moneda</translation>
+    </message>
+    <message>
+        <source>XMR → coin</source>
+        <translation>XMR → moneda</translation>
+    </message>
+    <message>
+        <source>Coin → XMR</source>
+        <translation>Moneda → XMR</translation>
+    </message>
+    <message>
+        <source>You end with</source>
+        <translation>Terminas con</translation>
+    </message>
+    <message>
+        <source>Result</source>
+        <translation>Resultado</translation>
+    </message>
+    <message>
+        <source>Turning 1 XMR into a coin on one exchange and back into XMR on the other, with the prices of this refresh, best first. The top 3 are highlighted. Estimated with the price for 1 coin on the second exchange. Not included: NonKYC trading fees, deposit and withdrawal fees between exchanges, and the time the transfers take (prices move meanwhile).</source>
+        <translation>Pasar 1 XMR a una moneda en un exchange y volver a XMR en el otro, con los precios de esta actualización, de mejor a peor. Las 3 mejores van resaltadas. Estimado con el precio de 1 moneda en el segundo exchange. No incluye: comisiones de trading de NonKYC, comisiones de depósito y retirada entre exchanges, ni el tiempo que tardan las transferencias (mientras tanto los precios cambian).</translation>
+    </message>
+    <message>
+        <source>Every refresh adds one line per coin and market to precios-swaps.csv, and the ranked routes to rutas-swaps.csv, with the date and time (UTC). Open them with Numbers or Excel, or import them into a database, to compare prices between dates.</source>
+        <translation>Cada actualización añade una línea por moneda y mercado a precios-swaps.csv, y las rutas ordenadas a rutas-swaps.csv, con la fecha y hora (UTC). Ábrelos con Numbers o Excel, o impórtalos en una base de datos, para comparar precios entre fechas.</translation>
+    </message>
+    <message>
+        <source>Swap prices are off. They are turned on together with the price conversion in Settings &gt; Node / Network.</source>
+        <translation>Los precios de los swaps están desactivados. Se activan junto con la conversión de precios en Opciones &gt; Nodo / Red.</translation>
+    </message>
+    <message>
+        <source>Open settings</source>
+        <translation>Abrir opciones</translation>
+    </message>
+    <message>
+        <source>needs an API key</source>
+        <translation>necesita clave API</translation>
+    </message>
+    <message>
+        <source>Last error: %1</source>
+        <translation>Último error: %1</translation>
+    </message>
+    <message>
+        <source>Estimated amounts of the standard flow, fees included. Stablecoins are measured on 100 units (below that is under ChangeNOW's minimum). Each refresh sends %1 requests to ChangeNOW.</source>
+        <translation>Importes estimados del flujo estándar, comisiones incluidas. Las stablecoins se miden con 100 unidades (por debajo no llega al mínimo de ChangeNOW). Cada actualización envía %1 peticiones a ChangeNOW.</translation>
+    </message>
+    <message>
+        <source>1 h</source>
+        <translation>1 h</translation>
+    </message>
+    <message>
+        <source>24 h</source>
+        <translation>24 h</translation>
+    </message>
+    <message>
+        <source>7 days</source>
+        <translation>7 días</translation>
+    </message>
+    <message>
+        <source>30 days</source>
+        <translation>30 días</translation>
+    </message>
+    <message>
+        <source>First</source>
+        <translation>Primera</translation>
+    </message>
+    <message>
+        <source>Compare with an earlier date</source>
+        <translation>Comparar con otra fecha</translation>
+    </message>
+    <message>
+        <source>XMR → coin for 1 XMR on %1 compared with the last refresh (%2). Green: you get more coin now.</source>
+        <translation>XMR → moneda por 1 XMR el %1 comparado con la última actualización (%2). Verde: ahora recibes más moneda.</translation>
+    </message>
+    <message>
+        <source>Needs at least two refreshes saved in precios-swaps.csv.</source>
+        <translation>Hacen falta al menos dos actualizaciones guardadas en precios-swaps.csv.</translation>
+    </message>
+    <message>
+        <source>Exchange</source>
+        <translation>Exchange</translation>
+    </message>
+    <message>
+        <source>Then</source>
+        <translation>Antes</translation>
+    </message>
+    <message>
+        <source>Now</source>
+        <translation>Ahora</translation>
+    </message>
+    <message>
+        <source>Change</source>
+        <translation>Cambio</translation>
+    </message>
+</context>
+<context>
+    <name>LeftPanel</name>
+    <message>
+        <source>Swaps</source>
+        <translation>Swaps</translation>
+    </message>
+</context>
+<context>
+    <name>NymVpnPanel</name>
+    <message>
+        <source>Traffic and privacy</source>
+        <translation>Tráfico y privacidad</translation>
+    </message>
+    <message>
+        <source>Installation help</source>
+        <translation>Ayuda de instalación</translation>
+    </message>
+    <message>
+        <source>Random exit</source>
+        <translation>Salida aleatoria</translation>
+    </message>
+    <message>
+        <source>Route details</source>
+        <translation>Detalles de la ruta</translation>
+    </message>
+    <message>
+        <source>When checked, every connection of the app goes only through NymVPN: remote node, local node, prices, swaps and updates. If Nym is not connected, nothing goes out directly: those connections wait until Nym is up. The option is saved, and NymVPN connects automatically every time the app starts.</source>
+        <translation>Si está marcado, todas las conexiones de la app van solo por NymVPN: nodo remoto, nodo local, precios, swaps y actualizaciones. Si Nym no está conectado no sale nada directamente: esas conexiones esperan hasta que Nym esté activo. La opción se guarda, y NymVPN se conecta solo cada vez que se abre la app.</translation>
+    </message>
+    <message>
+        <source>Nym required</source>
+        <translation>Nym obligatorio</translation>
+    </message>
+    <message>
+        <source>Connected · mixnet</source>
+        <translation>Conectado · mixnet</translation>
+    </message>
+    <message>
+        <source>Active · mixnet</source>
+        <translation>Activo · mixnet</translation>
+    </message>
+    <message>
+        <source>Connecting…</source>
+        <translation>Conectando…</translation>
+    </message>
+    <message>
+        <source>Error</source>
+        <translation>Error</translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation>No instalado</translation>
+    </message>
+    <message>
+        <source>Off</source>
+        <translation>Desactivado</translation>
+    </message>
+    <message>
+        <source>Sends only this app's traffic (remote node, prices, swaps and updates) through the Nym mixnet, using the SOCKS5 proxy of NymVPN. The rest of your Mac is not affected. It needs NymVPN installed with its command line client (nym-vpnc) and an account with credit.</source>
+        <translation>Envía solo el tráfico de esta app (nodo remoto, precios, swaps y actualizaciones) por la mixnet de Nym, usando el proxy SOCKS5 de NymVPN. El resto del Mac no se ve afectado. Necesita NymVPN instalado con su cliente de línea de comandos (nym-vpnc) y una cuenta con saldo.</translation>
+    </message>
+    <message>
+        <source>nym-vpnc was not found. Install NymVPN and the "nym-vpnc" command line installer (.pkg) from &lt;a href='https://github.com/nymtech/nym-vpn-client/releases'&gt;github.com/nymtech/nym-vpn-client/releases&lt;/a&gt;, then try again.</source>
+        <translation>No se encuentra nym-vpnc. Instala NymVPN y el instalador de línea de comandos "nym-vpnc" (.pkg) desde &lt;a href='https://github.com/nymtech/nym-vpn-client/releases'&gt;github.com/nymtech/nym-vpn-client/releases&lt;/a&gt; y vuelve a intentarlo.</translation>
+    </message>
+    <message>
+        <source>Recovery phrase of your NymVPN account</source>
+        <translation>Frase de recuperación de tu cuenta de NymVPN</translation>
+    </message>
+    <message>
+        <source>Leave empty to use the account already set in NymVPN</source>
+        <translation>Déjalo vacío para usar la cuenta que ya tiene NymVPN</translation>
+    </message>
+    <message>
+        <source>%1 words</source>
+        <translation>%1 palabras</translation>
+    </message>
+    <message>
+        <source>Connect</source>
+        <translation>Conectar</translation>
+    </message>
+    <message>
+        <source>Disconnect</source>
+        <translation>Desconectar</translation>
+    </message>
+    <message>
+        <source>The local node (monerod) is started with the Nym proxy too, so its peer connections also go through the mixnet; syncing is slower. If it was already running before Nym connected, stop and start it again.</source>
+        <translation>El nodo local (monerod) también se arranca con el proxy de Nym, así que sus conexiones con otros nodos también van por la mixnet; la sincronización es más lenta. Si ya estaba en marcha antes de conectar Nym, detenlo y vuelve a arrancarlo.</translation>
+    </message>
+    <message>
+        <source>Entry node</source>
+        <translation>Nodo de entrada</translation>
+    </message>
+    <message>
+        <source>Exit node</source>
+        <translation>Nodo de salida</translation>
+    </message>
+    <message>
+        <source>New IP</source>
+        <translation>IP nueva</translation>
+    </message>
+    <message>
+        <source>Refresh</source>
+        <translation>Actualizar</translation>
+    </message>
+    <message>
+        <source>The NymVPN command line client (nym-vpnc %1) is not installed.</source>
+        <translation>No está instalado el cliente de línea de comandos de NymVPN (nym-vpnc %1).</translation>
+    </message>
+    <message>
+        <source>Your nym-vpnc is version %1; version %2 or newer is needed.</source>
+        <translation>Tu nym-vpnc es la versión %1; hace falta la %2 o posterior.</translation>
+    </message>
+    <message>
+        <source>Open the NymVPN %1 download page with the button below.</source>
+        <translation>Abre la página de descarga de NymVPN %1 con el botón de abajo.</translation>
+    </message>
+    <message>
+        <source>In the macOS section, download nym-vpnc-%1.pkg (and NymVPN-%1.pkg too if you don't have the NymVPN app).</source>
+        <translation>En el apartado de macOS, descarga nym-vpnc-%1.pkg (y también NymVPN-%1.pkg si no tienes la app de NymVPN).</translation>
+    </message>
+    <message>
+        <source>Open the downloaded .pkg and follow the installer (it asks for your Mac password).</source>
+        <translation>Abre el .pkg descargado y sigue el instalador (te pedirá la contraseña del Mac).</translation>
+    </message>
+    <message>
+        <source>Come back here and press "Check again".</source>
+        <translation>Vuelve aquí y pulsa "Comprobar de nuevo".</translation>
+    </message>
+    <message>
+        <source>Open download page</source>
+        <translation>Abrir página de descarga</translation>
+    </message>
+    <message>
+        <source>Check again</source>
+        <translation>Comprobar de nuevo</translation>
+    </message>
+    <message>
+        <source>Restart</source>
+        <translation>Reiniciar</translation>
+    </message>
+    <message>
+        <source>NymVPN selects the exit randomly.</source>
+        <translation>NymVPN selecciona la salida de forma aleatoria.</translation>
+    </message>
+    <message>
+        <source>Traffic and privacy · random exit</source>
+        <translation>Tráfico y privacidad · salida aleatoria</translation>
+    </message>
+    <message>
+        <source>All of this app's traffic (remote or local node, prices, swaps and updates) goes through the Nym mixnet, using the SOCKS5 proxy of NymVPN. The rest of your Mac is not affected.</source>
+        <translation>Todo el tráfico de esta app (nodo remoto o local, precios, swaps y actualizaciones) pasa por la mixnet de Nym, usando el proxy SOCKS5 de NymVPN. El resto de tu Mac no se ve afectado.</translation>
+    </message>
+    <message>
+        <source>NymVPN picks the exit node at random. The app asks for a new route every time it starts and when you press Restart, so the public IP changes.</source>
+        <translation>NymVPN elige el nodo de salida al azar. La app pide una ruta nueva cada vez que se abre y al pulsar Reiniciar, así que la IP pública cambia.</translation>
+    </message>
+    <message>
+        <source>&quot;Nym required&quot; blocks all the app's connections while Nym is not connected and connects NymVPN when the app starts.</source>
+        <translation>«Nym obligatorio» bloquea todas las conexiones de la app mientras Nym no esté conectado y conecta NymVPN al abrir la app.</translation>
+    </message>
+    <message>
+        <source>It needs NymVPN installed with its command line client (nym-vpnc) and an account with credit.</source>
+        <translation>Necesita NymVPN instalado con su cliente de línea de comandos (nym-vpnc) y una cuenta con saldo.</translation>
+    </message>
+</context>
+<context>
+    <name>DaemonRunningDialog</name>
+    <message>
+        <source>Local node is running</source>
+        <translation>El nodo local está en marcha</translation>
+    </message>
+    <message>
+        <source>Do you want to stop local node or keep it running in the background?</source>
+        <translation>¿Quieres detener el nodo local o dejarlo en marcha en segundo plano?</translation>
+    </message>
+    <message>
+        <source>Kept running, it stays in sync and the wallet opens faster next time.</source>
+        <translation>Si lo dejas en marcha, sigue sincronizado y el monedero abre más rápido la próxima vez.</translation>
+    </message>
+    <message>
+        <source>Force stop</source>
+        <translation>Detener el nodo</translation>
+    </message>
+    <message>
+        <source>Keep it running</source>
+        <translation>Dejarlo en marcha</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Cancelar</translation>
+    </message>
+    <message>
+        <source>NymVPN stays connected too, so the node keeps syncing through Nym.</source>
+        <translation>NymVPN también sigue conectado, así que el nodo sigue sincronizando por Nym.</translation>
+    </message>
+</context>
+<context>
+    <name>Notes</name>
+    <message>
+        <source>Notes</source>
+        <translation>Notas</translation>
+    </message>
+    <message>
+        <source>Wrong wallet password.</source>
+        <translation>Contraseña del monedero incorrecta.</translation>
+    </message>
+    <message>
+        <source>The notes could not be decrypted. The file belongs to another wallet, Trezor or passphrase.</source>
+        <translation>No se pudieron descifrar las notas. El archivo es de otro monedero, otro Trezor u otra passphrase.</translation>
+    </message>
+    <message>
+        <source>The notes file is damaged.</source>
+        <translation>El archivo de notas está dañado.</translation>
+    </message>
+    <message>
+        <source>The notes file could not be read or written.</source>
+        <translation>No se pudo leer o escribir el archivo de notas.</translation>
+    </message>
+    <message>
+        <source>This wallet has no keys to encrypt notes with.</source>
+        <translation>Este monedero no tiene claves con las que cifrar las notas.</translation>
+    </message>
+    <message>
+        <source>The wallet is busy, try again.</source>
+        <translation>El monedero está ocupado, inténtalo otra vez.</translation>
+    </message>
+    <message>
+        <source>The notes are locked.</source>
+        <translation>Las notas están bloqueadas.</translation>
+    </message>
+    <message>
+        <source>The Trezor did not confirm. Check that it is connected and unlocked.</source>
+        <translation>El Trezor no confirmó. Comprueba que está conectado y desbloqueado.</translation>
+    </message>
+    <message>
+        <source>New note</source>
+        <translation>Nueva nota</translation>
+    </message>
+    <message>
+        <source>Saving…</source>
+        <translation>Guardando…</translation>
+    </message>
+    <message>
+        <source>Unsaved changes</source>
+        <translation>Cambios sin guardar</translation>
+    </message>
+    <message>
+        <source>Saved %1</source>
+        <translation>Guardado %1</translation>
+    </message>
+    <message>
+        <source>Encrypted</source>
+        <translation>Cifrado</translation>
+    </message>
+    <message>
+        <source>Lock</source>
+        <translation>Bloquear</translation>
+    </message>
+    <message>
+        <source>The notes are encrypted with the wallet keys and your Trezor. Enter the wallet password and then confirm on the Trezor.</source>
+        <translation>Las notas se cifran con las claves del monedero y tu Trezor. Introduce la contraseña del monedero y después confirma en el Trezor.</translation>
+    </message>
+    <message>
+        <source>The notes are encrypted with the wallet keys. Enter the wallet password to open them.</source>
+        <translation>Las notas se cifran con las claves del monedero. Introduce la contraseña del monedero para abrirlas.</translation>
+    </message>
+    <message>
+        <source>New file: </source>
+        <translation>Archivo nuevo: </translation>
+    </message>
+    <message>
+        <source>Wallet password</source>
+        <translation>Contraseña del monedero</translation>
+    </message>
+    <message>
+        <source>Confirm on the Trezor…</source>
+        <translation>Confirma en el Trezor…</translation>
+    </message>
+    <message>
+        <source>Opening…</source>
+        <translation>Abriendo…</translation>
+    </message>
+    <message>
+        <source>Open notes</source>
+        <translation>Abrir notas</translation>
+    </message>
+    <message>
+        <source>Delete</source>
+        <translation>Borrar</translation>
+    </message>
+    <message>
+        <source>Untitled</source>
+        <translation>Sin título</translation>
+    </message>
+    <message>
+        <source>No notes yet.</source>
+        <translation>Todavía no hay notas.</translation>
+    </message>
+    <message>
+        <source>Write here. Everything is saved encrypted.</source>
+        <translation>Escribe aquí. Todo se guarda cifrado.</translation>
+    </message>
+</context>
+<context>
+    <name>TradingData</name>
+    <message>
+        <source>Trading data</source>
+        <translation>Trading data</translation>
+    </message>
+    <message>
+        <source>Updating…</source>
+        <translation>Actualizando…</translation>
+    </message>
+    <message>
+        <source>Updated %1</source>
+        <translation>Actualizado %1</translation>
+    </message>
+    <message>
+        <source>Refresh</source>
+        <translation>Actualizar</translation>
+    </message>
+    <message>
+        <source>24H</source>
+        <translation>24H</translation>
+    </message>
+    <message>
+        <source>7D</source>
+        <translation>7D</translation>
+    </message>
+    <message>
+        <source>30D</source>
+        <translation>30D</translation>
+    </message>
+    <message>
+        <source>90D</source>
+        <translation>90D</translation>
+    </message>
+    <message>
+        <source>1Y</source>
+        <translation>1A</translation>
+    </message>
+    <message>
+        <source>PRICE</source>
+        <translation>PRECIO</translation>
+    </message>
+    <message>
+        <source>CHANGE</source>
+        <translation>CAMBIO</translation>
+    </message>
+    <message>
+        <source>HIGH</source>
+        <translation>MÁXIMO</translation>
+    </message>
+    <message>
+        <source>LOW</source>
+        <translation>MÍNIMO</translation>
+    </message>
+    <message>
+        <source>DATE</source>
+        <translation>FECHA</translation>
+    </message>
+    <message>
+        <source>too many requests, try again in a minute</source>
+        <translation>demasiadas peticiones, prueba otra vez en un minuto</translation>
+    </message>
+    <message>
+        <source>Prices are off (Settings &gt; Node / Network).</source>
+        <translation>Los precios están desactivados (Opciones &gt; Nodo / Red).</translation>
+    </message>
+    <message>
+        <source>Prices from CoinGecko (public data, no account). Every currency and range is saved as CSV in ~/Monero/xmr-wallet-plus/trading and downloaded again every 15 minutes, one request at a time, also with this page closed. With NymVPN on, the requests go through Nym.</source>
+        <translation>Precios de CoinGecko (datos públicos, sin cuenta). Cada moneda y periodo se guarda en CSV en ~/Monero/xmr-wallet-plus/trading y se vuelve a descargar cada 15 minutos, de una en una petición, también con esta página cerrada. Con NymVPN activo, las peticiones van por Nym.</translation>
+    </message>
+    <message>
+        <source>Open folder</source>
+        <translation>Abrir carpeta</translation>
+    </message>
+    <message>
+        <source>MAX.</source>
+        <translation>MAX.</translation>
+    </message>
+    <message>
+        <source>XMR/%1 is at %2 (alert: %3 %4)</source>
+        <translation>XMR/%1 está a %2 (alerta: %3 %4)</translation>
+    </message>
+    <message>
+        <source>Your wallet's value</source>
+        <translation>Valor de tu monedero</translation>
+    </message>
+    <message>
+        <source>Balance hidden</source>
+        <translation>Saldo oculto</translation>
+    </message>
+    <message>
+        <source>Balance of this account × price of each moment, %1</source>
+        <translation>Saldo de esta cuenta × precio de cada momento, %1</translation>
+    </message>
+    <message>
+        <source>NOW</source>
+        <translation>AHORA</translation>
+    </message>
+    <message>
+        <source>BALANCE</source>
+        <translation>SALDO</translation>
+    </message>
+    <message>
+        <source>Show</source>
+        <translation>Mostrar</translation>
+    </message>
+    <message>
+        <source>Show the value of this wallet over time</source>
+        <translation>Mostrar el valor de este monedero en el tiempo</translation>
+    </message>
+    <message>
+        <source>Converter</source>
+        <translation>Calculadora</translation>
+    </message>
+    <message>
+        <source>swaps of %1, approx.</source>
+        <translation>swaps del %1, aprox.</translation>
+    </message>
+    <message>
+        <source>XMR →</source>
+        <translation>XMR →</translation>
+    </message>
+    <message>
+        <source>Open Swaps once to add the exchanges' quotes here.</source>
+        <translation>Abre Swaps una vez para añadir aquí las cotizaciones de los exchanges.</translation>
+    </message>
+    <message>
+        <source>Price alerts</source>
+        <translation>Alertas de precio</translation>
+    </message>
+    <message>
+        <source>checked every 15 minutes</source>
+        <translation>se comprueban cada 15 minutos</translation>
+    </message>
+    <message>
+        <source>Add</source>
+        <translation>Añadir</translation>
+    </message>
+    <message>
+        <source>No alerts. You get a notification and a sound when XMR crosses the price.</source>
+        <translation>Sin alertas. Cuando XMR cruce el precio recibirás una notificación y un sonido.</translation>
+    </message>
+    <message>
+        <source>reached %1 at %2</source>
+        <translation>alcanzada el %1 a %2</translation>
+    </message>
+    <message>
+        <source>active</source>
+        <translation>activa</translation>
+    </message>
+    <message>
+        <source>Re-arm</source>
+        <translation>Reactivar</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>Quitar</translation>
     </message>
 </context>
 </TS>

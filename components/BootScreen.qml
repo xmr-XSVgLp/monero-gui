@@ -2,160 +2,198 @@ import QtQuick
 
 import "../components" as MoneroComponents
 
-// Terminal boot sequence shown once when the app opens. Click or press a key to skip.
+// Start screen shown once when the app opens: Monero coin, name, progress bar and version.
+// Click or press a key to skip.
 Rectangle {
     id: boot
     property bool active: true
-    property int lineIndex: 0
-    property int charIndex: 0
+    property string versionNumber: ""
+    property string versionTag: ""
     signal finished()
 
-    readonly property color accent: MoneroComponents.Style.orange
-    readonly property var lines: [
-        "MONERO // SAFE7 EDITION",
-        "> init secure memory ............ OK",
-        "> load ringct + bulletproofs .... OK",
-        "> trezor thp transport .......... OK",
-        "> p2p node bridge ............... OK",
-        "> decrypt interface layer ....... OK",
-        "",
-        "ACCESS GRANTED"
-    ]
-    property string typed: ""
+    readonly property bool dark: MoneroComponents.Style.blackTheme
+    readonly property color moneroOrange: "#F26822"
+    readonly property color textColor: dark ? "#ECECEC" : "#1E2421"
+    readonly property color dimColor: dark ? "#8C8C8C" : "#6A716D"
 
-    color: MoneroComponents.Style.blackTheme ? "#000000" : "#F2FFF4"
+    color: dark ? "#07090A" : "#F4F6F5"
     visible: false
     focus: visible
 
     function start() {
         if (!active) { finish(); return; }
-        typed = ""; lineIndex = 0; charIndex = 0;
         opacity = 1;
         visible = true;
         forceActiveFocus();
-        typer.start();
+        progress.value = 0;
+        intro.start();
         if (typeof appWindow !== "undefined" && appWindow.playFx) appWindow.playFx("boot");
     }
 
     function finish() {
-        typer.stop();
-        pauseLine.stop();
-        hold.stop();
+        intro.stop();
         if (!visible) boot.finished();
         else if (!outro.running) outro.start();
     }
 
     Keys.onPressed: (event) => { finish(); event.accepted = true; }
 
-    MoneroComponents.MatrixRain {
+    // soft light behind the coin
+    Canvas {
         anchors.fill: parent
-        opacity: MoneroComponents.Style.blackTheme ? 0.22 : 0.15
-        running: boot.visible
+        property bool dark: boot.dark
+        onDarkChanged: requestPaint()
+        onWidthChanged: requestPaint()
+        onHeightChanged: requestPaint()
+        onPaint: {
+            var ctx = getContext("2d");
+            ctx.reset();
+            var cx = width / 2, cy = height * 0.42, r = Math.max(width, height) * 0.6;
+            var g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+            g.addColorStop(0, dark ? "#1A1C1D" : "#FFFFFF");
+            g.addColorStop(1, dark ? "#07090A" : "#E9ECEA");
+            ctx.fillStyle = g;
+            ctx.fillRect(0, 0, width, height);
+        }
     }
 
-    Rectangle {
-        id: termBox
+    Column {
+        id: content
         anchors.centerIn: parent
-        width: Math.min(parent.width - 40, 520)
-        height: term.implicitHeight + 48
-        color: MoneroComponents.Style.blackTheme ? "#E6000000" : "#E6F2FFF4"
+        anchors.verticalCenterOffset: -20
+        spacing: 0
+        opacity: 0
+        scale: 0.96
 
-        MoneroComponents.NeonFrame {
-            anchors.fill: parent
-            cut: 12
-            lineWidth: 1.5
-            glow: 0.6
+        Item {
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: 170
+            height: 170
+
+            Image {
+                id: coin
+                anchors.centerIn: parent
+                width: 170
+                height: 170
+                source: "qrc:///images/boot-coin.png"
+                fillMode: Image.PreserveAspectFit
+                smooth: true
+                mipmap: true
+
+                // slow breathing of the ring glow
+                SequentialAnimation on scale {
+                    running: boot.visible
+                    loops: Animation.Infinite
+                    NumberAnimation { from: 1.0; to: 1.025; duration: 1400; easing.type: Easing.InOutSine }
+                    NumberAnimation { from: 1.025; to: 1.0; duration: 1400; easing.type: Easing.InOutSine }
+                }
+            }
+        }
+
+        Item { width: 1; height: 26 }
+
+        Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: "XMR WALLET+"
+            color: boot.textColor
+            font.family: MoneroComponents.Style.fontLight.name
+            font.pixelSize: 34
+            font.letterSpacing: 12
+            // letterSpacing adds space after the last letter too: shift to keep it centred
+            leftPadding: 12
+        }
+
+        Item { width: 1; height: 8 }
+
+        Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: qsTr("Secure Monero wallet") + translationManager.emptyString
+            color: boot.dimColor
+            font.family: MoneroComponents.Style.fontRegular.name
+            font.pixelSize: 13
+            font.letterSpacing: 1
+        }
+
+        Item { width: 1; height: 40 }
+
+        // progress bar
+        Item {
+            id: progress
+            property real value: 0
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: 240
+            height: 2
+
+            Rectangle {
+                anchors.fill: parent
+                radius: 1
+                color: boot.textColor
+                opacity: 0.12
+            }
+
+            Rectangle {
+                width: parent.width * progress.value
+                height: parent.height
+                radius: 1
+                color: boot.moneroOrange
+            }
+        }
+
+        Item { width: 1; height: 14 }
+
+        Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: (progress.value < 1 ? qsTr("Starting…") : qsTr("Ready")) + translationManager.emptyString
+            color: boot.dimColor
+            font.family: MoneroComponents.Style.fontRegular.name
+            font.pixelSize: 12
+            font.letterSpacing: 1
+        }
+    }
+
+    // version at the bottom
+    Column {
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 28
+        anchors.horizontalCenter: parent.horizontalCenter
+        spacing: 4
+        opacity: content.opacity
+
+        Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            visible: boot.versionNumber !== ""
+            text: qsTr("Version %1").arg(boot.versionNumber) + translationManager.emptyString
+            color: boot.dimColor
+            font.family: MoneroComponents.Style.fontMonoRegular.name
+            font.pixelSize: 12
         }
 
         Text {
-            id: term
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.margins: 24
-            color: MoneroComponents.Style.textAccent
-            font.family: MoneroComponents.Style.fontMonoMedium.name
-            font.pixelSize: 15
-            lineHeight: 1.35
-            wrapMode: Text.NoWrap
-            textFormat: Text.PlainText
-            text: boot.typed + (cursor.on ? "█" : " ")
+            anchors.horizontalCenter: parent.horizontalCenter
+            visible: boot.versionTag !== ""
+            text: boot.versionTag
+            color: boot.dimColor
+            opacity: 0.6
+            font.family: MoneroComponents.Style.fontMonoRegular.name
+            font.pixelSize: 10
         }
     }
 
-    Text {
-        anchors.bottom: parent.bottom
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.bottomMargin: 24
-        text: "[ click / any key ]"
-        color: MoneroComponents.Style.textAccent
-        opacity: 0.45
-        font.family: MoneroComponents.Style.fontMonoRegular.name
-        font.pixelSize: 11
-    }
-
-    Timer {
-        id: cursor
-        property bool on: true
-        interval: 400
-        repeat: true
-        running: boot.visible
-        onTriggered: on = !on
-    }
-
-    Timer {
-        id: typer
-        interval: 14
-        repeat: true
-        onTriggered: {
-            if (boot.lineIndex >= boot.lines.length) {
-                stop();
-                hold.start();
-                return;
-            }
-            var line = boot.lines[boot.lineIndex];
-            if (boot.charIndex < line.length) {
-                // type fast through the dotted leaders
-                var step = line.charAt(boot.charIndex) === "." ? 4 : 2;
-                boot.typed += line.substr(boot.charIndex, step);
-                boot.charIndex += step;
-            } else {
-                boot.typed += "\n";
-                boot.lineIndex += 1;
-                boot.charIndex = 0;
-                stop();
-                pauseLine.interval = boot.lineIndex === 1 ? 300 : 110;
-                pauseLine.start();
-            }
+    SequentialAnimation {
+        id: intro
+        ParallelAnimation {
+            NumberAnimation { target: content; property: "opacity"; from: 0; to: 1; duration: 450; easing.type: Easing.OutCubic }
+            NumberAnimation { target: content; property: "scale"; from: 0.96; to: 1; duration: 600; easing.type: Easing.OutCubic }
         }
-    }
-
-    // small pause after each line so it feels like work is being done
-    Timer {
-        id: pauseLine
-        interval: 90
-        onTriggered: typer.start()
-    }
-
-    Timer {
-        id: hold
-        interval: 450
-        onTriggered: boot.finish()
+        NumberAnimation { target: progress; property: "value"; from: 0; to: 1; duration: 1500; easing.type: Easing.InOutQuad }
+        PauseAnimation { duration: 350 }
+        ScriptAction { script: boot.finish() }
     }
 
     SequentialAnimation {
         id: outro
-        ScriptAction { script: glitch.trigger() }
-        PauseAnimation { duration: 220 }
-        NumberAnimation { target: boot; property: "opacity"; to: 0; duration: 280 }
+        NumberAnimation { target: boot; property: "opacity"; to: 0; duration: 380; easing.type: Easing.InOutQuad }
         ScriptAction { script: { boot.visible = false; boot.finished(); } }
-    }
-
-    MoneroComponents.GlitchFx {
-        id: glitch
-        anchors.fill: parent
-        target: termBox
-        duration: 400
     }
 
     MouseArea {

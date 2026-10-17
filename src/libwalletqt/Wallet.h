@@ -34,6 +34,8 @@
 #include <QElapsedTimer>
 #include <QObject>
 #include <QMutex>
+#include <QThreadPool>
+#include <functional>
 #include <QList>
 #include <QJSValue>
 #include <QVariantMap>
@@ -216,9 +218,22 @@ public:
     Q_INVOKABLE bool isHwBacked() const;
     Q_INVOKABLE bool isLedger() const;
     Q_INVOKABLE bool isTrezor() const;
+    //! name set on the hardware wallet (e.g. the Trezor label), empty for software wallets
+    Q_INVOKABLE QString deviceLabel() const;
 
     //! returns if view only wallet
     Q_INVOKABLE bool viewOnly() const;
+
+    //! encrypted notes stored next to the wallet as <name>_notes
+    Q_INVOKABLE QString notesFilePath() const;
+    Q_INVOKABLE bool notesFileExists() const;
+    Q_INVOKABLE bool notesUnlocked() const;
+    //! checks the wallet password, derives the key (asks the Trezor to confirm on hw wallets)
+    //! and decrypts the file; callback(ok, text, error)
+    Q_INVOKABLE void notesUnlockAsync(const QString &password, const QJSValue &callback);
+    //! encrypts and writes the notes with the key from notesUnlockAsync; callback(ok, error)
+    Q_INVOKABLE void notesSaveAsync(const QString &text, const QJSValue &callback);
+    Q_INVOKABLE void notesLock();
 
     Q_INVOKABLE void refreshHeightAsync();
 
@@ -518,6 +533,12 @@ private:
     std::atomic<bool> m_refreshing;
     std::atomic<bool> m_refreshThreadStarted;
     WalletListenerImpl *m_walletListener;
+    mutable QMutex m_notesMutex;
+    QByteArray m_notesKey;
+    QByteArray m_notesSalt;
+    // own thread: the shared pool can be full of slow network requests
+    QThreadPool m_notesPool;
+    void runNotesTask(std::function<QJSValueList()> task, const QJSValueList &fallback, const QJSValue &callback);
     FutureScheduler m_scheduler;
 };
 

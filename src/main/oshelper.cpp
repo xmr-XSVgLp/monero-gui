@@ -30,6 +30,10 @@
 
 #include <algorithm>
 #include <unordered_set>
+#include <cstdlib>
+#include <cstdio>
+#include <chrono>
+#include <thread>
 
 #include <QCoreApplication>
 #include <QGuiApplication>
@@ -40,6 +44,10 @@
 #include <QDir>
 #include <QDebug>
 #include <QDesktopServices>
+#include <QProcess>
+#include <QRegularExpression>
+#include <QTimer>
+#include <QFile>
 #include <QFileInfo>
 #include <QString>
 #include <QUrl>
@@ -212,6 +220,224 @@ bool OSHelper::isCapsLock() const
 #else
     return false;
 #endif
+}
+
+// Price history of the Swaps page: ~/Monero/xmr-wallet-plus/precios-swaps.csv
+QString OSHelper::swapsLogPath() const
+{
+    return QDir::homePath() + "/Monero/xmr-wallet-plus/precios-swaps.csv";
+}
+
+// Appends lines to a CSV file, creating its folder and writing the header first when the file is new.
+bool OSHelper::appendCsv(const QString &path, const QString &header, const QString &lines) const
+{
+    QFileInfo info(path);
+    if (!QDir().mkpath(info.absolutePath()))
+    {
+        qWarning() << "appendCsv: cannot create" << info.absolutePath();
+        return false;
+    }
+    const bool isNew = !info.exists() || info.size() == 0;
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text))
+    {
+        qWarning() << "appendCsv: cannot open" << path;
+        return false;
+    }
+    if (isNew)
+        file.write(header.toUtf8() + "\n");
+    file.write(lines.toUtf8());
+    return true;
+}
+
+// Whole text file, or "" when it does not exist (Trading data price series).
+QString OSHelper::readTextFile(const QString &path) const
+{
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+        return QString();
+    return QString::fromUtf8(file.readAll());
+}
+
+// Replaces a text file (written to a temporary file first, so a crash never leaves half a file).
+bool OSHelper::writeTextFile(const QString &path, const QString &text) const
+{
+    QFileInfo info(path);
+    if (!QDir().mkpath(info.absolutePath()))
+    {
+        qWarning() << "writeTextFile: cannot create" << info.absolutePath();
+        return false;
+    }
+    const QString tmp = path + ".tmp";
+    QFile file(tmp);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text))
+    {
+        qWarning() << "writeTextFile: cannot open" << tmp;
+        return false;
+    }
+    file.write(text.toUtf8());
+    file.close();
+    QFile::remove(path);
+    return QFile::rename(tmp, path);
+}
+
+// System notification (price alerts). macOS only, through osascript; elsewhere it is a no-op.
+void OSHelper::notify(const QString &title, const QString &message) const
+{
+#ifdef Q_OS_MACOS
+    auto quote = [](QString s) { return "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"") + "\""; };
+    QProcess::startDetached("/usr/bin/osascript",
+        {"-e", "display notification " + quote(message) + " with title " + quote(title) + " sound name \"Glass\""});
+#else
+    Q_UNUSED(title);
+    Q_UNUSED(message);
+#endif
+}
+
+// Opens a folder itself in Finder / Explorer (creating it if needed).
+bool OSHelper::openFolder(const QString &dirPath) const
+{
+    QDir().mkpath(dirPath);
+    QUrl url = QUrl::fromLocalFile(QDir(dirPath).absolutePath());
+    if (!url.isValid())
+    {
+        qWarning() << "Malformed folder path" << dirPath;
+        return false;
+    }
+    return QDesktopServices::openUrl(url);
+}
+
+QString OSHelper::nymVpncPath() const
+{
+    QString path = QStandardPaths::findExecutable("nym-vpnc");
+    if (path.isEmpty())
+    {
+        // the macOS installers put it here; apps started from Finder don't get the shell PATH
+        path = QStandardPaths::findExecutable("nym-vpnc", {
+            "/usr/local/bin",
+            "/opt/homebrew/bin",
+            "/Applications/NymVPN.app/Contents/MacOS",
+            "/Applications/NymVPN.app/Contents/Resources"});
+    }
+    return path;
+}
+
+// Runs nym-vpnc with the given arguments and calls callback(exitCode, output) when it ends.
+// exitCode is -1 when it could not be started or took longer than 60 s.
+void OSHelper::runNymVpnc(const QStringList &args, const QJSValue &callback)
+{
+    const QString program = nymVpncPath();
+    if (program.isEmpty())
+    {
+        QJSValue cb(callback);
+        if (cb.isCallable())
+            cb.call(QJSValueList({-1, QString("nym-vpnc not found")}));
+        return;
+    }
+    runProcess(program, args, callback, 60000);
+}
+
+void OSHelper::restartNymVpnDaemon(bool askPassword, const QJSValue &callback)
+{
+#ifdef Q_OS_MACOS
+    // nym-vpnd leaks its internal SOCKS5 server on socks5 disable, so a new route can't bind and
+    // traffic keeps leaving through the first exit; restarting the daemon (needs root) frees it.
+    // Without askPassword it only works if sudoers allows this exact command with NOPASSWD.
+    const QString command = "/bin/launchctl kickstart -k system/net.nymtech.vpn.daemon";
+    if (!askPassword)
+    {
+        runProcess("/usr/bin/sudo", QStringList({"-n", "/bin/launchctl", "kickstart", "-k", "system/net.nymtech.vpn.daemon"}), callback, 30000);
+        return;
+    }
+    // with the same password, also allow this one command without a password from now on
+    // (sudoers rule, checked with visudo before it is installed)
+    QString shell = command;
+    const QString user = qEnvironmentVariable("USER");
+    if (QRegularExpression("^[A-Za-z_][A-Za-z0-9_.-]*$").match(user).hasMatch())
+    {
+        const QString rule = user + " ALL=(root) NOPASSWD: " + command;
+        shell = "f=$(/usr/bin/mktemp /tmp/xmrwp.XXXXXX) && echo '" + rule + "' > $f"
+                " && /usr/sbin/visudo -cf $f >/dev/null && /usr/sbin/chown root:wheel $f && /bin/chmod 440 $f"
+                " && /bin/mkdir -p /etc/sudoers.d && /bin/mv $f /etc/sudoers.d/xmr-wallet-plus-nym; /bin/rm -f $f; "
+                + command;
+    }
+    const QString script = "do shell script \"" + shell + "\" with administrator privileges";
+    runProcess("/usr/bin/osascript", QStringList({"-e", script}), callback, 180000);
+#else
+    Q_UNUSED(askPassword);
+    QJSValue cb(callback);
+    if (cb.isCallable())
+        cb.call(QJSValueList({-1, QString("only supported on macOS")}));
+#endif
+}
+
+void OSHelper::stopNymVpnDetached() const
+{
+#ifdef Q_OS_MACOS
+    // runs on after the app quits: drop the SOCKS5 proxy and restart the daemon (only if allowed
+    // without a password) so the old internal SOCKS5 server and its exit don't stay alive
+    const QString program = nymVpncPath();
+    if (program.isEmpty())
+        return;
+    QString quoted = program;
+    quoted.replace("'", "'\\''");
+    const QString shell = "'" + quoted + "' socks5 disable; /usr/bin/sudo -n /bin/launchctl kickstart -k system/net.nymtech.vpn.daemon";
+    QProcess::startDetached("/bin/sh", QStringList({"-c", shell}));
+#endif
+}
+
+void OSHelper::armShutdownWatchdog(int seconds) const
+{
+    // closing waits for requests in flight (wallet refresh, prices, Nym lookups), which through
+    // the mixnet can take long; after this many seconds the process ends anyway
+    std::thread([seconds]() {
+        std::this_thread::sleep_for(std::chrono::seconds(seconds));
+        qWarning() << "Shutdown took longer than" << seconds << "s, exiting now";
+        std::fflush(nullptr);
+        std::_Exit(0);
+    }).detach();
+}
+
+void OSHelper::runProcess(const QString &program, const QStringList &args, const QJSValue &callback, int timeoutMs)
+{
+    QProcess *process = new QProcess(this);
+    process->setProcessChannelMode(QProcess::MergedChannels);
+    auto finish = [process, callback](int exitCode, const QString &extra) {
+        if (process->property("done").toBool())
+            return;
+        process->setProperty("done", true);
+        const QString output = QString::fromUtf8(process->readAll()).trimmed() + extra;
+        QJSValue cb(callback);
+        if (cb.isCallable())
+            cb.call(QJSValueList({exitCode, output}));
+        process->deleteLater();
+    };
+    connect(process, &QProcess::finished, this, [process, finish](int exitCode, QProcess::ExitStatus status) {
+        finish(status == QProcess::NormalExit ? exitCode : -1, QString());
+    });
+    connect(process, &QProcess::errorOccurred, this, [process, finish](QProcess::ProcessError error) {
+        if (error == QProcess::FailedToStart)
+            finish(-1, process->errorString());
+    });
+    QTimer::singleShot(timeoutMs, process, [process, finish]() {
+        if (process->state() != QProcess::NotRunning)
+        {
+            process->kill();
+            finish(-1, "timeout");
+        }
+    });
+    process->start(program, args);
+}
+
+QString OSHelper::nymVpnLogTail() const
+{
+    QFile file("/var/log/nym-vpnd/nym-vpnd.log");
+    if (!file.open(QIODevice::ReadOnly))
+        return QString();
+    const qint64 maxBytes = 512 * 1024;
+    if (file.size() > maxBytes)
+        file.seek(file.size() - maxBytes);
+    return QString::fromUtf8(file.readAll());
 }
 
 QString OSHelper::temporaryPath() const

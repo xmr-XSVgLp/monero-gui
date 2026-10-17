@@ -56,6 +56,13 @@
 #include <QList>
 #include <QVector>
 #include <QMutexLocker>
+#include <QSaveFile>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QMessageAuthenticationCode>
+#include <QRandomGenerator>
+
+#include <openssl/evp.h>
 
 #include "qt/ScopeGuard.h"
 
@@ -351,6 +358,11 @@ bool Wallet::isTrezor() const
     return m_walletImpl->getDeviceType() == Monero::Wallet::Device_Trezor;
 }
 
+QString Wallet::deviceLabel() const
+{
+    return QString::fromStdString(m_walletImpl->getDeviceLabel());
+}
+
 //! create a view only wallet
 bool Wallet::createViewOnly(const QString &path, const QString &password) const
 {
@@ -373,6 +385,280 @@ void Wallet::setTrustedDaemon(bool arg)
 bool Wallet::viewOnly() const
 {
     return m_walletImpl->watchOnly();
+}
+
+// ---- Encrypted notes (<wallet>_notes) ----
+//
+// The notes are encrypted with AES-256-GCM. The key never leaves memory and is
+// derived from the wallet secret (spend key, or view key for view-only wallets)
+// and a random salt stored in the file. On Trezor wallets the device also has
+// to confirm a SLIP-11 CipherKeyValue over the salt, so the file can only be
+// opened with the same Trezor (and passphrase). The wallet password is checked
+// every time the notes are unlocked.
+
+namespace
+{
+const char kNotesFormat[] = "xmr-wallet-plus-notes";
+const char kNotesLabel[] = "XMR Wallet+ notes";
+const int kNotesSaltSize = 32;
+const int kNotesIvSize = 12;
+const int kNotesTagSize = 16;
+
+QByteArray randomBytes(int size)
+{
+    QByteArray out(size, Qt::Uninitialized);
+    QRandomGenerator::system()->fillRange(reinterpret_cast<quint32 *>(out.data()), size / 4);
+    return out;
+}
+
+void wipe(QByteArray &data)
+{
+    if (!data.isEmpty())
+    {
+        volatile char *p = data.data();
+        for (int i = 0; i < data.size(); ++i)
+            p[i] = 0;
+    }
+    data.clear();
+}
+
+bool aesGcm(bool encrypt, const QByteArray &key, const QByteArray &iv, const QByteArray &aad,
+            const QByteArray &in, QByteArray &out)
+{
+    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+    if (!ctx)
+        return false;
+    bool ok = false;
+    int len = 0;
+    QByteArray body = encrypt ? in : in.left(in.size() - kNotesTagSize);
+    QByteArray tag = encrypt ? QByteArray(kNotesTagSize, 0) : in.right(kNotesTagSize);
+    out = QByteArray(body.size() + 16, 0);
+    const auto *k = reinterpret_cast<const unsigned char *>(key.constData());
+    const auto *v = reinterpret_cast<const unsigned char *>(iv.constData());
+    auto *o = reinterpret_cast<unsigned char *>(out.data());
+    if (!encrypt && in.size() < kNotesTagSize)
+        goto done;
+    if ((encrypt ? EVP_EncryptInit_ex(ctx, EVP_aes_256_gcm(), nullptr, nullptr, nullptr)
+                 : EVP_DecryptInit_ex(ctx, EVP_aes_256_gcm(), nullptr, nullptr, nullptr)) != 1)
+        goto done;
+    if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, iv.size(), nullptr) != 1)
+        goto done;
+    if ((encrypt ? EVP_EncryptInit_ex(ctx, nullptr, nullptr, k, v)
+                 : EVP_DecryptInit_ex(ctx, nullptr, nullptr, k, v)) != 1)
+        goto done;
+    if (!aad.isEmpty() && (encrypt
+            ? EVP_EncryptUpdate(ctx, nullptr, &len, reinterpret_cast<const unsigned char *>(aad.constData()), aad.size())
+            : EVP_DecryptUpdate(ctx, nullptr, &len, reinterpret_cast<const unsigned char *>(aad.constData()), aad.size())) != 1)
+        goto done;
+    {
+        int total = 0;
+        const auto *b = reinterpret_cast<const unsigned char *>(body.constData());
+        if (!body.isEmpty() && (encrypt ? EVP_EncryptUpdate(ctx, o, &len, b, body.size())
+                                        : EVP_DecryptUpdate(ctx, o, &len, b, body.size())) != 1)
+            goto done;
+        total = body.isEmpty() ? 0 : len;
+        if (encrypt)
+        {
+            if (EVP_EncryptFinal_ex(ctx, o + total, &len) != 1)
+                goto done;
+            total += len;
+            if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, kNotesTagSize, tag.data()) != 1)
+                goto done;
+            out.truncate(total);
+            out.append(tag);
+        }
+        else
+        {
+            if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, kNotesTagSize, tag.data()) != 1)
+                goto done;
+            if (EVP_DecryptFinal_ex(ctx, o + total, &len) != 1)
+                goto done;
+            total += len;
+            out.truncate(total);
+        }
+    }
+    ok = true;
+done:
+    EVP_CIPHER_CTX_free(ctx);
+    if (!ok)
+        wipe(out);
+    return ok;
+}
+} // namespace
+
+QString Wallet::notesFilePath() const
+{
+    const QString base = path();
+    return base.isEmpty() ? QString() : base + "_notes";
+}
+
+bool Wallet::notesFileExists() const
+{
+    const QString file = notesFilePath();
+    return !file.isEmpty() && QFile::exists(file);
+}
+
+bool Wallet::notesUnlocked() const
+{
+    QMutexLocker locker(&m_notesMutex);
+    return !m_notesKey.isEmpty();
+}
+
+void Wallet::notesLock()
+{
+    QMutexLocker locker(&m_notesMutex);
+    wipe(m_notesKey);
+    m_notesSalt.clear();
+}
+
+void Wallet::runNotesTask(std::function<QJSValueList()> task, const QJSValueList &fallback, const QJSValue &callback)
+{
+    m_notesPool.setMaxThreadCount(1);
+    auto *watcher = new QFutureWatcher<QJSValueList>(this);
+    connect(watcher, &QFutureWatcher<QJSValueList>::finished, this, [watcher, callback] {
+        const QJSValueList result = watcher->future().result();
+        watcher->deleteLater();
+        if (callback.isCallable())
+            QJSValue(callback).call(result);
+    });
+    watcher->setFuture(QtConcurrent::run(&m_notesPool, [task, fallback] {
+        try
+        {
+            return task();
+        }
+        catch (const std::exception &e)
+        {
+            qWarning() << "Notes task failed:" << e.what();
+            return fallback;
+        }
+    }));
+}
+
+void Wallet::notesUnlockAsync(const QString &password, const QJSValue &callback)
+{
+    runNotesTask(
+        [this, password] {
+            auto fail = [](const QString &error) {
+                return QJSValueList{QJSValue(false), QJSValue(QString()), QJSValue(error)};
+            };
+            const std::string typed = password.toStdString();
+            const std::string &stored = m_walletImpl->getPassword();
+            unsigned char diff = typed.size() != stored.size();
+            for (size_t i = 0; i < typed.size() && i < stored.size(); ++i)
+                diff |= typed[i] ^ stored[i];
+            if (diff)
+                return fail("password");
+
+            const QString file = notesFilePath();
+            if (file.isEmpty())
+                return fail("io");
+
+            QJsonObject json;
+            QByteArray salt;
+            const bool exists = QFile::exists(file);
+            if (exists)
+            {
+                QFile in(file);
+                if (!in.open(QIODevice::ReadOnly))
+                    return fail("io");
+                json = QJsonDocument::fromJson(in.readAll()).object();
+                salt = QByteArray::fromHex(json.value("salt").toString().toLatin1());
+                if (json.value("format").toString() != kNotesFormat || salt.size() != kNotesSaltSize)
+                    return fail("corrupt");
+            }
+            else
+            {
+                salt = randomBytes(kNotesSaltSize);
+            }
+
+            // no m_asyncMutex here: refresh() holds it for the whole sync, and reading the keys
+            // does not need it (the Trezor call takes the device lock itself)
+            const bool device = isHwBacked();
+            QByteArray secret = QByteArray::fromHex(QByteArray::fromStdString(
+                device || viewOnly() ? m_walletImpl->secretViewKey() : m_walletImpl->secretSpendKey()));
+            if (secret.isEmpty())
+                return fail("keys");
+            if (device)
+            {
+                std::string error;
+                const std::string answer = m_walletImpl->deviceCipherKeyValue(kNotesLabel, salt.toStdString(), error);
+                if (answer.empty())
+                {
+                    wipe(secret);
+                    return fail(error.empty() ? QString("device") : QString("device: ") + QString::fromStdString(error));
+                }
+                secret.append(QByteArray::fromStdString(answer));
+            }
+            QByteArray key = QMessageAuthenticationCode::hash(QByteArray(kNotesLabel) + " v1" + salt, secret, QCryptographicHash::Sha256);
+            wipe(secret);
+
+            QString text;
+            if (exists)
+            {
+                const QByteArray iv = QByteArray::fromHex(json.value("iv").toString().toLatin1());
+                const QByteArray data = QByteArray::fromHex(json.value("data").toString().toLatin1());
+                QByteArray plain;
+                if (iv.size() != kNotesIvSize || !aesGcm(false, key, iv, salt, data, plain))
+                {
+                    wipe(key);
+                    return fail("decrypt");
+                }
+                text = QString::fromUtf8(plain);
+                wipe(plain);
+            }
+
+            QMutexLocker notesLocker(&m_notesMutex);
+            wipe(m_notesKey);
+            m_notesKey = key;
+            m_notesSalt = salt;
+            wipe(key);
+            return QJSValueList{QJSValue(true), QJSValue(text), QJSValue(QString())};
+        },
+        QJSValueList{QJSValue(false), QJSValue(QString()), QJSValue(QString("io"))},
+        callback);
+}
+
+void Wallet::notesSaveAsync(const QString &text, const QJSValue &callback)
+{
+    runNotesTask(
+        [this, text] {
+            QByteArray key, salt;
+            {
+                QMutexLocker locker(&m_notesMutex);
+                key = m_notesKey;
+                salt = m_notesSalt;
+            }
+            if (key.isEmpty())
+                return QJSValueList{QJSValue(false), QJSValue(QString("locked"))};
+
+            const QByteArray iv = randomBytes(kNotesIvSize);
+            QByteArray plain = text.toUtf8();
+            QByteArray data;
+            const bool ok = aesGcm(true, key, iv, salt, plain, data);
+            wipe(plain);
+            wipe(key);
+            if (!ok)
+                return QJSValueList{QJSValue(false), QJSValue(QString("encrypt"))};
+
+            QJsonObject json;
+            json["format"] = kNotesFormat;
+            json["version"] = 1;
+            json["cipher"] = "aes-256-gcm";
+            json["device"] = isHwBacked();
+            json["salt"] = QString::fromLatin1(salt.toHex());
+            json["iv"] = QString::fromLatin1(iv.toHex());
+            json["data"] = QString::fromLatin1(data.toHex());
+
+            QSaveFile out(notesFilePath());
+            if (!out.open(QIODevice::WriteOnly)
+                || out.write(QJsonDocument(json).toJson(QJsonDocument::Indented)) < 0
+                || !out.commit())
+                return QJSValueList{QJSValue(false), QJSValue(QString("io"))};
+            QFile::setPermissions(notesFilePath(), QFileDevice::ReadOwner | QFileDevice::WriteOwner);
+            return QJSValueList{QJSValue(true), QJSValue(QString())};
+        },
+        QJSValueList{QJSValue(false), QJSValue(QString("io"))},
+        callback);
 }
 
 quint64 Wallet::balance() const
@@ -1255,6 +1541,8 @@ Wallet::Wallet(Monero::Wallet *w, QObject *parent)
 Wallet::~Wallet()
 {
     qDebug("~Wallet: Closing wallet");
+    m_notesPool.waitForDone();
+    notesLock();
 
     pauseRefresh();
     m_walletImpl->stop();

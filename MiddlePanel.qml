@@ -60,6 +60,9 @@ Rectangle {
     property AddressBook addressBookView: AddressBook { }
     property Keys keysView: Keys { }
     property Account accountView: Account { }
+    property Swaps swapsView: Swaps { }
+    property TradingData tradingView: TradingData { }
+    property Notes notesView: Notes { }
 
     signal paymentClicked(var recipients, string paymentId, int mixinCount, int priority, string description)
     signal sweepUnmixableClicked()
@@ -173,6 +176,18 @@ Rectangle {
                 name: "Account"
                 PropertyChanges { target: root; currentView: accountView }
                 PropertyChanges { target: mainFlickable; contentHeight: accountView.accountHeight + 80 }
+            }, State {
+                name: "Swaps"
+                PropertyChanges { target: root; currentView: swapsView }
+                PropertyChanges { target: mainFlickable; contentHeight: swapsView.swapsHeight + 80 }
+            }, State {
+                name: "Trading"
+                PropertyChanges { target: root; currentView: tradingView }
+                PropertyChanges { target: mainFlickable; contentHeight: tradingView.tradingHeight + 80 }
+            }, State {
+                name: "Notes"
+                PropertyChanges { target: root; currentView: notesView }
+                PropertyChanges { target: mainFlickable; contentHeight: notesView.notesHeight + 80 }
             }
         ]
 

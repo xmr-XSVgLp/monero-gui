@@ -49,7 +49,13 @@ Rectangle {
         anchors.right: parent.right
         anchors.margins: 20
         anchors.topMargin: 0
-        spacing: 0
+        spacing: 8
+
+        MoneroComponents.SectionTitle {
+            Layout.fillWidth: true
+            Layout.bottomMargin: 4
+            text: qsTr("Session") + translationManager.emptyString
+        }
 
         MoneroComponents.SettingsListItem {
             iconText: FontAwesome.lock
@@ -65,6 +71,58 @@ Rectangle {
             title: qsTr("Close this wallet") + translationManager.emptyString
 
             onClicked: appWindow.showWizard()
+        }
+
+        MoneroComponents.SettingsListItem {
+            iconText: FontAwesome.cashRegister
+            description: qsTr("Receive Monero for your business, easily.") + translationManager.emptyString
+            title: qsTr("Enter merchant mode") + translationManager.emptyString
+
+            onClicked: {
+                middlePanel.state = "Merchant";
+                middlePanel.flickable.contentY = 0;
+                updateBalance();
+            }
+        }
+
+        MoneroComponents.SectionTitle {
+            Layout.fillWidth: true
+            Layout.topMargin: 18
+            Layout.bottomMargin: 4
+            text: qsTr("Security") + translationManager.emptyString
+        }
+
+        MoneroComponents.SettingsListItem {
+            iconText: FontAwesome.key
+            description: qsTr("Store this information safely to recover your wallet in the future.") + translationManager.emptyString
+            title: qsTr("Show seed & keys") + translationManager.emptyString
+
+            onClicked: {
+                Utils.showSeedPage();
+            }
+        }
+
+        MoneroComponents.SettingsListItem {
+            iconText: FontAwesome.edit
+            description: qsTr("Change the password of your wallet.") + translationManager.emptyString
+            title: qsTr("Change wallet password") + translationManager.emptyString
+
+            onClicked: {
+                passwordDialog.onAcceptedCallback = function() {
+                    if(appWindow.walletPassword === passwordDialog.password){
+                        passwordDialog.openNewPasswordDialog()
+                    } else {
+                        informationPopup.title  = qsTr("Error") + translationManager.emptyString;
+                        informationPopup.text = qsTr("Wrong password") + translationManager.emptyString;
+                        informationPopup.open()
+                        informationPopup.onCloseCallback = function() {
+                            passwordDialog.open()
+                        }
+                    }
+                }
+                passwordDialog.onRejectedCallback = null;
+                passwordDialog.open()
+            }
         }
 
         MoneroComponents.SettingsListItem {
@@ -89,14 +147,11 @@ Rectangle {
             }
         }
 
-        MoneroComponents.SettingsListItem {
-            iconText: FontAwesome.key
-            description: qsTr("Store this information safely to recover your wallet in the future.") + translationManager.emptyString
-            title: qsTr("Show seed & keys") + translationManager.emptyString
-
-            onClicked: {
-                Utils.showSeedPage();
-            }
+        MoneroComponents.SectionTitle {
+            Layout.fillWidth: true
+            Layout.topMargin: 18
+            Layout.bottomMargin: 4
+            text: qsTr("Maintenance") + translationManager.emptyString
         }
 
         MoneroComponents.SettingsListItem {
@@ -131,6 +186,7 @@ Rectangle {
             iconText: FontAwesome.magnifyingGlass
             description: qsTr("Use this feature if a transaction is missing in your wallet history. This will expose the transaction ID to the remote node, which can harm your privacy.") + translationManager.emptyString
             title: qsTr("Scan transaction") + translationManager.emptyString
+            isLast: true
 
             onClicked: {
                 inputDialog.labelText = qsTr("Enter a transaction ID:") + translationManager.emptyString;
@@ -151,44 +207,9 @@ Rectangle {
                         }
                     }
                 }
+                inputDialog.kind = "tx";
                 inputDialog.onRejectedCallback = null;
                 inputDialog.open()
-            }
-        }
-
-        MoneroComponents.SettingsListItem {
-            iconText: FontAwesome.ellipsisH
-            description: qsTr("Change the password of your wallet.") + translationManager.emptyString
-            title: qsTr("Change wallet password") + translationManager.emptyString
-
-            onClicked: {
-                passwordDialog.onAcceptedCallback = function() {
-                    if(appWindow.walletPassword === passwordDialog.password){
-                        passwordDialog.openNewPasswordDialog()
-                    } else {
-                        informationPopup.title  = qsTr("Error") + translationManager.emptyString;
-                        informationPopup.text = qsTr("Wrong password") + translationManager.emptyString;
-                        informationPopup.open()
-                        informationPopup.onCloseCallback = function() {
-                            passwordDialog.open()
-                        }
-                    }
-                }
-                passwordDialog.onRejectedCallback = null;
-                passwordDialog.open()
-            }
-        }
-
-        MoneroComponents.SettingsListItem {
-            iconText: FontAwesome.cashRegister
-            isLast: true
-            description: qsTr("Receive Monero for your business, easily.") + translationManager.emptyString
-            title: qsTr("Enter merchant mode") + translationManager.emptyString
-
-            onClicked: {
-                middlePanel.state = "Merchant";
-                middlePanel.flickable.contentY = 0;
-                updateBalance();
             }
         }
     }

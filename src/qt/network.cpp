@@ -127,6 +127,22 @@ void Network::getJSON(const QString &url, const QJSValue &callback) const
     get(url, callback, "application/json; charset=utf-8");
 }
 
+void Network::postJSON(const QString &url, const QString &body, const QJSValue &callback) const
+{
+    m_scheduler.run(
+        [this, url, body] {
+            std::shared_ptr<abstract_http_client> httpClient = newClient();
+            if (httpClient.get() == nullptr)
+            {
+                return QJSValueList({url, "", "failed to initialize a client"});
+            }
+            std::string response;
+            QString error = get(httpClient, url, response, "application/json", "POST", body.toStdString());
+            return QJSValueList({url, QString::fromStdString(response), error});
+        },
+        callback);
+}
+
 std::string Network::get(const QString &url, const QString &contentType /* = {} */) const
 {
     std::string response;
@@ -147,7 +163,9 @@ QString Network::get(
     std::shared_ptr<abstract_http_client> httpClient,
     const QString &url,
     std::string &response,
-    const QString &contentType /* = {} */) const
+    const QString &contentType /* = {} */,
+    const std::string &method /* = "GET" */,
+    const std::string &body /* = {} */) const
 {
     const QUrl urlParsed(url);
     const bool isHttps = urlParsed.scheme() == "https";
@@ -164,14 +182,15 @@ QString Network::get(
 
     const QString uri = (urlParsed.hasQuery() ? urlParsed.path() + "?" + urlParsed.query() : urlParsed.path());
     const http_response_info *pri = NULL;
-    constexpr std::chrono::milliseconds timeout = std::chrono::seconds(15);
+    // through a SOCKS proxy (Tor, Nym mixnet) a request needs several slow round trips
+    const std::chrono::milliseconds timeout = std::chrono::seconds(m_proxyAddress.isEmpty() ? 15 : 60);
 
     fields_list headers({{"User-Agent", randomUserAgent().toStdString()}});
     if (!contentType.isEmpty())
     {
         headers.push_back({"Content-Type", contentType.toStdString()});
     }
-    const bool result = httpClient->invoke(uri.toStdString(), "GET", {}, timeout, std::addressof(pri), headers);
+    const bool result = httpClient->invoke(uri.toStdString(), method, body, timeout, std::addressof(pri), headers);
     if (!result)
     {
         return "unknown error";
@@ -180,7 +199,7 @@ QString Network::get(
     {
         return "internal error";
     }
-    if (pri->m_response_code != 200)
+    if (pri->m_response_code < 200 || pri->m_response_code > 299)
     {
         return QString("response code %1").arg(pri->m_response_code);
     }

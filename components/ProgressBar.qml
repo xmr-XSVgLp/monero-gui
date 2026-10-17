@@ -86,7 +86,7 @@ Rectangle {
             anchors.right: parent.right
             font.family: MoneroComponents.Style.fontMonoBold.name
             font.pixelSize: 11
-            color: MoneroComponents.Style.textAccent
+            color: MoneroComponents.Style.defaultFontColor
             height: 18
             themeTransition: false
         }
@@ -96,24 +96,15 @@ Rectangle {
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.top: progressText.bottom
-            anchors.topMargin: 3
+            anchors.topMargin: 4
             height: 12
 
-            readonly property color accent: MoneroComponents.Style.orange
-            readonly property int segW: 4
-            readonly property int gap: 2
-            readonly property int count: Math.max(1, Math.floor((segments.width + gap) / (segW + gap)))
-            readonly property int lit: Math.round(count * Math.max(0, Math.min(100, fillLevel)) / 100)
-
-            Text {
-                id: lb
-                anchors.left: parent.left
-                anchors.verticalCenter: parent.verticalCenter
-                text: "["
-                color: MoneroComponents.Style.textAccent
-                font.family: MoneroComponents.Style.fontMonoBold.name
-                font.pixelSize: 13
-            }
+            readonly property bool dark: MoneroComponents.Style.blackTheme
+            readonly property bool done: fillLevel >= 100
+            // yellow while syncing, blue when complete
+            readonly property color accent: done ? (dark ? "#4DA3FF" : "#1F62C9")
+                                                 : (dark ? "#FFC23D" : "#B07A00")
+            readonly property real level: Math.max(0, Math.min(100, fillLevel)) / 100
 
             Text {
                 id: pct
@@ -121,64 +112,56 @@ Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
                 width: 40
                 horizontalAlignment: Text.AlignRight
-                text: ("  " + fillLevel).slice(-3) + "%"
-                color: MoneroComponents.Style.textAccent
-                font.family: MoneroComponents.Style.fontMonoBold.name
+                text: fillLevel + "%"
+                color: MoneroComponents.Style.defaultFontColor
+                font.family: MoneroComponents.Style.fontMonoMedium.name
                 font.pixelSize: 11
             }
 
-            Text {
-                id: rb
+            // track
+            Rectangle {
+                id: track
+                anchors.left: parent.left
                 anchors.right: pct.left
-                anchors.rightMargin: 2
+                anchors.rightMargin: 8
                 anchors.verticalCenter: parent.verticalCenter
-                text: "]"
-                color: MoneroComponents.Style.textAccent
-                font.family: MoneroComponents.Style.fontMonoBold.name
-                font.pixelSize: 13
+                height: 6
+                radius: 3
+                color: MoneroComponents.Style.defaultFontColor
+                opacity: bar.dark ? 0.12 : 0.15
             }
 
-            Item {
-                id: segments
-                anchors.left: lb.right
-                anchors.leftMargin: 3
-                anchors.right: rb.left
-                anchors.rightMargin: 3
-                anchors.verticalCenter: parent.verticalCenter
-                height: 8
+            // fill
+            Rectangle {
+                id: fill
+                anchors.left: track.left
+                anchors.verticalCenter: track.verticalCenter
+                height: track.height
+                radius: 3
+                width: Math.max(bar.level > 0 ? height : 0, track.width * bar.level)
+                color: bar.accent
                 clip: true
+                Behavior on width { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
+                Behavior on color { ColorAnimation { duration: 300 } }
 
-                Row {
-                    spacing: bar.gap
-                    Repeater {
-                        model: bar.count
-                        Rectangle {
-                            width: bar.segW
-                            height: segments.height
-                            color: bar.accent
-                            opacity: index < bar.lit ? (index === bar.lit - 1 ? 1.0 : 0.85) : 0.13
-                        }
-                    }
-                }
-
-                // light sweep over the filled part
+                // soft light sweeping over the fill while syncing
                 Rectangle {
                     id: sweep
-                    width: 22
+                    width: 40
                     height: parent.height
-                    visible: bar.lit > 0 && bar.lit < bar.count && item.visible
+                    visible: !bar.done && bar.level > 0 && item.visible
                     gradient: Gradient {
                         orientation: Gradient.Horizontal
                         GradientStop { position: 0.0; color: "transparent" }
-                        GradientStop { position: 0.5; color: MoneroComponents.Style.blackTheme ? "#CCFFFFFF" : "#99FFFFFF" }
+                        GradientStop { position: 0.5; color: "#66FFFFFF" }
                         GradientStop { position: 1.0; color: "transparent" }
                     }
                     NumberAnimation on x {
                         running: sweep.visible
                         loops: Animation.Infinite
                         from: -sweep.width
-                        to: bar.lit * (bar.segW + bar.gap)
-                        duration: 1400
+                        to: fill.width
+                        duration: 1600
                     }
                 }
             }

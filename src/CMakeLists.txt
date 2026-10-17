@@ -111,6 +111,12 @@ target_link_libraries(monero-wallet-gui
     zxcvbn
 )
 
+# AES-GCM for the encrypted wallet notes (same OpenSSL the monero libraries use)
+# (plain paths: the imported OpenSSL:: target is not visible where the executable is defined)
+find_package(OpenSSL REQUIRED)
+target_include_directories(monero-wallet-gui PRIVATE ${OPENSSL_INCLUDE_DIR})
+target_link_libraries(monero-wallet-gui PRIVATE ${OPENSSL_CRYPTO_LIBRARY})
+
 if(MINGW)
     # Static Boost.Locale records ICU and iconv as bare library names. Keep the
     # depends library search path scoped to the executable that consumes them.

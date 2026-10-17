@@ -11,6 +11,9 @@
   <key>NSCameraUsageDescription</key>
   <string>The camera is used to scan Monero QR codes.</string>
 
+  <key>NSBluetoothAlwaysUsageDescription</key>
+  <string>Bluetooth is used to connect to a Trezor Safe 7 hardware wallet.</string>
+
   <key>CFBundleIconFile</key>
   <string>appicon.icns</string>
 
@@ -24,7 +27,10 @@
   <string>monero-wallet-gui</string>
   
   <key>CFBundleName</key>
-  <string>Monero GUI</string>
+  <string>XMR Wallet+</string>
+
+  <key>CFBundleDisplayName</key>
+  <string>XMR Wallet+</string>
 
   <key>NSHumanReadableCopyright</key>
   <string>Copyright © 2014-2020 The Monero Project</string>

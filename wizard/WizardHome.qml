@@ -78,6 +78,7 @@ Rectangle {
 
             WizardMenuItem {
                 id: createWalletButton
+                Layout.topMargin: 8
                 headerText: {
                     var nettype = persistentSettings.nettype;
                     return qsTr("Create a new wallet") + (nettype === 2 ? " (" + qsTr("stagenet") + ")"
@@ -93,15 +94,6 @@ Rectangle {
                     wizardStateView.state = "wizardCreateWallet1"
                     wizardStateView.wizardCreateWallet1View.pageRoot.forceActiveFocus();
                 }
-            }
-
-            Rectangle {
-                Layout.preferredHeight: 1
-                Layout.topMargin: 3
-                Layout.bottomMargin: 3
-                Layout.fillWidth: true
-                color: MoneroComponents.Style.dividerColor
-                opacity: MoneroComponents.Style.dividerOpacity
             }
 
             WizardMenuItem {
@@ -120,15 +112,6 @@ Rectangle {
                 }
             }
 
-            Rectangle {
-                Layout.preferredHeight: 1
-                Layout.topMargin: 3
-                Layout.bottomMargin: 3
-                Layout.fillWidth: true
-                color: MoneroComponents.Style.dividerColor
-                opacity: MoneroComponents.Style.dividerOpacity
-            }
-
             WizardMenuItem {
                 id: openWalletButton
                 headerText: qsTr("Open a wallet from file") + translationManager.emptyString
@@ -139,15 +122,6 @@ Rectangle {
                     wizardStateView.state = "wizardOpenWallet1"
                     wizardStateView.wizardOpenWallet1View.pageRoot.forceActiveFocus();
                 }
-            }
-
-            Rectangle {
-                Layout.preferredHeight: 1
-                Layout.topMargin: 3
-                Layout.bottomMargin: 3
-                Layout.fillWidth: true
-                color: MoneroComponents.Style.dividerColor
-                opacity: MoneroComponents.Style.dividerOpacity
             }
 
             WizardMenuItem {
@@ -179,16 +153,6 @@ Rectangle {
                 }
             }
 
-            MoneroComponents.CheckBox2 {
-                id: showAdvancedCheckbox
-                Layout.topMargin: 30
-                Layout.fillWidth: true
-                fontSize: 15
-                checked: false
-                text: qsTr("Advanced options") + translationManager.emptyString
-                visible: appWindow.walletMode >= 2
-            }
-
             ListModel {
                 id: networkTypeModel
                 ListElement {column1: "Mainnet"; column2: ""; nettype: "mainnet"}
@@ -196,78 +160,189 @@ Rectangle {
                 ListElement {column1: "Stagenet"; column2: ""; nettype: "stagenet"}
             }
 
-            GridLayout {
-                visible: showAdvancedCheckbox.checked && appWindow.walletMode >= 2
-                columns: 4
-                columnSpacing: 20
+            // advanced options: collapsible panel in the card style
+            Item {
+                id: showAdvancedCheckbox
+                property bool checked: false
+                readonly property bool dark: MoneroComponents.Style.blackTheme
+                readonly property color border: dark ? "#E8ECE9" : "#2B3A30"
+                readonly property color accent: dark ? "#4E9E6A" : "#2E7D4A"
+                readonly property bool hovered: advHeaderMouse.containsMouse
+                visible: appWindow.walletMode >= 2
+                Layout.topMargin: 24
                 Layout.fillWidth: true
-                Layout.topMargin: 10
+                implicitHeight: advColumn.implicitHeight
 
-                MoneroComponents.StandardDropdown {
-                    id: networkTypeDropdown
-                    currentIndex: persistentSettings.nettype
-                    dataModel: networkTypeModel
-                    Layout.maximumWidth: 180
-                    labelText: qsTr("Network") + ":" + translationManager.emptyString
-                    labelFontSize: 14
-
-                    onChanged: {
-                        var item = dataModel.get(currentIndex).nettype.toLowerCase();
-                        if(item === "mainnet") {
-                            persistentSettings.nettype = NetworkType.MAINNET
-                        } else if(item === "stagenet"){
-                            persistentSettings.nettype = NetworkType.STAGENET
-                        } else if(item === "testnet"){
-                            persistentSettings.nettype = NetworkType.TESTNET
-                        }
-                        appWindow.disconnectRemoteNode()
-                        networkTypeDropdown.currentIndex = Qt.binding(function() { return persistentSettings.nettype });
-                        persistentSettings.wallet_path = ""
-                    }
+                MoneroComponents.NeonFrame {
+                    anchors.fill: parent
+                    cut: 10
+                    accent: showAdvancedCheckbox.border
+                    lineOpacity: showAdvancedCheckbox.checked ? 0.6 : (showAdvancedCheckbox.hovered ? 0.6 : 0.25)
+                    fillColor: showAdvancedCheckbox.dark ? "#0C130E" : "#EEF4EF"
+                    fillOpacity: showAdvancedCheckbox.dark ? 0.92 : 0.9
+                    ticks: false
+                    Behavior on lineOpacity { NumberAnimation { duration: 150 } }
                 }
 
-                MoneroComponents.LineEdit {
-                    id: kdfRoundsText
-                    Layout.maximumWidth: 180
+                ColumnLayout {
+                    id: advColumn
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    spacing: 0
 
-                    property bool kdfWarningShown: false
+                    // header row: chevron, title, current settings
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 48
 
-                    labelText: qsTr("Number of KDF rounds:") + translationManager.emptyString
-                    labelFontSize: 14
-                    fontSize: 16
-                    placeholderFontSize: 16
-                    placeholderText: "0"
-                    validator: IntValidator { bottom: 1 }
-                    text: persistentSettings.kdfRounds ? persistentSettings.kdfRounds : "1"
-                    onTextChanged: {
-                        var wasDefault = persistentSettings.kdfRounds === 1;
-                        var newValue = parseInt(kdfRoundsText.text) >= 1 ? parseInt(kdfRoundsText.text) : 1;
-                        persistentSettings.kdfRounds = newValue;
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 16
+                            anchors.rightMargin: 16
+                            spacing: 12
 
-                        if (newValue === 1) {
-                            kdfRoundsText.kdfWarningShown = false;
-                        } else if (wasDefault && !kdfRoundsText.kdfWarningShown) {
-                            kdfRoundsText.kdfWarningShown = true;
-                            confirmationDialog.title = qsTr("Warning") + translationManager.emptyString;
-                            confirmationDialog.text = qsTr("You have selected a non-standard number of KDF rounds.\n\nThis value is set globally and is not stored in the wallet file. It must be remembered and re-entered every time this wallet is opened; otherwise, the wallet will not open due to the password being incorrect.\n\nHigher values make opening and saving the wallet significantly slower.") + translationManager.emptyString;
-                            confirmationDialog.onAcceptedCallback = null;
-                            confirmationDialog.onRejectedCallback = function() {
-                                kdfRoundsText.text = "1";
+                            Canvas {
+                                Layout.preferredWidth: 12
+                                Layout.preferredHeight: 12
+                                rotation: showAdvancedCheckbox.checked ? 90 : 0
+                                Behavior on rotation { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+                                property color c: showAdvancedCheckbox.accent
+                                onCChanged: requestPaint()
+                                onPaint: {
+                                    var ctx = getContext("2d");
+                                    ctx.reset();
+                                    ctx.strokeStyle = c;
+                                    ctx.lineWidth = 1.8;
+                                    ctx.lineCap = "round";
+                                    ctx.lineJoin = "round";
+                                    ctx.beginPath();
+                                    ctx.moveTo(3.5, 1.5); ctx.lineTo(8.5, 6); ctx.lineTo(3.5, 10.5);
+                                    ctx.stroke();
+                                }
                             }
-                            confirmationDialog.cancelText = qsTr("Reset to 1") + translationManager.emptyString;
-                            confirmationDialog.okText = qsTr("Keep") + translationManager.emptyString;
-                            confirmationDialog.open();
+
+                            MoneroComponents.TextPlain {
+                                text: qsTr("Advanced options").toUpperCase() + translationManager.emptyString
+                                font.family: MoneroComponents.Style.fontMonoMedium.name
+                                font.pixelSize: 13
+                                font.letterSpacing: 2
+                                color: showAdvancedCheckbox.checked || showAdvancedCheckbox.hovered
+                                       ? MoneroComponents.Style.defaultFontColor : MoneroComponents.Style.dimmedFontColor
+                                themeTransition: false
+                            }
+
+                            Item { Layout.fillWidth: true }
+
+                            // what is set now, so it shows even when closed
+                            MoneroComponents.TextPlain {
+                                text: networkTypeModel.get(Math.max(0, Math.min(2, persistentSettings.nettype))).column1
+                                      + "  ·  KDF " + (persistentSettings.kdfRounds ? persistentSettings.kdfRounds : 1)
+                                font.family: MoneroComponents.Style.fontMonoRegular.name
+                                font.pixelSize: 12
+                                color: persistentSettings.nettype !== 0 || persistentSettings.kdfRounds > 1
+                                       ? MoneroComponents.Style.defaultFontColor : MoneroComponents.Style.dimmedFontColor
+                                themeTransition: false
+                            }
+                        }
+
+                        MouseArea {
+                            id: advHeaderMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: showAdvancedCheckbox.checked = !showAdvancedCheckbox.checked
+                        }
+                    }
+
+                    Rectangle {
+                        visible: showAdvancedCheckbox.checked
+                        Layout.fillWidth: true
+                        Layout.leftMargin: 16
+                        Layout.rightMargin: 16
+                        Layout.preferredHeight: 1
+                        color: showAdvancedCheckbox.accent
+                        opacity: 0.3
+                    }
+
+                    RowLayout {
+                        visible: showAdvancedCheckbox.checked
+                        Layout.fillWidth: true
+                        Layout.margins: 16
+                        Layout.topMargin: 14
+                        spacing: 24
+
+                        MoneroComponents.StandardDropdown {
+                            id: networkTypeDropdown
+                            currentIndex: persistentSettings.nettype
+                            dataModel: networkTypeModel
+                            Layout.preferredWidth: 220
+                            Layout.maximumWidth: 220
+                            labelText: qsTr("Network") + ":" + translationManager.emptyString
+                            labelFontSize: 14
+
+                            onChanged: {
+                                var item = dataModel.get(currentIndex).nettype.toLowerCase();
+                                if(item === "mainnet") {
+                                    persistentSettings.nettype = NetworkType.MAINNET
+                                } else if(item === "stagenet"){
+                                    persistentSettings.nettype = NetworkType.STAGENET
+                                } else if(item === "testnet"){
+                                    persistentSettings.nettype = NetworkType.TESTNET
+                                }
+                                appWindow.disconnectRemoteNode()
+                                networkTypeDropdown.currentIndex = Qt.binding(function() { return persistentSettings.nettype });
+                                persistentSettings.wallet_path = ""
+                            }
+                        }
+
+                        MoneroComponents.LineEdit {
+                            id: kdfRoundsText
+                            Layout.preferredWidth: 220
+                            Layout.maximumWidth: 220
+
+                            property bool kdfWarningShown: false
+
+                            labelText: qsTr("Number of KDF rounds:") + translationManager.emptyString
+                            labelFontSize: 14
+                            fontSize: 16
+                            placeholderFontSize: 16
+                            placeholderText: "0"
+                            validator: IntValidator { bottom: 1 }
+                            text: persistentSettings.kdfRounds ? persistentSettings.kdfRounds : "1"
+                            onTextChanged: {
+                                var wasDefault = persistentSettings.kdfRounds === 1;
+                                var newValue = parseInt(kdfRoundsText.text) >= 1 ? parseInt(kdfRoundsText.text) : 1;
+                                persistentSettings.kdfRounds = newValue;
+
+                                if (newValue === 1) {
+                                    kdfRoundsText.kdfWarningShown = false;
+                                } else if (wasDefault && !kdfRoundsText.kdfWarningShown) {
+                                    kdfRoundsText.kdfWarningShown = true;
+                                    confirmationDialog.title = qsTr("Warning") + translationManager.emptyString;
+                                    confirmationDialog.text = qsTr("You have selected a non-standard number of KDF rounds.\n\nThis value is set globally and is not stored in the wallet file. It must be remembered and re-entered every time this wallet is opened; otherwise, the wallet will not open due to the password being incorrect.\n\nHigher values make opening and saving the wallet significantly slower.") + translationManager.emptyString;
+                                    confirmationDialog.onAcceptedCallback = null;
+                                    confirmationDialog.onRejectedCallback = function() {
+                                        kdfRoundsText.text = "1";
+                                    }
+                                    confirmationDialog.cancelText = qsTr("Reset to 1") + translationManager.emptyString;
+                                    confirmationDialog.okText = qsTr("Keep") + translationManager.emptyString;
+                                    confirmationDialog.open();
+                                }
+                            }
+                        }
+
+                        Item {
+                            Layout.fillWidth: true
                         }
                     }
                 }
+            }
 
-                Item {
-                    Layout.fillWidth: true
-                }
-
-                Item {
-                    Layout.fillWidth: true
-                }
+            // NymVPN: route the app through the Nym mixnet
+            MoneroComponents.NymVpnPanel {
+                id: nymVpnPanel
+                Layout.topMargin: 12
+                Layout.fillWidth: true
             }
         }
     }

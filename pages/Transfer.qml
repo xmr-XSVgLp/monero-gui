@@ -166,6 +166,9 @@ Rectangle {
         }
     }
 
+    readonly property color cardAccent: MoneroComponents.Style.blackTheme ? "#4E9E6A" : "#2E7D4A"
+    readonly property color cardBorder: MoneroComponents.Style.blackTheme ? "#E8ECE9" : "#2B3A30"
+
     ColumnLayout {
       id: pageRoot
       anchors.margins: 20
@@ -175,7 +178,7 @@ Rectangle {
       anchors.top: parent.top
       anchors.right: parent.right
 
-      spacing: 30
+      spacing: 16
 
       RowLayout {
           visible: root.warningContent !== ""
@@ -266,41 +269,62 @@ Rectangle {
             }
         }
 
+        // Recipients card: address + amount rows, tools, total and fiat value
         Item {
             Layout.fillWidth: true
-            implicitHeight: recipientLayout.height
+            implicitHeight: recipientLayout.implicitHeight + 32
+
+            HoverHandler { id: recipientCardHover }
+
+            MoneroComponents.CardPanel {
+                anchors.fill: parent
+                selected: recipientCardHover.hovered
+            }
 
             ColumnLayout {
                 id: recipientLayout
                 anchors.left: parent.left
                 anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.margins: 16
                 spacing: 0
 
-                readonly property int colSpacing: 10
-                readonly property int rowSpacing: 10
-                readonly property int secondRowWidth: 125
-                readonly property int thirdRowWidth: 50
+                readonly property int colSpacing: 16
+                readonly property int rowSpacing: 8
+                readonly property int secondRowWidth: 150
+                readonly property int thirdRowWidth: 48
 
                 RowLayout {
-                    Layout.bottomMargin: recipientLayout.rowSpacing / 2
-                    spacing: recipientLayout.colSpacing
+                    Layout.fillWidth: true
+                    Layout.bottomMargin: 12
+                    spacing: 0
 
                     RowLayout {
                         id: addressLabel
-                        spacing: 6
+                        spacing: 8
                         Layout.fillWidth: true
 
-                        MoneroComponents.TextPlain {
-                            font.family: MoneroComponents.Style.fontRegular.name
-                            font.pixelSize: 16
-                            color: MoneroComponents.Style.defaultFontColor
-                            text: qsTr("Address") + translationManager.emptyString
+                        Rectangle {
+                            Layout.preferredWidth: 6
+                            Layout.preferredHeight: 6
+                            color: root.cardAccent
                         }
 
-                        MoneroComponents.InlineButton {
-                            fontFamily: FontAwesome.fontFamilySolid
-                            fontStyleName: "Solid"
-                            fontPixelSize: 18
+                        MoneroComponents.TextPlain {
+                            Layout.leftMargin: 2
+                            font.family: MoneroComponents.Style.fontMonoMedium.name
+                            font.pixelSize: 13
+                            font.letterSpacing: 2
+                            color: MoneroComponents.Style.dimmedFontColor
+                            themeTransition: false
+                            text: qsTr("Address").toUpperCase() + translationManager.emptyString
+                        }
+
+                        Item {
+                            Layout.fillWidth: true
+                        }
+
+                        MoneroComponents.TransferIconButton {
                             text: FontAwesome.desktop
                             tooltip: qsTr("Grab QR code from screen") + translationManager.emptyString
                             onClicked: {
@@ -319,10 +343,9 @@ Rectangle {
                             }
                         }
 
-                        MoneroComponents.InlineButton {
-                            fontFamily: FontAwesome.fontFamilySolid
-                            fontStyleName: "Solid"
+                        MoneroComponents.TransferIconButton {
                             text: FontAwesome.qrcode
+                            fontPixelSize: 15
                             visible: appWindow.qrScannerEnabled
                             tooltip: qsTr("Scan QR code") + translationManager.emptyString
                             onClicked: {
@@ -331,51 +354,48 @@ Rectangle {
                             }
                         }
 
-                        MoneroComponents.InlineButton {
+                        MoneroComponents.TransferIconButton {
                             fontFamily: FontAwesome.fontFamily
+                            fontStyleName: ""
                             text: FontAwesome.addressBook
+                            fontPixelSize: 15
                             tooltip: qsTr("Import from address book") + translationManager.emptyString
                             onClicked: {
                                 middlePanel.addressBookView.selectAndSend = true;
                                 appWindow.showPageRequest("AddressBook");
                             }
                         }
-
-                        Item {
-                            Layout.fillWidth: true
-                        }
                     }
 
                     RowLayout {
                         id: amountLabel
-                        spacing: 6
-                        Layout.preferredWidth: 125
-                        Layout.maximumWidth: recipientLayout.secondRowWidth
+                        spacing: 8
+                        Layout.leftMargin: recipientLayout.colSpacing
+                        Layout.preferredWidth: recipientLayout.secondRowWidth + recipientLayout.thirdRowWidth
+                        Layout.maximumWidth: recipientLayout.secondRowWidth + recipientLayout.thirdRowWidth
 
                         MoneroComponents.TextPlain {
-                            font.family: MoneroComponents.Style.fontRegular.name
-                            font.pixelSize: 16
-                            color: MoneroComponents.Style.defaultFontColor
-                            text: qsTr("Amount") + translationManager.emptyString
-                        }
-
-                        MoneroComponents.InlineButton {
-                            fontFamily: FontAwesome.fontFamilySolid
-                            fontStyleName: "Solid"
-                            fontPixelSize: 16
-                            text: FontAwesome.infinity
-                            visible: recipientModel.count == 1
-                            tooltip: qsTr("Send all unlocked balance of this account") + translationManager.emptyString
-                            onClicked: recipientRepeater.itemAt(0).children[1].children[2].text = "(all)";
+                            Layout.leftMargin: recipientLayout.colSpacing / 2
+                            font.family: MoneroComponents.Style.fontMonoMedium.name
+                            font.pixelSize: 13
+                            font.letterSpacing: 2
+                            color: MoneroComponents.Style.dimmedFontColor
+                            themeTransition: false
+                            text: qsTr("Amount").toUpperCase() + translationManager.emptyString
                         }
 
                         Item {
                             Layout.fillWidth: true
                         }
-                    }
 
-                    Item {
-                        Layout.preferredWidth: recipientLayout.thirdRowWidth
+                        MoneroComponents.TransferIconButton {
+                            text: FontAwesome.infinity
+                            visible: recipientModel.count == 1
+                            tooltip: qsTr("Send all unlocked balance of this account") + translationManager.emptyString
+                            tooltipLeft: true
+                            // recipient delegate: children[1] = row, row.children[2] = amount field
+                            onClicked: recipientRepeater.itemAt(0).children[1].children[2].text = "(all)";
+                        }
                     }
                 }
 
@@ -383,36 +403,60 @@ Rectangle {
                     id: recipientRepeater
                     model: recipientModel
 
-                    ColumnLayout {
-                        spacing: 0
+                    // Keep the child order: children[0] = frame, children[1] = row with
+                    // [0] address, [1] divider, [2] amount, [3] remove, [4] XMR (used by index below)
+                    Item {
+                        id: recipientItem
+                        Layout.fillWidth: true
+                        Layout.topMargin: index > 0 ? recipientLayout.rowSpacing : 0
+                        implicitHeight: Math.max(46, recipientRow.implicitHeight + 8)
 
-                        Rectangle {
-                            Layout.fillWidth: true
-                            Layout.topMargin: -1
-                            Layout.leftMargin: 1
-                            Layout.rightMargin: recipientLayout.thirdRowWidth + 1
-                            color: MoneroComponents.Style.inputBorderColorInActive
-                            height: 1
-                            visible: index > 0
+                        readonly property bool hasFocusInside: {
+                            var item = Window.activeFocusItem;
+                            while (item) {
+                                if (item === recipientRow) {
+                                    return true;
+                                }
+                                item = item.parent;
+                            }
+                            return false;
+                        }
+                        readonly property bool hasError: (recipientRow.children[0].error && recipientRow.children[0].text != "")
+                                                         || recipientRow.children[2].error
+
+                        MoneroComponents.NeonFrame {
+                            anchors.fill: parent
+                            cut: 8
+                            accent: recipientItem.hasError ? MoneroComponents.Style.errorColor : root.cardBorder
+                            lineOpacity: recipientItem.hasError || recipientItem.hasFocusInside ? 0.85 : (recipientRowHover.hovered ? 0.6 : 0.3)
+                            fillColor: recipientItem.hasError ? MoneroComponents.Style.errorColor : root.cardAccent
+                            fillOpacity: recipientItem.hasFocusInside ? 0.10 : (MoneroComponents.Style.blackTheme ? 0.04 : 0.06)
+                            ticks: false
+                            Behavior on lineOpacity { NumberAnimation { duration: 150 } }
+
+                            HoverHandler { id: recipientRowHover }
                         }
 
                         RowLayout {
+                            id: recipientRow
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
                             spacing: 0
 
                             MoneroComponents.LineEditMulti {
                                 KeyNavigation.backtab: index > 0 ? recipientRepeater.itemAt(index - 1).children[1].children[2] : sendButton
                                 KeyNavigation.tab: parent.children[2]
                                 Layout.alignment: Qt.AlignVCenter
-                                Layout.topMargin: index > 0 ? 0 : 1
-                                Layout.bottomMargin: 2
+                                Layout.leftMargin: 4
                                 Layout.fillWidth: true
                                 addressValidation: true
                                 borderDisabled: true
                                 fontColor: error && text != "" ? MoneroComponents.Style.errorColor : MoneroComponents.Style.defaultFontColor
                                 fontFamily: MoneroComponents.Style.fontMonoRegular.name
                                 fontSize: 14
-                                inputPaddingBottom: 0
-                                inputPaddingTop: 0
+                                inputPaddingBottom: 4
+                                inputPaddingTop: 4
                                 inputPaddingRight: 0
                                 placeholderFontFamily: MoneroComponents.Style.fontMonoRegular.name
                                 placeholderFontSize: 14
@@ -472,12 +516,12 @@ Rectangle {
                             }
 
                             Rectangle {
-                                Layout.fillHeight: true
-                                Layout.topMargin: index > 0 ? 0 : 1
-                                Layout.bottomMargin: 1
-                                Layout.leftMargin: recipientLayout.colSpacing / 2 - width
+                                Layout.preferredHeight: 24
+                                Layout.alignment: Qt.AlignVCenter
+                                Layout.leftMargin: recipientLayout.colSpacing / 2
                                 Layout.rightMargin: recipientLayout.colSpacing / 2
-                                color: MoneroComponents.Style.inputBorderColorInActive
+                                color: root.cardBorder
+                                opacity: 0.25
                                 width: 1
                             }
 
@@ -485,20 +529,18 @@ Rectangle {
                                 KeyNavigation.backtab: parent.children[0]
                                 KeyNavigation.tab: index + 1 < recipientRepeater.count ? recipientRepeater.itemAt(index + 1).children[1].children[0] : sendButton
                                 Layout.alignment: Qt.AlignVCenter
-                                Layout.topMargin: index > 0 ? 0 : 1
-                                Layout.bottomMargin: 2
-                                Layout.rightMargin: recipientLayout.colSpacing / 2
-                                Layout.preferredWidth: 125
-                                Layout.maximumWidth: 125
+                                Layout.preferredWidth: recipientLayout.secondRowWidth - recipientLayout.colSpacing / 2
+                                Layout.maximumWidth: recipientLayout.secondRowWidth - recipientLayout.colSpacing / 2
                                 borderDisabled: true
                                 fontFamily: MoneroComponents.Style.fontMonoRegular.name
-                                fontSize: 14
+                                fontSize: 15
+                                inputHeight: 36
                                 inputPaddingLeft: 0
                                 inputPaddingRight: 0
                                 inputPaddingTop: 0
                                 inputPaddingBottom: 0
                                 placeholderFontFamily: MoneroComponents.Style.fontMonoRegular.name
-                                placeholderFontSize: 14
+                                placeholderFontSize: 15
                                 placeholderLeftMargin: 0
                                 placeholderText: "0.00"
                                 text: amount
@@ -524,34 +566,31 @@ Rectangle {
                                 }
                             }
 
-                            MoneroComponents.TextPlain {
-                                Layout.leftMargin: recipientLayout.colSpacing / 2
+                            Item {
                                 Layout.preferredWidth: recipientLayout.thirdRowWidth
-                                font.family: FontAwesome.fontFamilySolid
-                                font.styleName: "Solid"
-                                horizontalAlignment: Text.AlignHCenter
-                                opacity: mouseArea.containsMouse ? 1 : 0.85
-                                text: FontAwesome.times
-                                tooltip: qsTr("Remove recipient")  + translationManager.emptyString
-                                tooltipLeft: true
+                                Layout.preferredHeight: 32
                                 visible: recipientModel.count > 1
 
-                                MouseArea {
-                                    id: mouseArea
-                                    anchors.fill: parent
-                                    cursorShape: Qt.PointingHandCursor
-                                    hoverEnabled: true
-                                    onEntered: parent.tooltipPopup.open()
-                                    onExited: parent.tooltipPopup.close()
+                                MoneroComponents.TransferIconButton {
+                                    anchors.centerIn: parent
+                                    width: 28
+                                    height: 28
+                                    fontPixelSize: 13
+                                    text: FontAwesome.times
+                                    tooltip: qsTr("Remove recipient")  + translationManager.emptyString
+                                    tooltipLeft: true
                                     onClicked: recipientModel.remove(index);
                                 }
                             }
 
                             MoneroComponents.TextPlain {
-                                Layout.leftMargin: recipientLayout.colSpacing / 2
                                 Layout.preferredWidth: recipientLayout.thirdRowWidth
                                 horizontalAlignment: Text.AlignHCenter
-                                font.family: MoneroComponents.Style.fontRegular.name
+                                font.family: MoneroComponents.Style.fontMonoMedium.name
+                                font.pixelSize: 13
+                                font.letterSpacing: 1
+                                color: MoneroComponents.Style.dimmedFontColor
+                                themeTransition: false
                                 text: "XMR"
                                 visible: recipientModel.count == 1
                             }
@@ -561,17 +600,16 @@ Rectangle {
 
                 GridLayout {
                     id: totalLayout
-                    Layout.topMargin: recipientLayout.rowSpacing / 2
+                    Layout.topMargin: 10
                     Layout.fillWidth: true
                     columns: 3
-                    columnSpacing: recipientLayout.colSpacing
+                    columnSpacing: 0
                     rowSpacing: 0
 
                     RowLayout {
                         Layout.column: 0
                         Layout.row: 0
                         Layout.fillWidth: true
-                        Layout.topMargin: recipientModel.count > 1 ? 0 : -1
                         spacing: 0
 
                         CheckBox {
@@ -586,8 +624,9 @@ Rectangle {
                                 }
                                 return true;
                             }
+                            opacity: enabled ? 1 : 0.4
                             fontAwesomeIcons: true
-                            fontSize: descriptionLine.labelFontSize
+                            fontSize: 14
                             iconOnTheLeft: true
                             text: qsTr("Add recipient") + translationManager.emptyString
                             toggleOnClick: false
@@ -599,10 +638,14 @@ Rectangle {
 
                         MoneroComponents.TextPlain {
                             Layout.fillWidth: true
+                            Layout.rightMargin: recipientLayout.colSpacing / 2
                             horizontalAlignment: Text.AlignRight
-                            font.family: MoneroComponents.Style.fontRegular.name
-                            font.pixelSize: 16
-                            text: recipientModel.count > 1 ? qsTr("Total") + translationManager.emptyString : ""
+                            font.family: MoneroComponents.Style.fontMonoMedium.name
+                            font.pixelSize: 13
+                            font.letterSpacing: 2
+                            color: MoneroComponents.Style.dimmedFontColor
+                            themeTransition: false
+                            text: recipientModel.count > 1 ? qsTr("Total").toUpperCase() + translationManager.emptyString : ""
                         }
                     }
 
@@ -610,12 +653,12 @@ Rectangle {
                         id: totalValue
                         Layout.column: 1
                         Layout.row: 0
-                        Layout.preferredWidth: recipientLayout.secondRowWidth
-                        Layout.topMargin: recipientModel.count > 1 ? 0 : -1
-                        Layout.maximumWidth: recipientLayout.secondRowWidth
+                        Layout.leftMargin: recipientLayout.colSpacing / 2
+                        Layout.preferredWidth: recipientLayout.secondRowWidth - recipientLayout.colSpacing / 2
+                        Layout.maximumWidth: recipientLayout.secondRowWidth - recipientLayout.colSpacing / 2
                         borderDisabled: true
-                        fontFamily: MoneroComponents.Style.fontMonoRegular.name
-                        fontSize: 14
+                        fontFamily: MoneroComponents.Style.fontMonoMedium.name
+                        fontSize: 15
                         inputHeight: 30
                         inputPaddingLeft: 0
                         inputPaddingRight: 0
@@ -632,26 +675,31 @@ Rectangle {
                         Layout.preferredWidth: recipientLayout.thirdRowWidth
                         Layout.maximumWidth: recipientLayout.thirdRowWidth
                         horizontalAlignment: Text.AlignHCenter
-                        font.family: MoneroComponents.Style.fontRegular.name
+                        font.family: MoneroComponents.Style.fontMonoMedium.name
+                        font.pixelSize: 13
+                        font.letterSpacing: 1
+                        color: MoneroComponents.Style.dimmedFontColor
+                        themeTransition: false
                         text: "XMR"
                         visible: recipientModel.count > 1
                     }
 
+                    // fiat value of the total
                     MoneroComponents.LineEdit {
                         Layout.column: 1
                         Layout.row: recipientModel.count > 1 ? 1 : 0
-                        Layout.preferredWidth: recipientLayout.secondRowWidth
-                        Layout.topMargin: recipientModel.count > 1 ? 0 : -1
-                        Layout.maximumWidth: recipientLayout.secondRowWidth
+                        Layout.leftMargin: recipientLayout.colSpacing / 2
+                        Layout.preferredWidth: recipientLayout.secondRowWidth - recipientLayout.colSpacing / 2
+                        Layout.maximumWidth: recipientLayout.secondRowWidth - recipientLayout.colSpacing / 2
                         borderDisabled: true
                         fontFamily: MoneroComponents.Style.fontMonoRegular.name
                         fontSize: 14
+                        fontColor: MoneroComponents.Style.dimmedFontColor
                         inputHeight: 30
                         inputPaddingLeft: 0
                         inputPaddingRight: 0
                         inputPaddingTop: 0
                         inputPaddingBottom: 0
-                        opacity: 0.7
                         readOnly: true
                         text: fiatApiConvertToFiat(walletManager.displayAmount(recipientModel.getAmountTotal()))
                         visible: persistentSettings.fiatPriceEnabled
@@ -661,35 +709,40 @@ Rectangle {
                         Layout.column: 2
                         Layout.row: recipientModel.count > 1 ? 1 : 0
                         Layout.preferredWidth: recipientLayout.thirdRowWidth
-                        Layout.topMargin: recipientModel.count > 1 ? 0 : -1
                         Layout.maximumWidth: recipientLayout.thirdRowWidth
-                        font.family: MoneroComponents.Style.fontRegular.name
+                        font.family: MoneroComponents.Style.fontMonoMedium.name
+                        font.pixelSize: 13
+                        font.letterSpacing: 1
                         horizontalAlignment: Text.AlignHCenter
-                        opacity: 0.7
+                        color: MoneroComponents.Style.dimmedFontColor
+                        themeTransition: false
                         text: fiatApiCurrencySymbol()
                         visible: persistentSettings.fiatPriceEnabled
                     }
                 }
             }
-
-            Rectangle {
-                anchors.top: recipientLayout.top
-                anchors.topMargin: addressLabel.height + recipientLayout.rowSpacing / 2
-                anchors.bottom: recipientLayout.bottom
-                anchors.bottomMargin: totalLayout.height + recipientLayout.rowSpacing / 2
-                anchors.left: recipientLayout.left
-                anchors.right: recipientLayout.right
-                anchors.rightMargin: recipientLayout.thirdRowWidth
-                color: "transparent"
-                border.color: MoneroComponents.Style.inputBorderColorInActive
-                border.width: 1
-                radius: 4
-            }
         }
 
-        ColumnLayout {
-            spacing: 0
+        // Priority card: fee level + estimated fee
+        Item {
+            Layout.fillWidth: true
+            implicitHeight: priorityLayout.implicitHeight + 32
             visible: appWindow.walletMode >= 2
+
+            HoverHandler { id: priorityCardHover }
+
+            MoneroComponents.CardPanel {
+                anchors.fill: parent
+                selected: priorityCardHover.hovered
+            }
+
+        ColumnLayout {
+            id: priorityLayout
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.margins: 16
+            spacing: 12
 
             // Note: workaround for translations in listElements
             // ListElement: cannot use script for property value, so
@@ -709,27 +762,32 @@ Rectangle {
                 ListElement { column1: qsTr("Fastest (x200 fee)")  ; column2: "";  priority: 4 }
             }
 
+            MoneroComponents.SectionTitle {
+                Layout.fillWidth: true
+                text: qsTr("Transaction priority") + translationManager.emptyString
+            }
+
             RowLayout {
-                Layout.topMargin: 5
-                spacing: 10
+                Layout.fillWidth: true
+                spacing: 16
 
                 StandardDropdown {
-                    Layout.maximumWidth: 380; Layout.preferredWidth: 380
+                    Layout.maximumWidth: 300; Layout.preferredWidth: 300
                     id: priorityDropdown
                     currentIndex: 0
                     dataModel: priorityModelV5
-                    labelText: qsTr("Transaction priority") + translationManager.emptyString
-                    labelFontSize: 16
                 }
 
                 MoneroComponents.TextPlain {
                     id: feeLabel
-                    Layout.alignment: Qt.AlignBottom
-                    Layout.bottomMargin: 11
-                    font.family: MoneroComponents.Style.fontRegular.name
+                    Layout.alignment: Qt.AlignVCenter
+                    Layout.fillWidth: true
+                    leftPadding: estimating ? height + 6 : 0
+                    elide: Text.ElideRight
+                    font.family: MoneroComponents.Style.fontMonoRegular.name
                     font.pixelSize: 14
-                    color: MoneroComponents.Style.defaultFontColor
-                    opacity: 0.7
+                    color: MoneroComponents.Style.dimmedFontColor
+                    themeTransition: false
                     property bool estimating: false
                     property var estimatedFee: null
                     property string estimatedFeeFiat: {
@@ -775,11 +833,14 @@ Rectangle {
                     BusyIndicator {
                         anchors.left: parent.left
                         running: feeLabel.estimating
-                        height: parent.height
+                        visible: running
+                        height: 22
                         width: height
+                        anchors.verticalCenter: parent.verticalCenter
                     }
                 }
             }
+        }
         }
 
       MoneroComponents.WarningBox {
@@ -788,17 +849,37 @@ Rectangle {
           visible: warningLongPidDescription
       }
 
+      // Description (and legacy payment ID) card
+      Item {
+          Layout.fillWidth: true
+          implicitHeight: descriptionLayout.implicitHeight + 24
+
+          HoverHandler { id: descriptionCardHover }
+
+          MoneroComponents.CardPanel {
+              anchors.fill: parent
+              selected: descriptionCardHover.hovered
+          }
+
       ColumnLayout {
-          spacing: 15
+          id: descriptionLayout
+          anchors.left: parent.left
+          anchors.right: parent.right
+          anchors.top: parent.top
+          anchors.margins: 16
+          anchors.topMargin: 12
+          spacing: 12
 
           ColumnLayout {
+              spacing: 10
+
               CheckBox {
                   id: descriptionCheckbox
                   border: false
                   checkedIcon: FontAwesome.minusCircle
                   uncheckedIcon: FontAwesome.plusCircle
                   fontAwesomeIcons: true
-                  fontSize: descriptionLine.labelFontSize
+                  fontSize: 14
                   iconOnTheLeft: true
                   Layout.fillWidth: true
                   text: qsTr("Add description") + translationManager.emptyString
@@ -811,23 +892,26 @@ Rectangle {
 
               LineEdit {
                   id: descriptionLine
-                  placeholderFontSize: 16
-                  fontSize: 16
+                  placeholderFontSize: 15
+                  fontSize: 15
                   placeholderText: qsTr("Saved to local wallet history") + " (" + qsTr("only visible to you") + ")" + translationManager.emptyString
                   Layout.fillWidth: true
+                  Layout.bottomMargin: 4
                   visible: descriptionCheckbox.checked
               }
           }
 
           ColumnLayout {
               visible: paymentIdCheckbox.checked
+              spacing: 10
+
               CheckBox {
                   id: paymentIdCheckbox
                   border: false
-                    checkedIcon: FontAwesome.minusCircle
-                    uncheckedIcon: FontAwesome.plusCircle
-                    fontAwesomeIcons: true
-                  fontSize: paymentIdLine.labelFontSize
+                  checkedIcon: FontAwesome.minusCircle
+                  uncheckedIcon: FontAwesome.plusCircle
+                  fontAwesomeIcons: true
+                  fontSize: 14
                   iconOnTheLeft: true
                   Layout.fillWidth: true
                   text: qsTr("Add payment ID") + translationManager.emptyString
@@ -841,16 +925,19 @@ Rectangle {
               // payment id input
               LineEditMulti {
                   id: paymentIdLine
-                  fontBold: true
+                  fontFamily: MoneroComponents.Style.fontMonoRegular.name
+                  fontSize: 14
                   placeholderText: qsTr("64 hexadecimal characters") + translationManager.emptyString
                   readOnly: true
                   Layout.fillWidth: true
+                  Layout.bottomMargin: 4
                   wrapMode: Text.WrapAnywhere
                   addressValidation: false
                   visible: paymentIdCheckbox.checked
                   error: paymentIdCheckbox.checked
               }
           }
+      }
       }
 
       MoneroComponents.WarningBox {
@@ -868,10 +955,17 @@ Rectangle {
       }
 
       RowLayout {
+          Layout.fillWidth: true
+
+          Item {
+              Layout.fillWidth: true
+          }
+
           StandardButton {
               id: sendButton
               rightIcon: "qrc:///images/rightArrow.png"
               Layout.topMargin: 4
+              Layout.preferredWidth: Math.max(implicitWidth, 160)
               text: qsTr("Send") + translationManager.emptyString
               enabled: root.canSendTransaction
               onClicked: {
@@ -889,25 +983,122 @@ Rectangle {
         id: advancedLayout
         anchors.top: pageRoot.bottom
         anchors.left: parent.left
+        anchors.right: parent.right
         anchors.margins: 20
-        anchors.topMargin: 32
-        spacing: 10
+        anchors.topMargin: 24
+        spacing: 0
         enabled: !viewOnly || pageRoot.enabled
 
-        RowLayout {
+        // Collapsible "Advanced options" panel (same look as the wizard's)
+        Item {
+            id: showAdvancedCheckbox
+            readonly property bool checked: persistentSettings.transferShowAdvanced
+            readonly property bool hovered: advHeaderMouse.containsMouse
             visible: appWindow.walletMode >= 2
-            CheckBox2 {
-                id: showAdvancedCheckbox
-                checked: persistentSettings.transferShowAdvanced
-                onClicked: {
-                    persistentSettings.transferShowAdvanced = !persistentSettings.transferShowAdvanced
-                }
-                text: qsTr("Advanced options") + translationManager.emptyString
-            }
-        }
+            Layout.fillWidth: true
+            implicitHeight: advColumn.implicitHeight
 
-        AdvancedOptionsItem {
-            visible: persistentSettings.transferShowAdvanced && appWindow.walletMode >= 2
+            MoneroComponents.NeonFrame {
+                anchors.fill: parent
+                cut: 10
+                accent: root.cardBorder
+                lineOpacity: showAdvancedCheckbox.checked || showAdvancedCheckbox.hovered ? 0.6 : 0.25
+                fillColor: MoneroComponents.Style.blackTheme ? "#0C130E" : "#EEF4EF"
+                fillOpacity: MoneroComponents.Style.blackTheme ? 0.92 : 0.9
+                ticks: false
+                Behavior on lineOpacity { NumberAnimation { duration: 150 } }
+            }
+
+            ColumnLayout {
+                id: advColumn
+                anchors.left: parent.left
+                anchors.right: parent.right
+                spacing: 0
+
+                // header row: chevron, title, view-only hint
+                Item {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 48
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 16
+                        anchors.rightMargin: 16
+                        spacing: 12
+
+                        Canvas {
+                            Layout.preferredWidth: 12
+                            Layout.preferredHeight: 12
+                            rotation: showAdvancedCheckbox.checked ? 90 : 0
+                            Behavior on rotation { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+                            property color c: root.cardAccent
+                            onCChanged: requestPaint()
+                            onPaint: {
+                                var ctx = getContext("2d");
+                                ctx.reset();
+                                ctx.strokeStyle = c;
+                                ctx.lineWidth = 1.8;
+                                ctx.lineCap = "round";
+                                ctx.lineJoin = "round";
+                                ctx.beginPath();
+                                ctx.moveTo(3.5, 1.5); ctx.lineTo(8.5, 6); ctx.lineTo(3.5, 10.5);
+                                ctx.stroke();
+                            }
+                        }
+
+                        MoneroComponents.TextPlain {
+                            text: qsTr("Advanced options").toUpperCase() + translationManager.emptyString
+                            font.family: MoneroComponents.Style.fontMonoMedium.name
+                            font.pixelSize: 13
+                            font.letterSpacing: 2
+                            color: showAdvancedCheckbox.checked || showAdvancedCheckbox.hovered
+                                   ? MoneroComponents.Style.defaultFontColor : MoneroComponents.Style.dimmedFontColor
+                            themeTransition: false
+                        }
+
+                        Item { Layout.fillWidth: true }
+
+                        MoneroComponents.TextPlain {
+                            text: qsTr("Outputs") + "  ·  " + qsTr("Key images") + "  ·  " + qsTr("Offline transaction signing") + translationManager.emptyString
+                            Layout.maximumWidth: parent.width * 0.55
+                            elide: Text.ElideRight
+                            font.family: MoneroComponents.Style.fontMonoRegular.name
+                            font.pixelSize: 12
+                            color: MoneroComponents.Style.dimmedFontColor
+                            visible: !showAdvancedCheckbox.checked
+                            themeTransition: false
+                        }
+                    }
+
+                    MouseArea {
+                        id: advHeaderMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            persistentSettings.transferShowAdvanced = !persistentSettings.transferShowAdvanced
+                        }
+                    }
+                }
+
+                Rectangle {
+                    visible: showAdvancedCheckbox.checked
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 16
+                    Layout.rightMargin: 16
+                    Layout.preferredHeight: 1
+                    color: root.cardAccent
+                    opacity: 0.3
+                }
+
+                ColumnLayout {
+                    visible: showAdvancedCheckbox.checked
+                    Layout.fillWidth: true
+                    Layout.margins: 16
+                    Layout.topMargin: 14
+                    spacing: 8
+
+        MoneroComponents.TransferAdvancedRow {
             title: qsTr("Outputs") + translationManager.emptyString
             button1.text: qsTr("Export") + translationManager.emptyString
             button1.enabled: appWindow.viewOnly
@@ -932,8 +1123,7 @@ Rectangle {
             }
         }
 
-        AdvancedOptionsItem {
-            visible: persistentSettings.transferShowAdvanced && appWindow.walletMode >= 2
+        MoneroComponents.TransferAdvancedRow {
             title: qsTr("Key images") + translationManager.emptyString
             button1.text: qsTr("Export") + translationManager.emptyString
             button1.enabled: !appWindow.viewOnly
@@ -945,7 +1135,7 @@ Rectangle {
             button2.enabled: appWindow.viewOnly && appWindow.isTrustedDaemon()
             button2.onClicked: {
                 console.log("Transfer: import key images clicked")
-                importKeyImagesDialog.open(); 
+                importKeyImagesDialog.open();
             }
             tooltip: {
                 var errorMessage = "";
@@ -962,8 +1152,7 @@ Rectangle {
             }
         }
 
-        AdvancedOptionsItem {
-            visible: persistentSettings.transferShowAdvanced && appWindow.walletMode >= 2
+        MoneroComponents.TransferAdvancedRow {
             title: qsTr("Offline transaction signing") + translationManager.emptyString
             button1.text: qsTr("Create") + translationManager.emptyString
             button1.enabled: root.canCreateOfflineTx
@@ -1004,8 +1193,7 @@ Rectangle {
             }
         }
 
-        AdvancedOptionsItem {
-            visible: persistentSettings.transferShowAdvanced && appWindow.walletMode >= 2
+        MoneroComponents.TransferAdvancedRow {
             title: qsTr("Unmixable outputs") + translationManager.emptyString
             button1.text: qsTr("Sweep") + translationManager.emptyString
             button1.enabled : pageRoot.enabled
@@ -1014,6 +1202,9 @@ Rectangle {
                 root.sweepUnmixableClicked()
             }
             tooltip: qsTr("Create a transaction that spends old unmovable outputs") + translationManager.emptyString
+        }
+                }
+            }
         }
     }
 

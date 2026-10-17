@@ -44,6 +44,8 @@ Rectangle {
     property bool showMaximizeButton: true
     property bool showCloseButton: true
     property string walletName: ""
+    property string deviceLabel: ""        // Trezor name, shown after the wallet name
+    property bool hardwareWallet: false    // Trezor icon instead of the safe
 
     height: {
         if(!persistentSettings.customDecorations) return 0;
@@ -105,6 +107,69 @@ Rectangle {
             GradientStop { position: 1.0; color: "transparent" }
         }
         opacity: 0.6
+    }
+
+    // status chip of the title bar (privacy status)
+    component Chip: Item {
+        id: chip
+        property string label: ""
+        property color dot: "#8C8C8C"
+        property string tip: ""
+        property bool blink: false
+        width: chipRow.implicitWidth + 18
+        height: 24
+        MoneroComponents.NeonFrame {
+            anchors.fill: parent
+            cut: 5
+            accent: MoneroComponents.Style.blackTheme ? "#E8ECE9" : "#2B3A30"
+            lineOpacity: chipArea.containsMouse ? 0.7 : 0.3
+            fillColor: accent
+            fillOpacity: chipArea.containsMouse ? 0.08 : 0.03
+            ticks: false
+        }
+        Row {
+            id: chipRow
+            anchors.centerIn: parent
+            spacing: 6
+            Rectangle {
+                anchors.verticalCenter: parent.verticalCenter
+                width: 7; height: 7; radius: 3.5
+                color: chip.dot
+                SequentialAnimation on opacity {
+                    running: chip.blink
+                    loops: Animation.Infinite
+                    NumberAnimation { to: 0.25; duration: 600 }
+                    NumberAnimation { to: 1; duration: 600 }
+                    onRunningChanged: if (!running) parent.opacity = 1
+                }
+            }
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: chip.label
+                color: MoneroComponents.Style.defaultFontColor
+                font.family: MoneroComponents.Style.fontMonoMedium.name
+                font.pixelSize: 11
+                font.letterSpacing: 1
+            }
+        }
+        MoneroComponents.Tooltip {
+            id: chipTip
+            anchors.fill: parent
+            text: chip.tip
+        }
+        MouseArea {
+            id: chipArea
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onEntered: chipTip.tooltipPopup.open()
+            onExited: chipTip.tooltipPopup.close()
+            onClicked: {
+                chipTip.tooltipPopup.close();
+                middlePanel.settingsView.settingsStateViewState = "Node";
+                appWindow.showPageRequest("Settings");
+            }
+        }
     }
 
     RowLayout {
@@ -291,8 +356,8 @@ Rectangle {
 
             Image {
                 id: imgLogo
-                width: 125
-                height: 28
+                width: 265
+                height: 32
 
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.verticalCenter: parent.verticalCenter
@@ -327,9 +392,17 @@ Rectangle {
                 readonly property int nameMax: Math.max(40, parent.width - 120)
 
                 MoneroComponents.SafeIcon {
+                    visible: !root.hardwareWallet
                     anchors.verticalCenter: parent.verticalCenter
                     width: 22
                     height: 22
+                }
+
+                MoneroComponents.TrezorIcon {
+                    visible: root.hardwareWallet
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 22
+                    height: 24
                 }
 
                 Text {
@@ -359,6 +432,81 @@ Rectangle {
                     font.family: MoneroComponents.Style.fontMonoBold.name
                     font.pixelSize: 19
                 }
+
+                // Trezor name, in brackets like the wallet name
+                Row {
+                    visible: root.deviceLabel.length > 0
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 10
+
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "["
+                        color: walletTitle.accent
+                        font.family: MoneroComponents.Style.fontMonoBold.name
+                        font.pixelSize: 19
+                    }
+
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: Math.min(implicitWidth, walletTitle.nameMax / 2)
+                        elide: Text.ElideRight
+                        text: root.deviceLabel
+                        color: walletTitle.ink
+                        font.family: MoneroComponents.Style.fontMonoMedium.name
+                        font.pixelSize: 16
+                        font.capitalization: Font.AllUppercase
+                        font.letterSpacing: 2
+                    }
+
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "]"
+                        color: walletTitle.accent
+                        font.family: MoneroComponents.Style.fontMonoBold.name
+                        font.pixelSize: 19
+                    }
+                }
+            }
+        }
+
+        // privacy status: Nym, node and Trezor, only with a wallet open. Click: Settings > Node / Network
+        Row {
+            id: privacyStatus
+            visible: walletName.length > 0 && typeof appWindow !== "undefined"
+            Layout.alignment: Qt.AlignVCenter
+            Layout.rightMargin: 12
+            spacing: 6
+
+            readonly property bool nymUp: appWindow.nymVpnProxyUp()
+            readonly property bool nymWorking: persistentSettings.nymVpnEnabled && !nymUp
+            readonly property bool remote: persistentSettings.useRemoteNode
+            readonly property string nodeAddress: remote ? remoteNodesModel.currentRemoteNode().address : "127.0.0.1 (monerod)"
+
+            Chip {
+                label: "NYM"
+                dot: privacyStatus.nymUp ? "#3DDC84" : privacyStatus.nymWorking ? "#F5B83D" : persistentSettings.nymVpnRequired ? "#FF5A5A" : "#8C8C8C"
+                blink: privacyStatus.nymWorking
+                tip: privacyStatus.nymUp
+                     ? qsTr("All the app's traffic goes through NymVPN.") + (appWindow.nymVpnIpPlace !== "" ? " " + qsTr("Exit: %1").arg(appWindow.nymVpnIpPlace) : "") + translationManager.emptyString
+                     : privacyStatus.nymWorking ? qsTr("NymVPN is connecting…") + translationManager.emptyString
+                     : persistentSettings.nymVpnRequired ? qsTr("Nym required is on but NymVPN is not connected: nothing goes out.") + translationManager.emptyString
+                     : qsTr("NymVPN is off: the app connects directly.") + translationManager.emptyString
+            }
+
+            Chip {
+                label: privacyStatus.remote ? qsTr("REMOTE") + translationManager.emptyString : qsTr("LOCAL") + translationManager.emptyString
+                dot: appWindow.disconnected ? "#FF5A5A" : "#3DDC84"
+                tip: (privacyStatus.remote ? qsTr("Remote node: %1").arg(privacyStatus.nodeAddress) : qsTr("Local node: %1").arg(privacyStatus.nodeAddress))
+                     + " · " + (appWindow.disconnected ? qsTr("disconnected") : qsTr("connected"))
+                     + (privacyStatus.nymUp ? " · " + qsTr("through Nym") : "") + translationManager.emptyString
+            }
+
+            Chip {
+                visible: root.hardwareWallet
+                label: "TREZOR"
+                dot: "#3DDC84"
+                tip: qsTr("Hardware wallet: %1. The keys never leave the device.").arg(root.deviceLabel !== "" ? root.deviceLabel : "Trezor") + translationManager.emptyString
             }
         }
 

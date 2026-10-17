@@ -118,6 +118,33 @@ function capitalize(s){
     return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
+// Readable amounts for display only (never for values that are parsed back):
+// "1234567.123456789012" -> "1,234,567.123456789012". Works on every number inside the string.
+var amountThousandsSep = ",";
+var amountDecimalSep = ".";
+function prettyAmount(s) {
+    return String(s).replace(/\d+(\.\d+)?/g, function(m) {
+        var p = m.split('.');
+        var i = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, amountThousandsSep);
+        return p.length < 2 ? i : i + amountDecimalSep + p[1];
+    });
+}
+
+// Same as prettyAmount, as rich text: decimals after the third are drawn at smallPx.
+// Use with textFormat: Text.RichText. "12.345678901234" -> "12.345<span ...>678901234</span>"
+function prettyAmountRich(s, smallPx) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        .replace(/\d+(\.\d+)?/g, function(m) {
+            var p = m.split('.');
+            var i = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, amountThousandsSep);
+            if (p.length < 2) return i;
+            var d = p[1];
+            if (d.length <= 3) return i + amountDecimalSep + d;
+            return i + amountDecimalSep + d.slice(0, 3)
+                + '<span style="font-size:' + smallPx + 'px">' + d.slice(3) + '</span>';
+        });
+}
+
 function removeTrailingZeros(value) {
     return (value + '').replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
 }

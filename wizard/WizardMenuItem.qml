@@ -25,16 +25,15 @@
 // INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
 import QtQuick
 import QtQuick.Effects
-import QtQuick.Dialogs
 import QtQuick.Layouts
-import QtQuick.Controls
 
 import "../components" as MoneroComponents
 
-RowLayout {
+// Wizard menu entry drawn as a card, like the Account page: chamfered panel, icon,
+// title + description and a chevron. Hover lights the border; the whole card is clickable.
+Item {
     id: rowlayout
     Layout.fillWidth: true
     Layout.bottomMargin: 10
@@ -44,105 +43,169 @@ RowLayout {
     property alias headerText: header.text
     property alias bodyText: body.text
     signal menuClicked();
-    spacing: 10
 
-    Item {
-        Layout.preferredWidth: 70
-        Layout.preferredHeight: 70
+    readonly property bool dark: MoneroComponents.Style.blackTheme
+    readonly property color border: dark ? "#E8ECE9" : "#2B3A30"
+    readonly property color accent: dark ? "#4E9E6A" : "#2E7D4A"
+    readonly property bool hovered: mouse.containsMouse || rowlayout.activeFocus
 
-        MoneroComponents.CheckBox {
-            id: checkboxItem
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.verticalCenter: parent.verticalCenter
-            toggleOnClick: false
-            visible: rowlayout.checkbox
+    implicitHeight: Math.max(84, content.implicitHeight + 28)
+
+    MoneroComponents.NeonFrame {
+        anchors.fill: parent
+        cut: 12
+        accent: rowlayout.border
+        lineOpacity: rowlayout.hovered ? 0.85 : 0.28
+        fillColor: rowlayout.dark ? "#0C130E" : "#EEF4EF"
+        fillOpacity: rowlayout.dark ? 0.92 : 0.9
+        glow: rowlayout.hovered ? 0.3 : 0.0
+        ticks: rowlayout.hovered
+        Behavior on lineOpacity { NumberAnimation { duration: 150 } }
+    }
+
+    // green tint on hover
+    MoneroComponents.NeonFrame {
+        anchors.fill: parent
+        cut: 12
+        lineOpacity: 0
+        fillColor: rowlayout.accent
+        fillOpacity: rowlayout.hovered ? 0.10 : 0.0
+        ticks: false
+        Behavior on fillOpacity { NumberAnimation { duration: 150 } }
+    }
+
+    // hover: bar on the left
+    Rectangle {
+        anchors.left: parent.left
+        anchors.leftMargin: 1
+        anchors.verticalCenter: parent.verticalCenter
+        width: 3
+        height: parent.height - 24
+        radius: 1
+        color: rowlayout.accent
+        opacity: rowlayout.hovered ? 1 : 0
+        Behavior on opacity { NumberAnimation { duration: 150 } }
+    }
+
+    RowLayout {
+        id: content
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.leftMargin: 16
+        anchors.rightMargin: 18
+        spacing: 16
+
+        Item {
+            Layout.preferredWidth: 56
+            Layout.preferredHeight: 56
+
+            MoneroComponents.CheckBox {
+                id: checkboxItem
+                anchors.centerIn: parent
+                toggleOnClick: false
+                visible: rowlayout.checkbox
+            }
+
+            Image {
+                id: icon
+                visible: !rowlayout.checkbox && (GraphicsInfo.api === GraphicsInfo.Software || MoneroComponents.Style.blackTheme)
+                anchors.centerIn: parent
+                width: 56
+                height: 56
+                fillMode: Image.PreserveAspectFit
+                smooth: true
+                mipmap: true
+                source: ""
+                scale: rowlayout.hovered ? 1.06 : 1.0
+                Behavior on scale { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
+            }
+
+            MultiEffect {
+                visible: !rowlayout.checkbox && (GraphicsInfo.api !== GraphicsInfo.Software && !MoneroComponents.Style.blackTheme)
+                anchors.fill: icon
+                source: icon
+                scale: icon.scale
+                shadowEnabled: true
+                shadowHorizontalOffset: 3
+                shadowVerticalOffset: 3
+                shadowBlur: 0.625
+                blurMax: 16
+                shadowColor: "#1E000000"
+            }
         }
 
-        Image {
-            id: icon
-            visible: !rowlayout.checkbox && (GraphicsInfo.api === GraphicsInfo.Software || MoneroComponents.Style.blackTheme)
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.verticalCenter: parent.verticalCenter
-            source: ""
+        ColumnLayout {
+            Layout.alignment: Qt.AlignVCenter
+            Layout.fillWidth: true
+            spacing: 4
+
+            MoneroComponents.TextPlain {
+                id: header
+                Layout.fillWidth: true
+                color: MoneroComponents.Style.defaultFontColor
+                font.family: MoneroComponents.Style.fontMedium.name
+                font.pixelSize: wizardController.layoutScale == 4 ? 15 : wizardController.layoutScale == 3 ? 18 : 19
+                wrapMode: Text.WordWrap
+                themeTransition: false
+            }
+
+            MoneroComponents.TextPlain {
+                id: body
+                Layout.fillWidth: true
+                visible: text !== ""
+                color: MoneroComponents.Style.dimmedFontColor
+                font.family: MoneroComponents.Style.fontRegular.name
+                font.pixelSize: wizardController.layoutScale <= 2 ? 15 : 13
+                wrapMode: Text.WordWrap
+                themeTransition: false
+            }
         }
 
-        MultiEffect {
-            visible: !rowlayout.checkbox && (GraphicsInfo.api !== GraphicsInfo.Software && !MoneroComponents.Style.blackTheme)
-            anchors.fill: icon
-            source: icon
-            shadowEnabled: true
-            shadowHorizontalOffset: 3
-            shadowVerticalOffset: 3
-            shadowBlur: 0.625
-            blurMax: 16
-            shadowColor: "#1E000000"
-        }
-
-        MouseArea {
-            cursorShape: Qt.PointingHandCursor
-            anchors.fill: parent
-            onClicked: {
-                rowlayout.menuClicked();
+        // chevron
+        Canvas {
+            Layout.preferredWidth: 14
+            Layout.preferredHeight: 14
+            Layout.leftMargin: 4
+            property color c: rowlayout.hovered ? MoneroComponents.Style.defaultFontColor : MoneroComponents.Style.dimmedFontColor
+            onCChanged: requestPaint()
+            transform: Translate { x: rowlayout.hovered ? 3 : 0; Behavior on x { NumberAnimation { duration: 150 } } }
+            onPaint: {
+                var ctx = getContext("2d");
+                ctx.reset();
+                ctx.strokeStyle = c;
+                ctx.lineWidth = 1.8;
+                ctx.lineCap = "round";
+                ctx.lineJoin = "round";
+                ctx.beginPath();
+                ctx.moveTo(4, 2); ctx.lineTo(10, 7); ctx.lineTo(4, 12);
+                ctx.stroke();
             }
         }
     }
 
-    ColumnLayout {
-        Layout.alignment: Qt.AlignVCenter
-        Layout.fillWidth: true
-        spacing: 0
-
-        MoneroComponents.TextPlain {
-            id: header
-            Layout.fillWidth: true
-            leftPadding: parent.leftPadding
-            topPadding: 0
-            color: MoneroComponents.Style.defaultFontColor
-            opacity: MoneroComponents.Style.blackTheme ? 1.0 : 0.8
-            font.bold: true
-            font.family: MoneroComponents.Style.fontRegular.name
-            font.pixelSize: {
-                if (wizardController.layoutScale == 4) {
-                    return 16;
-                } else if (wizardController.layoutScale == 3) {
-                    return 20;
-                } else if (wizardController.layoutScale <= 2) {
-                    return 22;
-                }
-            }
-
-            MouseArea {
-                cursorShape: Qt.PointingHandCursor
-                anchors.fill: parent
-                onClicked: {
-                    rowlayout.menuClicked();
-                }
-            }
+    MouseArea {
+        id: mouse
+        anchors.fill: parent
+        hoverEnabled: true
+        cursorShape: Qt.PointingHandCursor
+        // only a real click: the page must not be scrolling and the item must not have moved
+        // under the cursor between press and release (e.g. a panel below changed height)
+        property real pressSceneY: 0
+        property bool pressOk: false
+        function pageMoving() {
+            return typeof wizardFlickable !== "undefined" && wizardFlickable && wizardFlickable.moving;
         }
-
-        MoneroComponents.TextPlain {
-            id: body
-            Layout.fillWidth: true
-            color: MoneroComponents.Style.dimmedFontColor
-            font.family: MoneroComponents.Style.fontRegular.name
-            font.pixelSize: {
-                if (wizardController.layoutScale <= 2 ){
-                    return 16;
-                } else {
-                    return 14;
-                }
-            }
-            topPadding: 4
-            wrapMode: Text.WordWrap
-            themeTransition: false
-
-            MouseArea {
-                cursorShape: Qt.PointingHandCursor
-                anchors.fill: parent
-                onClicked: {
-                    rowlayout.menuClicked();
-                }
-            }
+        onPressed: {
+            pressSceneY = rowlayout.mapToItem(null, 0, 0).y;
+            pressOk = !pageMoving();
+        }
+        onCanceled: pressOk = false
+        onClicked: {
+            var moved = Math.abs(rowlayout.mapToItem(null, 0, 0).y - pressSceneY) > 2;
+            if (pressOk && !moved && !pageMoving())
+                rowlayout.menuClicked();
+            pressOk = false;
         }
     }
 }

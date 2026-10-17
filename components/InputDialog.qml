@@ -32,11 +32,16 @@ import QtQuick.Layouts
 
 import "../components" as MoneroComponents
 
+// Text input dialog (labels of transactions, addresses and accounts, page jump, restore height):
+// a centered card over the blurred window.
 Item {
     id: root
     visible: false
     property alias labelText: label.text
     property alias inputText: input.text
+    // picture: tag (labels, default), info, tx...
+    property string kind: "tag"
+    readonly property bool dark: MoneroComponents.Style.blackTheme
 
     // same signals as Dialog has
     signal accepted()
@@ -49,6 +54,7 @@ Item {
         root.visible = true;
         input.focus = true;
         input.text = prepopulate ? prepopulate : "";
+        input.selectAll();
     }
 
     function close() {
@@ -56,102 +62,98 @@ Item {
         middlePanel.enabled = true
         titleBar.state = "default"
         root.visible = false;
+        kind = "tag";
     }
 
-    ColumnLayout {
-        z: parent.z + 1
-        id: mainLayout
-        spacing: 10
-        anchors { fill: parent; margins: 35 }
+    MoneroComponents.ModalTint { }
 
-        ColumnLayout {
-            id: column
+    MoneroComponents.ModalCard {
+        id: card
+        kind: root.kind
+        maxWidth: 680
+        imageSize: 140
 
+        Label {
+            id: label
             Layout.fillWidth: true
-            Layout.alignment: Qt.AlignHCenter
-            Layout.maximumWidth: 400
+            wrapMode: Text.WordWrap
+            font.pixelSize: 16
+            font.family: MoneroComponents.Style.fontRegular.name
+            color: MoneroComponents.Style.defaultFontColor
+        }
 
-            Label {
-                id: label
-                Layout.fillWidth: true
+        MoneroComponents.Input {
+            id : input
+            focus: true
+            Layout.topMargin: 2
+            Layout.fillWidth: true
+            horizontalAlignment: TextInput.AlignLeft
+            verticalAlignment: TextInput.AlignVCenter
+            font.family: MoneroComponents.Style.fontMonoRegular.name
+            font.pixelSize: 20
+            KeyNavigation.tab: okButton
+            bottomPadding: 10
+            leftPadding: 12
+            topPadding: 10
+            color: MoneroComponents.Style.defaultFontColor
+            selectionColor: MoneroComponents.Style.textSelectionColor
+            selectedTextColor: MoneroComponents.Style.textSelectedColor
 
-                font.pixelSize: 16
-                font.family: MoneroComponents.Style.fontLight.name
-
-                color: MoneroComponents.Style.defaultFontColor
+            background: MoneroComponents.NeonFrame {
+                cut: 6
+                ticks: false
+                accent: input.activeFocus ? (root.dark ? "#5FD08F" : "#1E8E4E") : (root.dark ? "#E8ECE9" : "#2B3A30")
+                lineOpacity: input.activeFocus ? 0.9 : 0.4
+                fillColor: root.dark ? "#050806" : "#FFFFFF"
+                fillOpacity: 0.9
             }
 
-            MoneroComponents.Input {
-                id : input
-                focus: true
-                Layout.topMargin: 6
-                Layout.fillWidth: true
-                horizontalAlignment: TextInput.AlignLeft
-                verticalAlignment: TextInput.AlignVCenter
-                font.family: MoneroComponents.Style.fontLight.name
-                font.pixelSize: 24
-                KeyNavigation.tab: okButton
-                bottomPadding: 10
-                leftPadding: 10
-                topPadding: 10
-                color: MoneroComponents.Style.defaultFontColor
-                selectionColor: MoneroComponents.Style.textSelectionColor
-                selectedTextColor: MoneroComponents.Style.textSelectedColor
+            Keys.enabled: root.visible
+            function acceptInput() {
+                root.close()
+                root.accepted()
+            }
 
-                background: Rectangle {
-                    radius: 2
-                    border.color: MoneroComponents.Style.inputBorderColorActive
-                    border.width: 1
-                    color: MoneroComponents.Style.blackTheme ? "black" : "#A9FFFFFF"
-                }
+            Keys.onEnterPressed: acceptInput()
+            Keys.onReturnPressed: {
+                acceptInput()
+            }
+            Keys.onEscapePressed: {
+                root.close()
+                root.rejected()
+            }
+        }
 
-                Keys.enabled: root.visible
-                function acceptInput() {
-                    root.close()
-                    root.accepted()
-                }
+        // Cancel (grey) / OK (green)
+        RowLayout {
+            id: buttons
+            spacing: 14
+            Layout.topMargin: 8
+            Layout.fillWidth: true
 
-                Keys.onEnterPressed: acceptInput()
-                Keys.onReturnPressed: {
-                    acceptInput()
-                }
-                Keys.onEscapePressed: {
+            Item { Layout.fillWidth: true }
+
+            MoneroComponents.StandardButton {
+                id: cancelButton
+                small: true
+                accent: root.dark ? "#8C8C8C" : "#6B6B6B"
+                textColor: root.dark ? "#D0D0D0" : "#4A4A4A"
+                text: qsTr("Cancel") + translationManager.emptyString
+                KeyNavigation.tab: input
+                onClicked: {
                     root.close()
                     root.rejected()
                 }
             }
-
-            // Ok/Cancel buttons
-            RowLayout {
-                id: buttons
-                spacing: 16
-                Layout.topMargin: 16
-                Layout.alignment: Qt.AlignRight
-
-                MoneroComponents.StandardButton {
-                    id: cancelButton
-                    primary: false
-                    small: true
-                    width: 120
-                    fontSize: 14
-                    text: qsTr("Cancel") + translationManager.emptyString
-                    KeyNavigation.tab: input
-                    onClicked: {
-                        root.close()
-                        root.rejected()
-                    }
-                }
-                MoneroComponents.StandardButton {
-                    id: okButton
-                    small: true
-                    width: 120
-                    fontSize: 14
-                    text: qsTr("Ok") + translationManager.emptyString
-                    KeyNavigation.tab: cancelButton
-                    onClicked: {
-                        root.close()
-                        root.accepted()
-                    }
+            MoneroComponents.StandardButton {
+                id: okButton
+                small: true
+                accent: root.dark ? "#5FD08F" : "#1E8E4E"
+                text: qsTr("Ok") + translationManager.emptyString
+                KeyNavigation.tab: cancelButton
+                onClicked: {
+                    root.close()
+                    root.accepted()
                 }
             }
         }

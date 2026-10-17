@@ -31,6 +31,8 @@ import QtQuick.Layouts
 import QtQuick.Controls
 import QtQuick.Dialogs
 
+import FontAwesome
+
 import "../../js/Wizard.js" as Wizard
 import "../../js/Utils.js" as Utils
 import "../../version.js" as Version
@@ -71,323 +73,125 @@ Rectangle {
         anchors.right: parent.right
         anchors.margins: 20
         anchors.topMargin: 0
-        spacing: 30
+        spacing: 12
 
-        GridLayout {
-            columns: 2
-            columnSpacing: 0
+        MoneroComponents.SectionTitle {
+            Layout.fillWidth: true
+            text: qsTr("Information") + translationManager.emptyString
+        }
 
-            MoneroComponents.TextBlock {
-                font.pixelSize: 14
-                text: qsTr("GUI version: ") + translationManager.emptyString
+        MoneroComponents.SettingsCard {
+            padding: 8
+            spacing: 2
+
+            MoneroComponents.SettingsInfoRow {
+                label: qsTr("GUI version: ").replace(/:\s*$/, "") + translationManager.emptyString
+                value: Version.GUI_VERSION + " (Qt " + qtRuntimeVersion + ")" + translationManager.emptyString
             }
 
-            MoneroComponents.TextBlock {
-                font.pixelSize: 14
-                color: MoneroComponents.Style.dimmedFontColor
-                text: Version.GUI_VERSION + " (Qt " + qtRuntimeVersion + ")" + translationManager.emptyString
-            }
-
-            Rectangle {
-                height: 1
-                Layout.topMargin: 2
-                Layout.bottomMargin: 2
-                Layout.fillWidth: true
-                color: MoneroComponents.Style.dividerColor
-                opacity: MoneroComponents.Style.dividerOpacity
-            }
-
-            Rectangle {
-                height: 1
-                Layout.topMargin: 2
-                Layout.bottomMargin: 2
-                Layout.fillWidth: true
-                color: MoneroComponents.Style.dividerColor
-                opacity: MoneroComponents.Style.dividerOpacity
-            }
-
-            MoneroComponents.TextBlock {
+            MoneroComponents.SettingsInfoRow {
                 id: guiMoneroVersion
-                font.pixelSize: 14
-                text: qsTr("Embedded Monero version: ") + translationManager.emptyString
+                label: qsTr("Embedded Monero version: ").replace(/:\s*$/, "") + translationManager.emptyString
+                value: moneroVersion
             }
 
-            MoneroComponents.TextBlock {
-                font.pixelSize: 14
-                color: MoneroComponents.Style.dimmedFontColor
-                text: moneroVersion
-            }
-
-            Rectangle {
-                height: 1
-                Layout.topMargin: 2
-                Layout.bottomMargin: 2
-                Layout.fillWidth: true
-                color: MoneroComponents.Style.dividerColor
-                opacity: MoneroComponents.Style.dividerOpacity
-            }
-
-            Rectangle {
-                height: 1
-                Layout.topMargin: 2
-                Layout.bottomMargin: 2
-                Layout.fillWidth: true
-                color: MoneroComponents.Style.dividerColor
-                opacity: MoneroComponents.Style.dividerOpacity
-            }
-
-            MoneroComponents.TextBlock {
-                Layout.fillWidth: true
-                font.pixelSize: 14
-                text: qsTr("Wallet path: ") + translationManager.emptyString
-            }
-
-            MoneroComponents.TextBlock {
+            MoneroComponents.SettingsInfoRow {
                 id: walletLocation
-                Layout.fillWidth: true
-                color: MoneroComponents.Style.dimmedFontColor
-                font.pixelSize: 14
                 property string walletPath: (isIOS ?  appWindow.accountsDir : "") + persistentSettings.wallet_path
-                text: "\
-                    <style type='text/css'>\
-                        a {cursor:pointer;text-decoration: none; color: #FF6C3C}\
-                    </style>\
-                    <a href='#'>%1</a>".arg(Utils.htmlEscape(walletPath))
-                textFormat: Text.RichText
-                onLinkActivated: oshelper.openContainingFolder(walletPath)
-
-                MouseArea {
-                    anchors.fill: parent
-                    acceptedButtons: Qt.NoButton
-                    cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor
-                }
+                label: qsTr("Wallet path: ").replace(/:\s*$/, "") + translationManager.emptyString
+                value: walletPath
+                actionIcon: FontAwesome.folderOpen
+                actionTooltip: qsTr("Open folder") + translationManager.emptyString
+                onActionClicked: oshelper.openContainingFolder(walletPath)
             }
 
-            Rectangle {
-                height: 1
-                Layout.topMargin: 2
-                Layout.bottomMargin: 2
-                Layout.fillWidth: true
-                color: MoneroComponents.Style.dividerColor
-                opacity: MoneroComponents.Style.dividerOpacity
-            }
-
-            Rectangle {
-                height: 1
-                Layout.topMargin: 2
-                Layout.bottomMargin: 2
-                Layout.fillWidth: true
-                color: MoneroComponents.Style.dividerColor
-                opacity: MoneroComponents.Style.dividerOpacity
-            }
-
-            MoneroComponents.TextBlock {
+            MoneroComponents.SettingsInfoRow {
                 id: restoreHeight
-                font.pixelSize: 14
-                textFormat: Text.RichText
-                text: (typeof currentWallet == "undefined") ? "" : qsTr("Wallet restore height: ") + translationManager.emptyString
-            }
+                visible: typeof currentWallet != "undefined"
+                label: qsTr("Wallet restore height: ").replace(/:\s*$/, "") + translationManager.emptyString
+                value: currentWallet ? currentWallet.walletCreationHeight : ""
+                actionIcon: FontAwesome.edit
+                actionTooltip: qsTr("Change") + translationManager.emptyString
+                onActionClicked: restoreHeightText.changeRestoreHeight()
 
-            MoneroComponents.TextBlock {
-                id: restoreHeightText
-                Layout.fillWidth: true
-                textFormat: Text.RichText
-                color: MoneroComponents.Style.dimmedFontColor
-                font.pixelSize: 14
-                property var style: "<style type='text/css'>a {cursor:pointer;text-decoration: none; color: #FF6C3C}</style>"
-                text: (currentWallet ? currentWallet.walletCreationHeight : "") + style + " <a href='#'> (%1)</a>".arg(qsTr("Change")) + translationManager.emptyString
-                onLinkActivated: {
-                    inputDialog.labelText = qsTr("Set a new restore height.\nYou can enter a block height or a date (YYYY-MM-DD):") + translationManager.emptyString;
-                    inputDialog.onAcceptedCallback = function() {
-                        var _restoreHeight;
-                        if (inputDialog.inputText) {
-                            _restoreHeight = Utils.parseDateStringOrRestoreHeightAsInteger(inputDialog.inputText.trim());
-                        }
-                        if (!isNaN(_restoreHeight)) {
-                            if(_restoreHeight >= 0) {
-                                currentWallet.walletCreationHeight = _restoreHeight
-                                // Restore height is saved in .keys file. Set password to trigger rewrite.
-                                currentWallet.setPassword(appWindow.walletPassword)
-
-                                // Show confirmation dialog
-                                confirmationDialog.title = qsTr("Rescan wallet cache") + translationManager.emptyString;
-                                confirmationDialog.text  = qsTr("Are you sure you want to rebuild the wallet cache?\n"
-                                                                + "The following information will be deleted\n"
-                                                                + "- Recipient addresses\n"
-                                                                + "- Tx keys\n"
-                                                                + "- Tx descriptions\n\n"
-                                                                + "The old wallet cache file will be renamed and can be restored later.\n"
-                                                                );
-                                confirmationDialog.onAcceptedCallback = function() {
-                                    appWindow.closeWallet(function() {
-                                        walletManager.clearWalletCache(persistentSettings.wallet_path);
-                                        walletManager.openWalletAsync(persistentSettings.wallet_path, appWindow.walletPassword,
-                                                                        persistentSettings.nettype, persistentSettings.kdfRounds);
-                                    });
-                                }
-
-                                confirmationDialog.onRejectedCallback = null;
-                                confirmationDialog.open()
-                                return;
+                // kept as an object so the restore height logic keeps its id
+                QtObject {
+                    id: restoreHeightText
+                    function changeRestoreHeight() {
+                        inputDialog.labelText = qsTr("Set a new restore height.\nYou can enter a block height or a date (YYYY-MM-DD):") + translationManager.emptyString;
+                        inputDialog.onAcceptedCallback = function() {
+                            var _restoreHeight;
+                            if (inputDialog.inputText) {
+                                _restoreHeight = Utils.parseDateStringOrRestoreHeightAsInteger(inputDialog.inputText.trim());
                             }
+                            if (!isNaN(_restoreHeight)) {
+                                if(_restoreHeight >= 0) {
+                                    currentWallet.walletCreationHeight = _restoreHeight
+                                    // Restore height is saved in .keys file. Set password to trigger rewrite.
+                                    currentWallet.setPassword(appWindow.walletPassword)
+
+                                    // Show confirmation dialog
+                                    confirmationDialog.title = qsTr("Rescan wallet cache") + translationManager.emptyString;
+                                    confirmationDialog.text  = qsTr("Are you sure you want to rebuild the wallet cache?\n"
+                                                                    + "The following information will be deleted\n"
+                                                                    + "- Recipient addresses\n"
+                                                                    + "- Tx keys\n"
+                                                                    + "- Tx descriptions\n\n"
+                                                                    + "The old wallet cache file will be renamed and can be restored later.\n"
+                                                                    );
+                                    confirmationDialog.onAcceptedCallback = function() {
+                                        appWindow.closeWallet(function() {
+                                            walletManager.clearWalletCache(persistentSettings.wallet_path);
+                                            walletManager.openWalletAsync(persistentSettings.wallet_path, appWindow.walletPassword,
+                                                                            persistentSettings.nettype, persistentSettings.kdfRounds);
+                                        });
+                                    }
+
+                                    confirmationDialog.onRejectedCallback = null;
+                                    confirmationDialog.open()
+                                    return;
+                                }
+                            }
+
+                            appWindow.showStatusMessage(qsTr("Invalid restore height specified. Must be a number or a date formatted YYYY-MM-DD"),3);
                         }
-
-                        appWindow.showStatusMessage(qsTr("Invalid restore height specified. Must be a number or a date formatted YYYY-MM-DD"),3);
+                        inputDialog.onRejectedCallback = null;
+                        inputDialog.kind = "info";
+                        inputDialog.open(currentWallet ? currentWallet.walletCreationHeight.toFixed(0) : "0")
                     }
-                    inputDialog.onRejectedCallback = null;
-                    inputDialog.open(currentWallet ? currentWallet.walletCreationHeight.toFixed(0) : "0")
-                }
-
-                MouseArea {
-                    anchors.fill: parent
-                    acceptedButtons: Qt.NoButton
-                    cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor
                 }
             }
 
-            Rectangle {
-                height: 1
-                Layout.topMargin: 2
-                Layout.bottomMargin: 2
-                Layout.fillWidth: true
-                color: MoneroComponents.Style.dividerColor
-                opacity: MoneroComponents.Style.dividerOpacity
+            MoneroComponents.SettingsInfoRow {
+                label: qsTr("Wallet log path: ").replace(/:\s*$/, "") + translationManager.emptyString
+                value: logger.logFilePath
+                actionIcon: FontAwesome.folderOpen
+                actionTooltip: qsTr("Open folder") + translationManager.emptyString
+                onActionClicked: oshelper.openContainingFolder(logger.logFilePath)
             }
 
-            Rectangle {
-                height: 1
-                Layout.topMargin: 2
-                Layout.bottomMargin: 2
-                Layout.fillWidth: true
-                color: MoneroComponents.Style.dividerColor
-                opacity: MoneroComponents.Style.dividerOpacity
+            MoneroComponents.SettingsInfoRow {
+                label: qsTr("Wallet mode: ").replace(/:\s*$/, "") + translationManager.emptyString
+                value: walletModeString
+                mono: false
             }
 
-            MoneroComponents.TextBlock {
-                Layout.fillWidth: true
-                font.pixelSize: 14
-                text: qsTr("Wallet log path: ") + translationManager.emptyString
+            MoneroComponents.SettingsInfoRow {
+                label: qsTr("Graphics mode: ").replace(/:\s*$/, "") + translationManager.emptyString
+                value: rendererName
             }
 
-            MoneroComponents.TextBlock {
-                Layout.fillWidth: true
-                color: MoneroComponents.Style.dimmedFontColor
-                font.pixelSize: 14
-                text: "\
-                    <style type='text/css'>\
-                        a {cursor:pointer;text-decoration: none; color: #FF6C3C}\
-                    </style>\
-                    <a href='#'>%1</a>".arg(logger.logFilePath)
-                textFormat: Text.RichText
-                onLinkActivated: oshelper.openContainingFolder(logger.logFilePath)
-
-                MouseArea {
-                    anchors.fill: parent
-                    acceptedButtons: Qt.NoButton
-                    cursorShape: parent.hoveredLink ? Qt.PointingHandCursor : Qt.ArrowCursor
-                }
-            }
-
-            Rectangle {
-                height: 1
-                Layout.topMargin: 2
-                Layout.bottomMargin: 2
-                Layout.fillWidth: true
-                color: MoneroComponents.Style.dividerColor
-                opacity: MoneroComponents.Style.dividerOpacity
-            }
-
-            Rectangle {
-                height: 1
-                Layout.topMargin: 2
-                Layout.bottomMargin: 2
-                Layout.fillWidth: true
-                color: MoneroComponents.Style.dividerColor
-                opacity: MoneroComponents.Style.dividerOpacity
-            }
-
-            MoneroComponents.TextBlock {
-                Layout.fillWidth: true
-                font.pixelSize: 14
-                text: qsTr("Wallet mode: ") + translationManager.emptyString
-            }
-
-            MoneroComponents.TextBlock {
-                Layout.fillWidth: true
-                color: MoneroComponents.Style.dimmedFontColor
-                font.pixelSize: 14
-                text: walletModeString
-            }
-
-            Rectangle {
-                height: 1
-                Layout.topMargin: 2
-                Layout.bottomMargin: 2
-                Layout.fillWidth: true
-                color: MoneroComponents.Style.dividerColor
-                opacity: MoneroComponents.Style.dividerOpacity
-            }
-
-            Rectangle {
-                height: 1
-                Layout.topMargin: 2
-                Layout.bottomMargin: 2
-                Layout.fillWidth: true
-                color: MoneroComponents.Style.dividerColor
-                opacity: MoneroComponents.Style.dividerOpacity
-            }
-
-            MoneroComponents.TextBlock {
-                Layout.fillWidth: true
-                font.pixelSize: 14
-                text: qsTr("Graphics mode: ") + translationManager.emptyString
-            }
-
-            MoneroComponents.TextBlock {
-                Layout.fillWidth: true
-                color: MoneroComponents.Style.dimmedFontColor
-                font.pixelSize: 14
-                text: rendererName
-            }
-
-            Rectangle {
+            MoneroComponents.SettingsInfoRow {
                 visible: isTails
-                height: 1
-                Layout.topMargin: 2
-                Layout.bottomMargin: 2
-                Layout.fillWidth: true
-                color: MoneroComponents.Style.dividerColor
-                opacity: MoneroComponents.Style.dividerOpacity
-            }
-
-            Rectangle {
-                visible: isTails
-                height: 1
-                Layout.topMargin: 2
-                Layout.bottomMargin: 2
-                Layout.fillWidth: true
-                color: MoneroComponents.Style.dividerColor
-                opacity: MoneroComponents.Style.dividerOpacity
-            }
-
-            MoneroComponents.TextBlock {
-                visible: isTails
-                Layout.fillWidth: true
-                font.pixelSize: 14
-                text: qsTr("Tails: ") + translationManager.emptyString
-            }
-
-            MoneroComponents.TextBlock {
-                visible: isTails
-                Layout.fillWidth: true
-                color: MoneroComponents.Style.dimmedFontColor
-                font.pixelSize: 14
-                text: tailsUsePersistence ? qsTr("persistent") + translationManager.emptyString : qsTr("persistence disabled") + translationManager.emptyString;
+                label: qsTr("Tails: ").replace(/:\s*$/, "") + translationManager.emptyString
+                value: tailsUsePersistence ? qsTr("persistent") + translationManager.emptyString : qsTr("persistence disabled") + translationManager.emptyString;
+                mono: false
             }
         }
 
         RowLayout {
-            spacing: 20;
+            Layout.topMargin: 6
+            spacing: 12;
 
             MoneroComponents.StandardButton {
                 small: true

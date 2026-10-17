@@ -70,7 +70,8 @@ Rectangle {
 
     ToolTip {
         id: popup
-        height: tooltip.height + 20
+        width: tooltip.width + leftPadding + rightPadding
+        height: tooltip.height + topPadding + bottomPadding
 
         background: MoneroComponents.NeonFrame {
             cut: 7

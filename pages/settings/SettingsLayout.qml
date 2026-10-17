@@ -51,340 +51,207 @@ Rectangle {
         anchors.right: parent.right
         anchors.margins: 20
         anchors.topMargin: 0
-        spacing: 6
+        spacing: 12
 
-        MoneroComponents.CheckBox {
-            id: customDecorationsCheckBox
-            checked: persistentSettings.customDecorations
-            onClicked: Windows.setCustomWindowDecorations(checked)
-            text: qsTr("Custom decorations") + translationManager.emptyString
-        }
 
-        MoneroComponents.CheckBox {
-            id: checkForUpdatesCheckBox
-            enabled: !disableCheckUpdatesFlag
-            checked: persistentSettings.checkForUpdates && !disableCheckUpdatesFlag
-            onClicked: persistentSettings.checkForUpdates = !persistentSettings.checkForUpdates
-            text: qsTr("Check for updates periodically") + translationManager.emptyString
-        }
-
-        MoneroComponents.CheckBox {
-            checked: persistentSettings.displayWalletNameInTitleBar
-            onClicked: persistentSettings.displayWalletNameInTitleBar = !persistentSettings.displayWalletNameInTitleBar
-            text: qsTr("Display wallet name in title bar") + translationManager.emptyString
-        }
-
-        MoneroComponents.CheckBox {
-            id: hideBalanceCheckBox
-            checked: persistentSettings.hideBalance
-            onClicked: {
-                persistentSettings.hideBalance = !persistentSettings.hideBalance
-                appWindow.updateBalance();
-            }
-            text: qsTr("Hide balance") + translationManager.emptyString
-        }
-
-        MoneroComponents.CheckBox {
-            id: themeCheckbox
-            checked: !MoneroComponents.Style.blackTheme
-            text: qsTr("Light theme") + translationManager.emptyString
-            toggleOnClick: false
-            onClicked: {
-                MoneroComponents.Style.blackTheme = !MoneroComponents.Style.blackTheme;
-            }
-        }
-
-        MoneroComponents.LabelSubheader {
+        // ---- appearance ----
+        MoneroComponents.SectionTitle {
             Layout.fillWidth: true
-            Layout.topMargin: 14
-            Layout.bottomMargin: 4
-            text: "MATRIX FX"
+            text: qsTr("Appearance") + translationManager.emptyString
         }
 
-        MoneroComponents.CheckBox {
-            checked: persistentSettings.fxMatrixRain
-            onClicked: persistentSettings.fxMatrixRain = !persistentSettings.fxMatrixRain
-            text: "Lluvia Matrix de fondo (tema oscuro)"
-        }
-
-        MoneroComponents.CheckBox {
-            checked: persistentSettings.fxBootScreen
-            onClicked: persistentSettings.fxBootScreen = !persistentSettings.fxBootScreen
-            text: "Pantalla de arranque tipo terminal"
-        }
-
-        MoneroComponents.CheckBox {
-            checked: persistentSettings.fxPageGlitch
-            onClicked: persistentSettings.fxPageGlitch = !persistentSettings.fxPageGlitch
-            text: "Efecto glitch al cambiar de página"
-        }
-
-        MoneroComponents.CheckBox {
-            checked: persistentSettings.fxSounds
-            onClicked: persistentSettings.fxSounds = !persistentSettings.fxSounds
-            text: "Sonidos de la interfaz"
-        }
-        
-        MoneroComponents.CheckBox {
-            checked: persistentSettings.askPasswordBeforeSending
-            text: qsTr("Ask for password before sending a transaction") + translationManager.emptyString
-            toggleOnClick: false
-            onClicked: {
-                if (persistentSettings.askPasswordBeforeSending) {
-                    passwordDialog.onAcceptedCallback = function() {
-                        if (appWindow.walletPassword === passwordDialog.password){
-                            persistentSettings.askPasswordBeforeSending = false;
-                        } else {
-                            passwordDialog.showError(qsTr("Wrong password"));
-                        }
-                    }
-                    passwordDialog.onRejectedCallback = null;
-                    passwordDialog.open()
-                } else {
-                    persistentSettings.askPasswordBeforeSending = true;
-                }
-            }
-        }
-
-        MoneroComponents.CheckBox {
-            checked: persistentSettings.autosave
-            onClicked: persistentSettings.autosave = !persistentSettings.autosave
-            text: qsTr("Autosave") + translationManager.emptyString
-        }
-
-        MoneroComponents.Slider {
-            Layout.fillWidth: true
-            Layout.leftMargin: 35
-            Layout.topMargin: 6
-            visible: persistentSettings.autosave
-            from: 1
-            stepSize: 1
-            to: 60
-            value: persistentSettings.autosaveMinutes
-            text: "%1 %2 %3".arg(qsTr("Every")).arg(value).arg(qsTr("minute(s)")) + translationManager.emptyString
-            onMoved: persistentSettings.autosaveMinutes = value
-        }
-
-        MoneroComponents.CheckBox {
-            id: userInActivityCheckbox
-            checked: persistentSettings.lockOnUserInActivity
-            onClicked: persistentSettings.lockOnUserInActivity = !persistentSettings.lockOnUserInActivity
-            text: qsTr("Lock wallet on inactivity") + translationManager.emptyString
-        }
-
-        MoneroComponents.Slider {
-            visible: userInActivityCheckbox.checked
-            Layout.fillWidth: true
-            Layout.topMargin: 6
-            Layout.leftMargin: 35
-            from: 1
-            stepSize: 1
-            to: 60
-            value: persistentSettings.lockOnUserInActivityInterval
-            text: {
-                var minutes = value > 1 ? qsTr("minutes") : qsTr("minute");
-                return qsTr("After ") + value + " " + minutes + translationManager.emptyString;
-            }
-            onMoved: persistentSettings.lockOnUserInActivityInterval = value
-        }
-
-        MoneroComponents.CheckBox {
-            id: backgroundSyncCheckbox
-            visible: !!currentWallet && !currentWallet.isHwBacked() && !appWindow.viewOnly
-            checked: appWindow.backgroundSyncType != Wallet.BackgroundSync_Off
-            text: qsTr("Sync in the background when locked") + translationManager.emptyString
-            toggleOnClick: false
-            onClicked: {
-                if (currentWallet && appWindow) {
-                    appWindow.showProcessingSplash(qsTr("Updating settings..."))
-
-                    // TODO: add support for custom background password option
-                    var newBackgroundSyncType = Wallet.BackgroundSync_Off
-                    if (currentWallet.getBackgroundSyncType() === Wallet.BackgroundSync_Off)
-                        newBackgroundSyncType = Wallet.BackgroundSync_ReusePassword
-
-                    // TODO: don't keep the wallet password in memory on the appWindow
-                    // https://github.com/monero-project/monero-gui/issues/1537#issuecomment-410055329
-                    currentWallet.setupBackgroundSync(newBackgroundSyncType, appWindow.walletPassword)
-                }
-            }
-        }
-
-        MoneroComponents.CheckBox {
-            checked: persistentSettings.askStopLocalNode
-            onClicked: persistentSettings.askStopLocalNode = !persistentSettings.askStopLocalNode
-            text: qsTr("Ask to stop local node during program exit") + translationManager.emptyString
-        }
-
-        //! Manage pricing
-        readonly property bool fiatRatesConsentNeeded: persistentSettings.fiatPriceCurrency !== "xmrusd" && !persistentSettings.fiatRatesConsentGiven
-
-        RowLayout {
+        MoneroComponents.SettingsCard {
             MoneroComponents.CheckBox {
-                id: enableConvertCurrency
-                text: qsTr("Enable displaying balance in other currencies") + translationManager.emptyString
-                checked: persistentSettings.fiatPriceEnabled
-                onCheckedChanged: {
-                    if (!checked) {
-                        console.log("Disabled price conversion");
-                        persistentSettings.fiatPriceEnabled = false;
-                    }
-                }
-            }
-        }
-
-        GridLayout {
-            visible: enableConvertCurrency.checked
-            columns: 2
-            Layout.fillWidth: true
-            Layout.leftMargin: 36
-            columnSpacing: 32
-
-            MoneroComponents.StandardDropdown {
-                id: fiatPriceProviderDropDown
-                Layout.maximumWidth: 200
-                labelText: qsTr("Price source") + translationManager.emptyString
-                labelFontSize: 14
-                dataModel: fiatPriceProvidersModel
-                onChanged: {
-                    var obj = dataModel.get(currentIndex);
-                    persistentSettings.fiatPriceProvider = obj.data;
-
-                    if(persistentSettings.fiatPriceEnabled)
-                        appWindow.fiatApiRefresh();
+                id: themeCheckbox
+                checked: !MoneroComponents.Style.blackTheme
+                text: qsTr("Light theme") + translationManager.emptyString
+                toggleOnClick: false
+                onClicked: {
+                    MoneroComponents.Style.blackTheme = !MoneroComponents.Style.blackTheme;
                 }
             }
 
-            MoneroComponents.StandardDropdown {
-                id: fiatPriceCurrencyDropdown
-                Layout.maximumWidth: 100
-                labelText: qsTr("Currency") + translationManager.emptyString
-                labelFontSize: 14
-                maxDropdownItems: 8
-                dataModel: fiatPriceCurrencyModel
-                onChanged: {
-                    var obj = dataModel.get(currentIndex);
-                    persistentSettings.fiatPriceCurrency = obj.data;
-
-                    if(persistentSettings.fiatPriceEnabled) {
-                        appWindow.fiatApiUpdatePrice();
-                        appWindow.fiatApiRefresh();
-                    }
-                }
+            MoneroComponents.CheckBox {
+                id: customDecorationsCheckBox
+                checked: persistentSettings.customDecorations
+                onClicked: Windows.setCustomWindowDecorations(checked)
+                text: qsTr("Custom decorations") + translationManager.emptyString
             }
 
-            z: parent.z + 1
-        }
+            MoneroComponents.CheckBox {
+                checked: persistentSettings.displayWalletNameInTitleBar
+                onClicked: persistentSettings.displayWalletNameInTitleBar = !persistentSettings.displayWalletNameInTitleBar
+                text: qsTr("Display wallet name in title bar") + translationManager.emptyString
+            }
 
-        ColumnLayout {
-            // Feature needs to be double enabled for security purposes (miss-clicks)
-            visible: enableConvertCurrency.checked && (!persistentSettings.fiatPriceEnabled || settingsUI.fiatRatesConsentNeeded)
-            spacing: 0
-            Layout.topMargin: 5
-            Layout.leftMargin: 36
-
-            MoneroComponents.WarningBox {
-                text: !persistentSettings.fiatPriceEnabled
-                    ? qsTr("Enabling price conversion exposes your IP address to the selected price source, and for currencies other than USD, to the exchange rate provider (frankfurter.dev).") + translationManager.emptyString
-                    : qsTr("Using a non-USD currency exposes your IP address to the exchange rate provider (frankfurter.dev).") + translationManager.emptyString;
+            MoneroComponents.CheckBox {
+                id: hideBalanceCheckBox
+                checked: persistentSettings.hideBalance
+                onClicked: {
+                    persistentSettings.hideBalance = !persistentSettings.hideBalance
+                    appWindow.updateBalance();
+                }
+                text: qsTr("Hide balance") + translationManager.emptyString
             }
 
             MoneroComponents.StandardButton {
-                Layout.topMargin: 10
-                Layout.bottomMargin: 10
+                visible: !persistentSettings.customDecorations
+                Layout.topMargin: 4
                 small: true
-                text: !persistentSettings.fiatPriceEnabled
-                    ? qsTr("Confirm and enable") + translationManager.emptyString
-                    : qsTr("Confirm") + translationManager.emptyString
+                text: qsTr("Change language") + translationManager.emptyString
 
                 onClicked: {
-                    console.log(persistentSettings.fiatPriceEnabled ? "Confirmed exchange rate provider consent" : "Enabled price conversion");
-                    persistentSettings.fiatPriceEnabled = true;
-                    persistentSettings.fiatRatesConsentGiven = true;
-                    appWindow.fiatApiRefresh();
+                    appWindow.toggleLanguageView();
                 }
             }
         }
 
-        MoneroComponents.CheckBox {
-            id: proxyCheckbox
-            Layout.topMargin: 6
-            enabled: !socksProxyFlagSet
-            checked: socksProxyFlagSet ? socksProxyFlag : persistentSettings.proxyEnabled
-            onClicked: {
-                persistentSettings.proxyEnabled = !persistentSettings.proxyEnabled;
-            }
-            text: qsTr("Socks5 proxy (%1%2)")
-                .arg(appWindow.walletMode >= 2 ? qsTr("remote node connections, ") : "")
-                .arg(qsTr("updates downloading, fetching price sources")) + translationManager.emptyString
+        // ---- matrix effects ----
+        MoneroComponents.SectionTitle {
+            Layout.fillWidth: true
+            Layout.topMargin: 12
+            text: "MATRIX FX"
         }
 
-        MoneroComponents.RemoteNodeEdit {
-            id: proxyEdit
-            enabled: proxyCheckbox.enabled
-            Layout.leftMargin: 36
-            Layout.topMargin: 6
-            Layout.minimumWidth: 100
-            placeholderFontSize: 15
-            visible: proxyCheckbox.checked
+        MoneroComponents.SettingsCard {
+            MoneroComponents.CheckBox {
+                checked: persistentSettings.fxMatrixRain
+                onClicked: persistentSettings.fxMatrixRain = !persistentSettings.fxMatrixRain
+                text: "Lluvia Matrix de fondo (tema oscuro)"
+            }
 
-            daemonAddrLabelText: qsTr("IP address") + translationManager.emptyString
-            daemonPortLabelText: qsTr("Port") + translationManager.emptyString
+            MoneroComponents.CheckBox {
+                checked: persistentSettings.fxPageGlitch
+                onClicked: persistentSettings.fxPageGlitch = !persistentSettings.fxPageGlitch
+                text: "Efecto glitch al cambiar de página"
+            }
 
-            initialAddress: socksProxyFlagSet ? socksProxyFlag : persistentSettings.proxyAddress
-            onEditingFinished: {
-                persistentSettings.proxyAddress = proxyEdit.getAddress();
+            MoneroComponents.CheckBox {
+                checked: persistentSettings.fxSounds
+                onClicked: persistentSettings.fxSounds = !persistentSettings.fxSounds
+                text: "Sonidos de la interfaz"
             }
         }
 
-        MoneroComponents.StandardButton {
-            visible: !persistentSettings.customDecorations
-            Layout.topMargin: 10
-            small: true
-            text: qsTr("Change language") + translationManager.emptyString
+        // ---- security ----
+        MoneroComponents.SectionTitle {
+            Layout.fillWidth: true
+            Layout.topMargin: 12
+            text: qsTr("Security") + translationManager.emptyString
+        }
 
-            onClicked: {
-                appWindow.toggleLanguageView();
+        MoneroComponents.SettingsCard {
+            MoneroComponents.CheckBox {
+                checked: persistentSettings.askPasswordBeforeSending
+                text: qsTr("Ask for password before sending a transaction") + translationManager.emptyString
+                toggleOnClick: false
+                onClicked: {
+                    if (persistentSettings.askPasswordBeforeSending) {
+                        passwordDialog.onAcceptedCallback = function() {
+                            if (appWindow.walletPassword === passwordDialog.password){
+                                persistentSettings.askPasswordBeforeSending = false;
+                            } else {
+                                passwordDialog.showError(qsTr("Wrong password"));
+                            }
+                        }
+                        passwordDialog.onRejectedCallback = null;
+                        passwordDialog.open()
+                    } else {
+                        persistentSettings.askPasswordBeforeSending = true;
+                    }
+                }
+            }
+
+            MoneroComponents.CheckBox {
+                id: userInActivityCheckbox
+                checked: persistentSettings.lockOnUserInActivity
+                onClicked: persistentSettings.lockOnUserInActivity = !persistentSettings.lockOnUserInActivity
+                text: qsTr("Lock wallet on inactivity") + translationManager.emptyString
+            }
+
+            MoneroComponents.Slider {
+                visible: userInActivityCheckbox.checked
+                Layout.fillWidth: true
+                Layout.leftMargin: 35
+                Layout.rightMargin: 8
+                from: 1
+                stepSize: 1
+                to: 60
+                value: persistentSettings.lockOnUserInActivityInterval
+                text: {
+                    var minutes = value > 1 ? qsTr("minutes") : qsTr("minute");
+                    return qsTr("After ") + value + " " + minutes + translationManager.emptyString;
+                }
+                onMoved: persistentSettings.lockOnUserInActivityInterval = value
+            }
+
+            MoneroComponents.CheckBox {
+                id: backgroundSyncCheckbox
+                visible: !!currentWallet && !currentWallet.isHwBacked() && !appWindow.viewOnly
+                checked: appWindow.backgroundSyncType != Wallet.BackgroundSync_Off
+                text: qsTr("Sync in the background when locked") + translationManager.emptyString
+                toggleOnClick: false
+                onClicked: {
+                    if (currentWallet && appWindow) {
+                        appWindow.showProcessingSplash(qsTr("Updating settings..."))
+
+                        // TODO: add support for custom background password option
+                        var newBackgroundSyncType = Wallet.BackgroundSync_Off
+                        if (currentWallet.getBackgroundSyncType() === Wallet.BackgroundSync_Off)
+                            newBackgroundSyncType = Wallet.BackgroundSync_ReusePassword
+
+                        // TODO: don't keep the wallet password in memory on the appWindow
+                        // https://github.com/monero-project/monero-gui/issues/1537#issuecomment-410055329
+                        currentWallet.setupBackgroundSync(newBackgroundSyncType, appWindow.walletPassword)
+                    }
+                }
             }
         }
-    }
 
-    ListModel {
-        id: fiatPriceProvidersModel
-    }
+        // ---- general ----
+        MoneroComponents.SectionTitle {
+            Layout.fillWidth: true
+            Layout.topMargin: 12
+            text: qsTr("General") + translationManager.emptyString
+        }
 
-    ListModel {
-        id: fiatPriceCurrencyModel
+        MoneroComponents.SettingsCard {
+            MoneroComponents.CheckBox {
+                id: checkForUpdatesCheckBox
+                enabled: !disableCheckUpdatesFlag
+                checked: persistentSettings.checkForUpdates && !disableCheckUpdatesFlag
+                onClicked: persistentSettings.checkForUpdates = !persistentSettings.checkForUpdates
+                text: qsTr("Check for updates periodically") + translationManager.emptyString
+            }
+
+            MoneroComponents.CheckBox {
+                checked: persistentSettings.autosave
+                onClicked: persistentSettings.autosave = !persistentSettings.autosave
+                text: qsTr("Autosave") + translationManager.emptyString
+            }
+
+            MoneroComponents.Slider {
+                Layout.fillWidth: true
+                Layout.leftMargin: 35
+                Layout.rightMargin: 8
+                visible: persistentSettings.autosave
+                from: 1
+                stepSize: 1
+                to: 60
+                value: persistentSettings.autosaveMinutes
+                text: "%1 %2 %3".arg(qsTr("Every")).arg(value).arg(qsTr("minute(s)")) + translationManager.emptyString
+                onMoved: persistentSettings.autosaveMinutes = value
+            }
+
+            MoneroComponents.CheckBox {
+                checked: persistentSettings.askStopLocalNode
+                onClicked: persistentSettings.askStopLocalNode = !persistentSettings.askStopLocalNode
+                text: qsTr("Ask to stop local node during program exit") + translationManager.emptyString
+            }
+        }
     }
 
     Component.onCompleted: {
-        // Dynamically fill fiatPrice dropdown based on `appWindow.fiatPriceAPIs`
-        var apis = appWindow.fiatPriceAPIs;
-        fiatPriceProvidersModel.clear();
-
-        var i = 0;
-        for (var api in apis){
-            if (!apis.hasOwnProperty(api))
-               continue;
-
-            fiatPriceProvidersModel.append({"column1": Utils.capitalize(api), "data": api});
-
-            if(api === persistentSettings.fiatPriceProvider)
-                fiatPriceProviderDropDown.currentIndex = i;
-            i += 1;
-        }
-
-        var currencies = appWindow.fiatCurrencies;
-        fiatPriceCurrencyModel.clear();
-
-        for (var j = 0; j < currencies.length; ++j) {
-            const key = "xmr" + currencies[j].toLowerCase();
-            fiatPriceCurrencyModel.append({"column1": currencies[j], "data": key});
-
-            if(key === persistentSettings.fiatPriceCurrency)
-                fiatPriceCurrencyDropdown.currentIndex = j;
-        }
-
         console.log('SettingsLayout loaded');
     }
 }

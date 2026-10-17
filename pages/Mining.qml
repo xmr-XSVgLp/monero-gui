@@ -309,7 +309,7 @@ Rectangle {
                                         confirmationDialog.okText = qsTr("Yes") + translationManager.emptyString;
                                         confirmationDialog.onAcceptedCallback = function() {
                                             p2poolManager.download();
-                                            statusMessageText.text = "Downloading P2Pool...";
+                                            statusMessage.text = "Downloading P2Pool...";
                                             statusMessage.visible = true
                                             startSoloMinerButton.enabled = false;
                                             stopSoloMinerButton.enabled = false;

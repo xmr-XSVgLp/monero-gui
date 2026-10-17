@@ -40,7 +40,9 @@ Rectangle {
     property var under: null
     signal clicked()
 
-    readonly property color accent: MoneroComponents.Style.orange
+    // Monero orange instead of the theme accent (Trading data / Swaps)
+    property bool moneroOrange: false
+    readonly property color accent: moneroOrange ? "#FF6600" : MoneroComponents.Style.orange
     readonly property bool hovered: buttonArea.containsMouse
 
     function doClick() {
@@ -169,7 +171,8 @@ Rectangle {
         // button text
         MoneroComponents.TextPlain {
             id: label
-            color: button.checked ? MoneroComponents.Style.textAccent : MoneroComponents.Style.menuButtonTextColor
+            color: button.moneroOrange ? (MoneroComponents.Style.blackTheme ? (button.checked ? "#FFB27A" : "#FF8A3D") : "#D95700")
+                 : button.checked ? MoneroComponents.Style.textAccent : MoneroComponents.Style.menuButtonTextColor
             font.family: MoneroComponents.Style.fontMonoMedium.name
             font.letterSpacing: 0.5
             themeTransitionBlackColor: MoneroComponents.Style._b_menuButtonTextColor

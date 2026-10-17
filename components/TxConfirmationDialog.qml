@@ -45,11 +45,23 @@ Rectangle {
     // TODO: implement without hardcoding sizes
     width: 590
     height: layout.height + layout.anchors.margins * 2
-    color: MoneroComponents.Style.blackTheme ? "black" : "white"
+    color: "transparent"
     visible: false
-    radius: 10
-    border.color: MoneroComponents.Style.blackTheme ? Qt.rgba(255, 255, 255, 0.25) : Qt.rgba(0, 0, 0, 0.25)
-    border.width: 1
+    radius: 0
+    border.width: 0
+    readonly property bool darkTheme: MoneroComponents.Style.blackTheme
+
+    // same neon card as the other dialogs
+    MoneroComponents.NeonFrame {
+        anchors.fill: parent
+        z: -1
+        cut: 14
+        accent: root.darkTheme ? "#E8ECE9" : "#2B3A30"
+        lineOpacity: 0.6
+        fillColor: root.darkTheme ? "#0C130E" : "#EEF4EF"
+        fillOpacity: 0.98
+        glow: 0.4
+    }
     Keys.enabled: true
     Keys.onEscapePressed: {
         root.close()
@@ -417,6 +429,8 @@ Rectangle {
 
                 MoneroComponents.StandardButton {
                     id: backButton
+                    accent: root.darkTheme ? "#8C8C8C" : "#6B6B6B"
+                    textColor: root.darkTheme ? "#D0D0D0" : "#4A4A4A"
                     text: qsTr("Back") + translationManager.emptyString;
                     width: 200
                     primary: false
@@ -430,6 +444,7 @@ Rectangle {
 
                 MoneroComponents.StandardButton {
                     id: confirmButton
+                    accent: root.darkTheme ? "#5FD08F" : "#1E8E4E"
                     text: qsTr("Confirm") + translationManager.emptyString;
                     rightIcon: "qrc:///images/rightArrow.png"
                     width: 200
