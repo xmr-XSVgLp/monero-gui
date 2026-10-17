@@ -1,34 +1,69 @@
-# Monero GUI — Safe 7 Edition (unofficial)
+# XMR Wallet+ (unofficial Monero GUI fork)
 
 > **This is an unofficial, community fork of the [Monero GUI](https://github.com/monero-project/monero-gui).
-> It is not made, reviewed or endorsed by The Monero Project or by Trezor / SatoshiLabs.**
+> It is not made, reviewed or endorsed by The Monero Project, by Trezor / SatoshiLabs or by Nym.**
 > It handles real money: it is **experimental**, use it at your own risk and test with small amounts first.
+
+Tested on **macOS (Apple Silicon) with a Trezor Safe 7**. Older Trezor models and other platforms are untested.
+The interface is available in English and Spanish.
 
 ## What is different from the official Monero GUI
 
-- **Trezor Safe 7 support.** The Safe 7 uses the new Trezor Host Protocol (THP, Noise-encrypted channel),
-  which the official Monero code does not speak yet. This fork adds a THP transport to Monero's Trezor code
-  (in the [`safe7-thp` branch of the monero fork](https://github.com/xmr-XSVgLp/monero/tree/safe7-thp)),
-  including first-time pairing with the 6-digit code shown on the device.
-- **Matrix / cypherpunk theme:** neon dark theme, redesigned buttons, inputs, menus, cards and icons,
-  optional effects (code rain, boot screen, page glitch, UI sounds) that can be switched off in
-  *Settings → Interface → MATRIX FX*.
+### Trezor Safe 7
+- **USB and Bluetooth.** The Safe 7 uses the new Trezor Host Protocol (THP, Noise-encrypted channel), which the
+  official Monero code does not speak yet. The [`safe7-thp` branch of the monero fork](https://github.com/xmr-XSVgLp/monero/tree/safe7-thp)
+  adds THP over USB and over Bluetooth (CoreBluetooth on macOS), first-time pairing with the 6-digit code shown on
+  the device, and passphrase entry on the device.
+- The Trezor's name is shown in the title bar next to the wallet name.
+- Close Trezor Suite before opening the wallet: the Safe 7 is used directly, not through Trezor Bridge.
 
-Tested only on **macOS (Apple Silicon) with a Trezor Safe 7**. Older Trezor models and other platforms are untested.
-Close Trezor Suite before opening the wallet: the Safe 7 is used directly over USB, not through Trezor Bridge.
+### Privacy
+- **NYM VPN panel** on the welcome page. It sends only this app's traffic through the Nym mixnet, using NymVPN's
+  SOCKS5 proxy (`nym-vpnc`), including the local node's P2P traffic. You can pick a new random exit, see the
+  route, and set **Nym required** so nothing connects while Nym is down.
+- **Privacy chips** in the title bar: Nym, remote/local node and Trezor status at a glance.
+- **Settings → Node / Network** groups node, network and Nym options.
+- With *price conversion* turned off in the settings, the app makes no price or exchange requests at all.
+
+### Trading data (only when price conversion is on)
+- XMR/EUR, XMR/USD and XMR/BTC price charts from CoinGecko, for 24H, 7D, 30D, 90D, 1Y and MAX.
+  Prices are cached in CSV files under `~/Monero/xmr-wallet-plus/trading/` and refreshed every 15 minutes.
+- Value of the current wallet over time, a converter, and **price alerts** with a macOS notification.
+- **Swaps:** quotes from Wagyu, NonKYC and ChangeNOW side by side, the best routes between exchanges,
+  and a comparison against earlier prices. Every refresh is saved to `~/Monero/xmr-wallet-plus/precios-swaps.csv`.
+
+### Encrypted notes
+- **Notes** page under Trading data, for private notes stored next to the wallet as `<wallet name>_notes`.
+- Encrypted with AES-256-GCM using a key derived from the wallet keys. Opening the notes asks for the
+  wallet password every time.
+- On Trezor wallets the key also needs the device: the Trezor has to confirm "XMR Wallet+ notes"
+  (SLIP-0011), so the file cannot be opened without that Trezor and passphrase.
+- Notes lock when you leave the page and when the wallet locks for inactivity.
+
+### Look and feel
+- **Matrix / cypherpunk theme:** dark neon theme with white text, redesigned pages, cards, dialogs and icons.
+- Optional effects (code rain, boot screen, page glitch, UI sounds) that can be switched off in
+  *Settings → Interface → MATRIX FX*.
 
 ## Building (macOS)
 
 ```
 git clone --recursive -b safe7-matrix https://github.com/xmr-XSVgLp/monero-gui.git
+cd monero-gui
+bash compilar-macos.sh          # first build: installs Homebrew dependencies and builds
+bash compilar-macos.sh rapido   # later rebuilds
 ```
-Then follow the official *Building on OS X* instructions below (Qt 6, Homebrew dependencies),
-configuring CMake with `-D USE_DEVICE_TREZOR=ON`.
+`compilar-macos.sh` pins OpenSSL 3, Boost 1.85 and protobuf 21, because Monero v0.18 does not build with newer
+versions. The app ends up in `build/release/bin`.
+
+To copy the app to another Mac, run `bash empaquetar-macos.sh`. It creates `dist/XMR-wallet+.app` and
+`dist/XMR-wallet+-macos.zip`, which do not need Homebrew. On the other Mac, run
+`xattr -dr com.apple.quarantine XMR-wallet+.app` once before opening it.
 
 ## License
 
 Same as upstream: BSD 3-Clause, see [LICENSE](LICENSE). Copyright (c) 2014-2024, The Monero Project,
-plus the contributors of this fork. "Monero" and "Trezor" are used only to describe compatibility;
+plus the contributors of this fork. "Monero", "Trezor" and "Nym" are used only to describe compatibility;
 they are trademarks of their respective owners.
 
 ---
