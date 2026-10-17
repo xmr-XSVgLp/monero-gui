@@ -22,14 +22,16 @@ RUN apt update && \
     ninja-build pkg-config python3 python-is-python3 wget xutils-dev && \
     rm -rf /var/lib/apt/lists/*
 
-RUN git clone -b v0.18.5.1 --depth 1 https://github.com/monero-project/monero && \
+RUN git clone -b v0.18.5.4 --depth 1 https://github.com/monero-project/monero && \
     cd monero && \
-    git reset --hard 4f92268d7c16741cfb41e5bbe2aa46cc260a9ea5 && \
+    git reset --hard 85f036ba7019cd36f08e8a38a27c37ea7b522618 && \
     cp -a contrib/depends / && \
     cd .. && \
     rm -rf monero
 
-RUN make -j"$THREADS" -C /depends HOST=x86_64-linux-gnu
+# TODO: Remove this workaround once a better solution is found.
+RUN sed -i 's|--openssldir=$(host_prefix)/etc/openssl|--openssldir=/etc/ssl|' /depends/packages/openssl.mk && \
+    make -j"$THREADS" -C /depends HOST=x86_64-linux-gnu
 
 # Use the pinned upstream CMake binary without changing the compiler or glibc
 # baseline. The Linux x86_64 binaries require glibc 2.17 or newer.
@@ -249,3 +251,6 @@ RUN git clone -b libgcrypt-1.10.1 --depth 1 https://github.com/gpg/libgcrypt && 
     make -j$THREADS && \
     make -j$THREADS install && \
     rm -rf $(pwd)
+
+COPY docker.gitconfig /etc/monero-gui.gitconfig
+RUN git config --system --add include.path /etc/monero-gui.gitconfig

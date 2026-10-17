@@ -202,7 +202,7 @@ Rectangle {
         ListModel {
             id: recipientModel
 
-            readonly property int maxRecipients: 16
+            readonly property int maxRecipients: 15
 
             ListElement {
                 address: ""
