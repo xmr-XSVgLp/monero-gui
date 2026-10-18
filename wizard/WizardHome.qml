@@ -178,7 +178,7 @@ Rectangle {
                     cut: 10
                     accent: showAdvancedCheckbox.border
                     lineOpacity: showAdvancedCheckbox.checked ? 0.6 : (showAdvancedCheckbox.hovered ? 0.6 : 0.25)
-                    fillColor: showAdvancedCheckbox.dark ? "#0C130E" : "#EEF4EF"
+                    fillColor: showAdvancedCheckbox.dark ? "#0C130E" : "#DADFDB"
                     fillOpacity: showAdvancedCheckbox.dark ? 0.92 : 0.9
                     ticks: false
                     Behavior on lineOpacity { NumberAnimation { duration: 150 } }

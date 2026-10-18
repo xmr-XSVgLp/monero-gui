@@ -138,6 +138,21 @@ void TransactionHistory::refresh(quint32 accountIndex)
     }
 }
 
+QVariantList TransactionHistory::usedSubaddresses() const
+{
+    QReadLocker locker(&m_lock);
+
+    QSet<quint32> used;
+    for (const TransactionInfo *ti : m_tinfo) {
+        if (ti->direction() == TransactionInfo::Direction_In && !ti->isFailed())
+            used.unite(ti->subaddrIndex());
+    }
+    QVariantList list;
+    for (const quint32 index : used)
+        list.append(index);
+    return list;
+}
+
 quint64 TransactionHistory::count() const
 {
     QReadLocker locker(&m_lock);

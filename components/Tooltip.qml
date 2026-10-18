@@ -75,7 +75,7 @@ Rectangle {
 
         background: MoneroComponents.NeonFrame {
             cut: 7
-            fillColor: MoneroComponents.Style.blackTheme ? "#000A02" : "#F4FFF6"
+            fillColor: MoneroComponents.Style.blackTheme ? "#000A02" : "#DEE3DF"
             fillOpacity: 0.96
             lineOpacity: 0.9
             glow: 0.45
@@ -123,7 +123,7 @@ Rectangle {
 
                 Rectangle {
                     // cover that slides away to the right
-                    color: MoneroComponents.Style.blackTheme ? "#000A02" : "#F4FFF6"
+                    color: MoneroComponents.Style.blackTheme ? "#000A02" : "#DEE3DF"
                     x: tooltip.width * typeClip.reveal
                     width: tooltip.width + 12
                     height: parent.height

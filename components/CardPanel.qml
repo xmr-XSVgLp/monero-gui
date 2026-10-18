@@ -20,7 +20,7 @@ Item {
         cut: root.cut
         accent: root.border
         lineOpacity: root.lit ? 0.85 : root.idleLine
-        fillColor: root.dark ? "#0C130E" : "#EEF4EF"
+        fillColor: root.dark ? "#0C130E" : "#DADFDB"
         fillOpacity: root.dark ? 0.92 : 0.9
         glow: root.hovered ? 0.3 : 0.0
         ticks: root.lit

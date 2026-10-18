@@ -117,7 +117,7 @@ Rectangle {
             MoneroComponents.CheckBox {
                 checked: persistentSettings.fxMatrixRain
                 onClicked: persistentSettings.fxMatrixRain = !persistentSettings.fxMatrixRain
-                text: "Lluvia Matrix de fondo (tema oscuro)"
+                text: "Lluvia Matrix de fondo"
             }
 
             MoneroComponents.CheckBox {

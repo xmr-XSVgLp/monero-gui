@@ -1094,7 +1094,7 @@ Rectangle {
                 cut: 10
                 accent: root.borderColor
                 lineOpacity: showAdvancedCheckbox.checked || showAdvancedCheckbox.hovered ? 0.6 : 0.25
-                fillColor: MoneroComponents.Style.blackTheme ? "#0C130E" : "#EEF4EF"
+                fillColor: MoneroComponents.Style.blackTheme ? "#0C130E" : "#DADFDB"
                 fillOpacity: MoneroComponents.Style.blackTheme ? 0.92 : 0.9
                 ticks: false
                 Behavior on lineOpacity { NumberAnimation { duration: 150 } }

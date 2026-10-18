@@ -33,6 +33,7 @@
 #include <QList>
 #include <QObject>
 #include <QString>
+#include <QVariantMap>
 /**
  * @brief The OSHelper class - exports to QML some OS-related functions
  */
@@ -69,6 +70,25 @@ public:
     Q_INVOKABLE void armShutdownWatchdog(int seconds) const;
     // end of the NymVPN daemon log (it names the entry gateway and the exit Network Requester); "" if unreadable
     Q_INVOKABLE QString nymVpnLogTail() const;
+    // connection check: SOCKS5 proxy (empty: direct), web latency and speed through it, Monero P2P ping
+    // through it and the local node's state. Runs in its own thread; callback(json) once per finished check, last {"key":"done"}
+    Q_INVOKABLE void nymVpnTest(const QString &socksAddress, const QString &daemonAddress, const QJSValue &callback);
+    // Security page: one HTTP(S) request to a node's RPC (path, JSON body) through a SOCKS5 proxy ("" = direct),
+    // in its own thread; callback(ok, ms, body, error). "https://" or port 443 use TLS.
+    Q_INVOKABLE void nodeRpc(const QString &address, const QString &socksAddress, const QString &path,
+                             const QString &body, int timeoutMs, const QJSValue &callback);
+    // file permissions without reading the file: {exists, isDir, mode ("600"), groupOrOthers, size, modified}
+    Q_INVOKABLE QVariantMap filePermissions(const QString &path) const;
+    // owner only: 600 for files, 700 for folders
+    Q_INVOKABLE bool restrictPermissions(const QString &path) const;
+    // copies a file into a folder as <name>-<yyyyMMdd-HHmm><ext>; returns the new path or ""
+    Q_INVOKABLE QString backupFile(const QString &path, const QString &folder) const;
+    // copies the wallet files (keys, cache, _notes) into <folder>/xmr_<wallet name>, 600/700
+    Q_INVOKABLE QVariantMap backupWallet(const QString &walletPath, const QString &folder) const;
+    // removable volumes (USB, SD...): [{ root, name, free, total }]
+    Q_INVOKABLE QVariantList removableVolumes() const;
+    // wallets inside the "XMR" folder of removable volumes: [{ path, fileName, volume, modified, networktype, address }]
+    Q_INVOKABLE QVariantList removableWallets() const;
     Q_INVOKABLE bool isWritableDirectory(const QString &path) const;
     Q_INVOKABLE QString randomPassword(int numBytes = 32) const;
     Q_INVOKABLE bool isCapsLock() const;

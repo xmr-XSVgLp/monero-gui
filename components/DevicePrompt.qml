@@ -105,7 +105,7 @@ Rectangle {
                     width: parent.width - 18
                     height: parent.height - 40
                     radius: 13
-                    color: root.dark ? "#0B1A0E" : "#E3F7E7"
+                    color: root.dark ? "#0B1A0E" : "#D0D8D2"
                     border.color: Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.35)
                     border.width: 1
                     clip: true

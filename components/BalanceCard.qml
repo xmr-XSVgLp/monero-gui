@@ -109,7 +109,7 @@ Item {
         cut: 16
         accent: root.border
         lineOpacity: 0.85
-        fillColor: MoneroComponents.Style.blackTheme ? "#0C130E" : "#EEF4EF"
+        fillColor: MoneroComponents.Style.blackTheme ? "#0C130E" : "#DADFDB"
         fillOpacity: MoneroComponents.Style.blackTheme ? 0.95 : 0.92
         glow: 0.25
     }
@@ -324,7 +324,7 @@ Item {
                     cut: 10
                     accent: root.border
                     lineOpacity: 0.45
-                    fillColor: MoneroComponents.Style.blackTheme ? "#16231A" : "#DDE9E0"
+                    fillColor: MoneroComponents.Style.blackTheme ? "#16231A" : "#C9D0CA"
                     fillOpacity: MoneroComponents.Style.blackTheme ? 0.9 : 0.9
                     ticks: false
                 }

@@ -54,7 +54,7 @@ Item {
         cut: 10
         accent: card.border
         lineOpacity: card.checked || card.hovered ? 0.6 : 0.25
-        fillColor: card.dark ? "#0C130E" : "#EEF4EF"
+        fillColor: card.dark ? "#0C130E" : "#DADFDB"
         fillOpacity: card.dark ? 0.92 : 0.9
         ticks: false
         Behavior on lineOpacity { NumberAnimation { duration: 150 } }

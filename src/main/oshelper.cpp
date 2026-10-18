@@ -42,6 +42,8 @@
 #include <QStandardPaths>
 #include <QWindow>
 #include <QDir>
+#include <QDirIterator>
+#include <QStorageInfo>
 #include <QDebug>
 #include <QDesktopServices>
 #include <QProcess>
@@ -53,6 +55,15 @@
 #include <QUrl>
 #include <QByteArray>
 #include <QRandomGenerator>
+#include <QThread>
+#include <QDateTime>
+#include <QElapsedTimer>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QNetworkProxy>
+#include <QSslSocket>
+#include <QTcpSocket>
 #ifdef Q_OS_MAC
 #include <QEventLoop>
 #include <QThread>
@@ -443,6 +454,539 @@ QString OSHelper::nymVpnLogTail() const
 QString OSHelper::temporaryPath() const
 {
     return QDir::tempPath();
+}
+
+namespace {
+
+// "host:port" -> (host, port)
+std::pair<QString, quint16> splitHostPort(const QString &address, quint16 fallbackPort)
+{
+    const int colon = address.lastIndexOf(':');
+    if (colon <= 0)
+        return {address, fallbackPort};
+    bool ok = false;
+    const quint16 port = address.mid(colon + 1).toUShort(&ok);
+    return {address.left(colon), ok ? port : fallbackPort};
+}
+
+struct HttpResult
+{
+    bool ok = false;
+    qint64 totalMs = 0;     // connect + TLS + request + whole answer
+    qint64 firstByteMs = 0; // until the first byte of the answer
+    qint64 bodyBytes = 0;
+    QByteArray body;
+    QString error;
+};
+
+// blocking HTTP(S) request on the calling thread; proxy may be NoProxy
+HttpResult httpRequest(const QNetworkProxy &proxy, bool tls, const QString &host, quint16 port,
+                       const QByteArray &method, const QByteArray &path, const QByteArray &payload,
+                       int timeoutMs, bool keepBody)
+{
+    HttpResult r;
+    QElapsedTimer timer;
+    timer.start();
+    QSslSocket socket;
+    socket.setProxy(proxy);
+    if (tls)
+        socket.connectToHostEncrypted(host, port);
+    else
+        socket.connectToHost(host, port);
+    const auto left = [&]() { return std::max<qint64>(1, timeoutMs - timer.elapsed()); };
+    if (!(tls ? socket.waitForEncrypted(left()) : socket.waitForConnected(left())))
+    {
+        r.error = socket.errorString();
+        r.totalMs = timer.elapsed();
+        return r;
+    }
+    QByteArray request = method + " " + path + " HTTP/1.1\r\nHost: " + host.toUtf8()
+                         + "\r\nUser-Agent: XMR-Wallet-Plus\r\nAccept: */*\r\nConnection: close\r\n";
+    if (!payload.isEmpty())
+        request += "Content-Type: application/json\r\nContent-Length: " + QByteArray::number(payload.size()) + "\r\n";
+    request += "\r\n" + payload;
+    socket.write(request);
+    QByteArray head;
+    bool inBody = false;
+    qint64 contentLength = -1;
+    while (timer.elapsed() < timeoutMs)
+    {
+        if (socket.bytesAvailable() == 0 && !socket.waitForReadyRead(std::min<qint64>(left(), 1000)))
+        {
+            if (socket.state() != QAbstractSocket::ConnectedState)
+                break;
+            continue;
+        }
+        const QByteArray chunk = socket.readAll();
+        if (chunk.isEmpty())
+            continue;
+        if (r.firstByteMs == 0)
+            r.firstByteMs = timer.elapsed();
+        if (!inBody)
+        {
+            head += chunk;
+            const int end = head.indexOf("\r\n\r\n");
+            if (end < 0)
+                continue;
+            inBody = true;
+            const QByteArray rest = head.mid(end + 4);
+            head.truncate(end);
+            const QRegularExpressionMatch m = QRegularExpression("content-length:\\s*(\\d+)",
+                QRegularExpression::CaseInsensitiveOption).match(QString::fromLatin1(head));
+            if (m.hasMatch())
+                contentLength = m.captured(1).toLongLong();
+            r.bodyBytes += rest.size();
+            if (keepBody)
+                r.body += rest;
+        }
+        else
+        {
+            r.bodyBytes += chunk.size();
+            if (keepBody)
+                r.body += chunk;
+        }
+        if (contentLength >= 0 && r.bodyBytes >= contentLength)
+            break;
+    }
+    r.totalMs = timer.elapsed();
+    // chunked answers (no Content-Length): join the chunks
+    if (keepBody && QString::fromLatin1(head).contains(QRegularExpression("transfer-encoding:\\s*chunked", QRegularExpression::CaseInsensitiveOption)))
+    {
+        QByteArray joined;
+        int pos = 0;
+        while (pos < r.body.size())
+        {
+            const int lineEnd = r.body.indexOf("\r\n", pos);
+            if (lineEnd < 0)
+                break;
+            bool ok = false;
+            const int size = r.body.mid(pos, lineEnd - pos).split(';').first().trimmed().toInt(&ok, 16);
+            if (!ok || size == 0)
+                break;
+            joined += r.body.mid(lineEnd + 2, size);
+            pos = lineEnd + 2 + size + 2;
+        }
+        r.body = joined;
+    }
+    const QString status = QString::fromLatin1(head.left(head.indexOf("\r\n")));
+    r.ok = inBody && status.contains(QRegularExpression(" 2\\d\\d")) && (contentLength < 0 || r.bodyBytes >= contentLength);
+    if (!r.ok)
+        r.error = !inBody ? (socket.error() != QAbstractSocket::UnknownSocketError ? socket.errorString() : QString("timeout"))
+                          : (status.isEmpty() ? QString("incomplete answer") : status);
+    return r;
+}
+
+// Monero P2P ping (the same COMMAND_PING monerod sends to check a peer) through the proxy
+QJsonObject moneroPing(const QNetworkProxy &proxy, const QString &host, quint16 port, int timeoutMs)
+{
+    QJsonObject o{{"host", host}, {"ok", false}};
+    QElapsedTimer timer;
+    timer.start();
+    QTcpSocket socket;
+    socket.setProxy(proxy);
+    socket.connectToHost(host, port);
+    if (!socket.waitForConnected(timeoutMs))
+    {
+        o["error"] = socket.errorString();
+        return o;
+    }
+    o["connectMs"] = timer.elapsed();
+    // levin header (33 bytes, little endian) + empty portable-storage section
+    const QByteArray body = QByteArray::fromHex("01110101010102010100");
+    QByteArray packet;
+    const auto put = [&packet](quint64 v, int bytes) { for (int i = 0; i < bytes; ++i) packet.append(char((v >> (8 * i)) & 0xff)); };
+    put(0x0101010101012101ULL, 8); // signature
+    put(body.size(), 8);          // body size
+    put(1, 1);                    // expects an answer
+    put(1003, 4);                 // COMMAND_PING
+    put(0, 4);                    // return code
+    put(1, 4);                    // request
+    put(1, 4);                    // protocol version
+    packet += body;
+    const qint64 sent = timer.elapsed();
+    socket.write(packet);
+    QByteArray answer;
+    while (timer.elapsed() < timeoutMs && answer.size() < 33 + 8)
+    {
+        if (!socket.waitForReadyRead(std::max<qint64>(1, timeoutMs - timer.elapsed())))
+            break;
+        answer += socket.readAll();
+    }
+    if (answer.size() >= 33 && answer.startsWith(packet.left(8)))
+    {
+        o["ok"] = true;
+        o["pingMs"] = timer.elapsed() - sent;
+    }
+    else
+        o["error"] = answer.isEmpty() ? (socket.state() == QAbstractSocket::ConnectedState ? QString("no answer") : socket.errorString())
+                                      : QString("unexpected answer");
+    return o;
+}
+
+} // namespace
+
+void OSHelper::nymVpnTest(const QString &socksAddress, const QString &daemonAddress, const QJSValue &callback)
+{
+    QThread *thread = QThread::create([this, socksAddress, daemonAddress, callback]() {
+        const auto report = [this, callback](const QJsonObject &o) {
+            const QString json = QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
+            QMetaObject::invokeMethod(this, [callback, json]() {
+                QJSValue cb(callback);
+                if (cb.isCallable())
+                    cb.call(QJSValueList({json}));
+            }, Qt::QueuedConnection);
+        };
+        const auto socks = splitHostPort(socksAddress, 1080);
+        const QNetworkProxy proxy = socksAddress.isEmpty() ? QNetworkProxy(QNetworkProxy::NoProxy)
+                                                           : QNetworkProxy(QNetworkProxy::Socks5Proxy, socks.first, socks.second);
+
+        // 1. the local SOCKS5 proxy answers (none: direct connection)
+        if (socksAddress.isEmpty())
+            report({{"key", "socks"}, {"ok", true}, {"direct", true}});
+        else
+        {
+            QElapsedTimer t;
+            t.start();
+            QTcpSocket s;
+            s.setProxy(QNetworkProxy::NoProxy);
+            s.connectToHost(socks.first, socks.second);
+            const bool ok = s.waitForConnected(3000);
+            report({{"key", "socks"}, {"ok", ok}, {"ms", t.elapsed()}, {"error", ok ? QString() : s.errorString()}});
+            if (!ok)
+            {
+                report({{"key", "done"}});
+                return;
+            }
+        }
+
+        // 2. public IP seen from outside (through the proxy)
+        if (QSslSocket::supportsSsl())
+        {
+            QJsonObject ip{{"key", "ip"}, {"ok", false}};
+            const HttpResult who = httpRequest(proxy, true, "ipwho.is", 443, "GET", "/", QByteArray(), 30000, true);
+            const QJsonObject j = QJsonDocument::fromJson(who.body).object();
+            if (who.ok && !j["ip"].toString().isEmpty())
+            {
+                ip["ok"] = true;
+                ip["ip"] = j["ip"];
+                ip["place"] = QStringList({j["city"].toString(), j["country"].toString()}).filter(QRegularExpression(".")).join(", ");
+            }
+            else
+            {
+                const HttpResult info = httpRequest(proxy, true, "ipinfo.io", 443, "GET", "/json", QByteArray(), 30000, true);
+                const QJsonObject k = QJsonDocument::fromJson(info.body).object();
+                if (info.ok && !k["ip"].toString().isEmpty())
+                {
+                    ip["ok"] = true;
+                    ip["ip"] = k["ip"];
+                    ip["place"] = QStringList({k["city"].toString(), k["country"].toString()}).filter(QRegularExpression(".")).join(", ");
+                }
+                else
+                    ip["error"] = info.error.isEmpty() ? QString("unexpected answer") : info.error;
+            }
+            report(ip);
+        }
+        else
+            report({{"key", "ip"}, {"ok", false}, {"error", QString("TLS not available")}});
+
+        // 3. web latency: three small HTTPS requests through the mixnet (connect + TLS + answer each)
+        if (!QSslSocket::supportsSsl())
+        {
+            report({{"key", "latency"}, {"ok", false}, {"error", QString("TLS not available")}});
+            report({{"key", "speed"}, {"ok", false}, {"error", QString("TLS not available")}});
+        }
+        else
+        {
+            QJsonArray times;
+            int failed = 0;
+            QString error;
+            for (int i = 0; i < 3; ++i)
+            {
+                const HttpResult r = httpRequest(proxy, true, "speed.cloudflare.com", 443, "GET", "/__down?bytes=0", QByteArray(), 30000, false);
+                if (r.ok)
+                    times.append(r.totalMs);
+                else
+                {
+                    ++failed;
+                    error = r.error;
+                }
+            }
+            report({{"key", "latency"}, {"ok", !times.isEmpty()}, {"times", times}, {"failed", failed}, {"error", error}});
+        }
+
+        // 4. download speed: 1 MB through the mixnet
+        if (QSslSocket::supportsSsl())
+        {
+            const HttpResult r = httpRequest(proxy, true, "speed.cloudflare.com", 443, "GET", "/__down?bytes=1000000", QByteArray(), 60000, false);
+            const qint64 transferMs = std::max<qint64>(1, r.totalMs - r.firstByteMs);
+            report({{"key", "speed"}, {"ok", r.ok}, {"bytes", r.bodyBytes}, {"ms", r.totalMs},
+                    {"kBps", r.bodyBytes > 0 ? double(r.bodyBytes) / 1024.0 * 1000.0 / double(transferMs) : 0.0},
+                    {"error", r.error}});
+        }
+
+        // 5. Monero P2P through the mixnet: ping some seed nodes on port 18080 in parallel
+        {
+            const QStringList seeds({"176.9.0.187", "88.198.163.90", "51.79.173.165", "192.99.8.110"});
+            QList<QThread *> workers;
+            QList<QJsonObject> results(seeds.size());
+            for (int i = 0; i < seeds.size(); ++i)
+            {
+                QThread *w = QThread::create([&results, i, &seeds, proxy]() {
+                    results[i] = moneroPing(proxy, seeds[i], 18080, 45000);
+                });
+                workers.append(w);
+                w->start();
+            }
+            for (QThread *w : workers)
+            {
+                w->wait();
+                delete w;
+            }
+            QJsonArray peers;
+            int ok = 0;
+            for (const QJsonObject &o : results)
+            {
+                peers.append(o);
+                if (o["ok"].toBool())
+                    ++ok;
+            }
+            report({{"key", "p2p"}, {"ok", ok > 0}, {"reached", ok}, {"total", int(seeds.size())}, {"peers", peers}});
+        }
+
+        // 6. the local node (directly, no proxy): height, target and peers
+        {
+            const auto daemon = splitHostPort(daemonAddress, 18081);
+            const QString host = daemon.first == "localhost" ? QString("127.0.0.1") : daemon.first;
+            const HttpResult info = httpRequest(QNetworkProxy(QNetworkProxy::NoProxy), false, host, daemon.second,
+                                                "POST", "/get_info", "{}", 5000, true);
+            QJsonObject o{{"key", "node"}, {"ok", info.ok}};
+            if (!info.ok)
+                o["error"] = info.error;
+            else
+            {
+                const QJsonObject j = QJsonDocument::fromJson(info.body).object();
+                for (const char *k : {"height", "target_height", "outgoing_connections_count", "incoming_connections_count", "synchronized", "busy_syncing"})
+                    o[k] = j[k];
+                const HttpResult conns = httpRequest(QNetworkProxy(QNetworkProxy::NoProxy), false, host, daemon.second, "POST", "/json_rpc",
+                                                     "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_connections\"}", 5000, true);
+                if (conns.ok)
+                {
+                    QJsonObject states;
+                    for (const QJsonValue &c : QJsonDocument::fromJson(conns.body).object()["result"].toObject()["connections"].toArray())
+                    {
+                        const QString state = c.toObject()["state"].toString();
+                        states[state] = states[state].toInt() + 1;
+                    }
+                    o["states"] = states;
+                }
+            }
+            report(o);
+        }
+        report({{"key", "done"}});
+    });
+    connect(thread, &QThread::finished, thread, &QObject::deleteLater);
+    thread->start();
+}
+
+void OSHelper::nodeRpc(const QString &address, const QString &socksAddress, const QString &path,
+                       const QString &body, int timeoutMs, const QJSValue &callback)
+{
+    QThread *thread = QThread::create([this, address, socksAddress, path, body, timeoutMs, callback]() {
+        QString target = address.trimmed();
+        bool tls = false;
+        if (target.startsWith("https://"))
+        {
+            tls = true;
+            target = target.mid(8);
+        }
+        else if (target.startsWith("http://"))
+            target = target.mid(7);
+        target = target.section('/', 0, 0);
+        const auto hostPort = splitHostPort(target, 18081);
+        if (hostPort.second == 443)
+            tls = true;
+        const auto socks = splitHostPort(socksAddress, 1080);
+        const QNetworkProxy proxy = socksAddress.isEmpty() ? QNetworkProxy(QNetworkProxy::NoProxy)
+                                                           : QNetworkProxy(QNetworkProxy::Socks5Proxy, socks.first, socks.second);
+        const QString host = hostPort.first == "localhost" ? QString("127.0.0.1") : hostPort.first;
+        HttpResult r;
+        if (tls && !QSslSocket::supportsSsl())
+            r.error = "TLS not available";
+        else
+            r = httpRequest(proxy, tls, host, hostPort.second, body.isEmpty() ? "GET" : "POST", path.toUtf8(), body.toUtf8(), timeoutMs, true);
+        const bool ok = r.ok;
+        const qint64 ms = r.totalMs;
+        const QString answer = QString::fromUtf8(r.body);
+        const QString error = r.error;
+        QMetaObject::invokeMethod(this, [callback, ok, ms, answer, error]() {
+            QJSValue cb(callback);
+            if (cb.isCallable())
+                cb.call(QJSValueList({ok, double(ms), answer, error}));
+        }, Qt::QueuedConnection);
+    });
+    connect(thread, &QThread::finished, thread, &QObject::deleteLater);
+    thread->start();
+}
+
+QVariantMap OSHelper::filePermissions(const QString &path) const
+{
+    QVariantMap m;
+    const QFileInfo info(path);
+    m["exists"] = info.exists();
+    if (!info.exists())
+        return m;
+    const QFileDevice::Permissions p = info.permissions();
+    const int mode = ((p & QFileDevice::ReadOwner) ? 0400 : 0) | ((p & QFileDevice::WriteOwner) ? 0200 : 0) | ((p & QFileDevice::ExeOwner) ? 0100 : 0)
+                   | ((p & QFileDevice::ReadGroup) ? 040 : 0) | ((p & QFileDevice::WriteGroup) ? 020 : 0) | ((p & QFileDevice::ExeGroup) ? 010 : 0)
+                   | ((p & QFileDevice::ReadOther) ? 04 : 0) | ((p & QFileDevice::WriteOther) ? 02 : 0) | ((p & QFileDevice::ExeOther) ? 01 : 0);
+    m["isDir"] = info.isDir();
+    m["mode"] = QString::number(mode, 8);
+    m["groupOrOthers"] = (mode & 077) != 0;
+    m["size"] = double(info.size());
+    m["modified"] = info.lastModified();
+    return m;
+}
+
+bool OSHelper::restrictPermissions(const QString &path) const
+{
+    const QFileInfo info(path);
+    if (!info.exists())
+        return false;
+    QFileDevice::Permissions p = QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ReadUser | QFileDevice::WriteUser;
+    if (info.isDir())
+        p |= QFileDevice::ExeOwner | QFileDevice::ExeUser;
+    return QFile::setPermissions(path, p);
+}
+
+QString OSHelper::backupFile(const QString &path, const QString &folder) const
+{
+    const QFileInfo info(path);
+    if (!info.isFile() || folder.isEmpty())
+        return QString();
+    QString dir = folder;
+    if (dir.startsWith("file://"))
+        dir = QUrl(dir).toLocalFile();
+    const QString name = info.fileName();
+    const int dot = name.lastIndexOf('.');
+    const QString base = dot > 0 ? name.left(dot) : name;
+    const QString ext = dot > 0 ? name.mid(dot) : QString();
+    const QString target = QDir(dir).filePath(base + "-" + QDateTime::currentDateTime().toString("yyyyMMdd-HHmm") + ext);
+    if (QFile::exists(target) || !QFile::copy(path, target))
+        return QString();
+    QFile::setPermissions(target, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ReadUser | QFileDevice::WriteUser);
+    return target;
+}
+
+QVariantMap OSHelper::backupWallet(const QString &walletPath, const QString &folder) const
+{
+    QVariantMap result;
+    result["ok"] = false;
+    const QFileInfo keys(walletPath + ".keys");
+    if (!keys.isFile() || folder.isEmpty())
+        return result;
+    QString dir = folder;
+    if (dir.startsWith("file://"))
+        dir = QUrl(dir).toLocalFile();
+    const QString name = QFileInfo(walletPath).fileName();
+    const QString target = QDir(dir).filePath("xmr_" + name);
+    if (!QDir().mkpath(target))
+        return result;
+    QFile::setPermissions(target, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner
+                                  | QFileDevice::ReadUser | QFileDevice::WriteUser | QFileDevice::ExeUser);
+
+    // same names as the originals, so the wallet opens straight from the backup folder (no .address.txt: plain text)
+    QStringList copied;
+    for (const QString &suffix : {QString(".keys"), QString(), QString("_notes")}) {
+        const QString source = walletPath + suffix;
+        if (!QFileInfo(source).isFile())
+            continue;
+        const QString dest = QDir(target).filePath(name + suffix);
+        // the wallet is already open from this folder: never delete it to copy it onto itself
+        if (QFileInfo(source).canonicalFilePath() == QFileInfo(dest).canonicalFilePath()) {
+            result["error"] = "same";
+            return result;
+        }
+        if (QFile::exists(dest))
+            QFile::remove(dest);
+        if (!QFile::copy(source, dest))
+            return result;
+        QFile::setPermissions(dest, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ReadUser | QFileDevice::WriteUser);
+        copied.append(name + suffix);
+    }
+    result["ok"] = true;
+    result["dir"] = target;
+    result["files"] = copied;
+    return result;
+}
+
+QVariantList OSHelper::removableVolumes() const
+{
+    QVariantList list;
+    const QString home = QDir::homePath();
+    for (const QStorageInfo &volume : QStorageInfo::mountedVolumes()) {
+        if (!volume.isValid() || !volume.isReady() || volume.isRoot() || volume.isReadOnly())
+            continue;
+        const QString root = volume.rootPath();
+        if (home.startsWith(root + "/"))
+            continue;
+#if defined(Q_OS_MAC)
+        if (!root.startsWith("/Volumes/"))
+            continue;
+#elif defined(Q_OS_WIN)
+        if (QDir(root) == QDir(QDir::rootPath()))
+            continue;
+#else
+        if (!root.startsWith("/media/") && !root.startsWith("/run/media/") && !root.startsWith("/mnt/"))
+            continue;
+#endif
+        QVariantMap v;
+        v["root"] = root;
+        v["name"] = volume.displayName().isEmpty() ? QFileInfo(root).fileName() : volume.displayName();
+        v["free"] = double(volume.bytesAvailable());
+        v["total"] = double(volume.bytesTotal());
+        list.append(v);
+    }
+    return list;
+}
+
+QVariantList OSHelper::removableWallets() const
+{
+    QVariantList list;
+    for (const QVariant &v : removableVolumes()) {
+        const QVariantMap volume = v.toMap();
+        const QString xmr = QDir(volume["root"].toString()).filePath("XMR");
+        if (!QFileInfo(xmr).isDir())
+            continue;
+        // XMR/*.keys and XMR/<folder>/*.keys (the backups are XMR/xmr_<name>/<name>.keys)
+        QStringList keysFiles;
+        QDirIterator top(xmr, QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot);
+        while (top.hasNext()) {
+            const QFileInfo info(top.next());
+            if (info.isFile() && info.suffix() == "keys")
+                keysFiles << info.filePath();
+            else if (info.isDir() && !info.fileName().startsWith('.')) {
+                QDirIterator sub(info.filePath(), {"*.keys"}, QDir::Files);
+                while (sub.hasNext())
+                    keysFiles << sub.next();
+            }
+        }
+        for (const QString &keys : keysFiles) {
+            const QFileInfo info(keys);
+            if (info.fileName().startsWith("._"))    // macOS metadata files on FAT/exFAT drives
+                continue;
+            const QString wallet = info.path() + "/" + info.completeBaseName();
+            const auto networkTypeAndAddress = getNetworkTypeAndAddressFromFile(wallet);
+            QVariantMap w;
+            w["path"] = QDir::toNativeSeparators(wallet);
+            w["fileName"] = info.completeBaseName();
+            w["volume"] = volume["name"];
+            w["modified"] = double(info.lastModified().toSecsSinceEpoch());
+            w["networktype"] = int(networkTypeAndAddress.first);
+            w["address"] = networkTypeAndAddress.second;
+            list.append(w);
+        }
+    }
+    return list;
 }
 
 bool OSHelper::isWritableDirectory(const QString &path) const

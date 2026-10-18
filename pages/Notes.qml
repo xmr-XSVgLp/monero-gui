@@ -1,6 +1,7 @@
 // Notes page: private notes encrypted with AES-256-GCM in <wallet>_notes, next to the wallet.
 // The key comes from the wallet keys (and a confirmation on the Trezor for hardware wallets),
-// so the wallet password is asked every time the notes are opened.
+// They open by themselves with the password the wallet was opened with (plus one confirmation on the
+// Trezor) and stay open until the wallet is closed.
 // Notes are kept as JSON { version, notes: [{ title, text, updated }] } inside the encrypted file.
 
 import QtQuick
@@ -50,14 +51,12 @@ Rectangle {
     }
 
     function unlock() {
-        if (!currentWallet || busy)
+        if (!currentWallet || busy || unlocked)
             return;
         busy = true;
         error = "";
-        var pass = passwordInput.text;
-        currentWallet.notesUnlockAsync(pass, function(ok, text, err) {
+        currentWallet.notesUnlockAsync(appWindow.walletPassword || "", function(ok, text, err) {
             busy = false;
-            passwordInput.text = "";
             if (!ok) {
                 error = errorText(err);
                 return;
@@ -78,29 +77,6 @@ Rectangle {
             savedAt = "";
             select(list.length > 0 ? 0 : -1);
         });
-    }
-
-    function lockNotes() {
-        saveTimer.stop();
-        if (dirty && unlocked && currentWallet) {
-            save(function() { finishLock(); });
-            return;
-        }
-        finishLock();
-    }
-
-    function finishLock() {
-        if (currentWallet)
-            currentWallet.notesLock();
-        unlocked = false;
-        notes = [];
-        current = -1;
-        dirty = false;
-        loadingEditor = true;
-        titleInput.text = "";
-        bodyInput.text = "";
-        loadingEditor = false;
-        fileTick++;
     }
 
     function select(index) {
@@ -169,12 +145,14 @@ Rectangle {
     function onPageCompleted() {
         error = "";
         fileTick++;
-        if (!unlocked)
-            passwordInput.forceActiveFocus();
+        unlock();
     }
 
+    // stays open until the wallet is closed; only pending changes are written now
     function onPageClosed() {
-        lockNotes();
+        saveTimer.stop();
+        if (dirty && unlocked && currentWallet)
+            save();
     }
 
     Connections {
@@ -184,6 +162,11 @@ Rectangle {
             pageNotes.notes = [];
             pageNotes.current = -1;
             pageNotes.dirty = false;
+            pageNotes.error = "";
+            pageNotes.loadingEditor = true;
+            titleInput.text = "";
+            bodyInput.text = "";
+            pageNotes.loadingEditor = false;
         }
     }
 
@@ -197,7 +180,7 @@ Rectangle {
         cut: 12
         accent: pageNotes.neutral
         lineOpacity: 0.35
-        fillColor: MoneroComponents.Style.blackTheme ? "#0C130E" : "#EEF4EF"
+        fillColor: MoneroComponents.Style.blackTheme ? "#0C130E" : "#DADFDB"
         fillOpacity: 0.92
         glow: 0.0
     }
@@ -232,12 +215,6 @@ Rectangle {
                 themeTransition: false
             }
 
-            MoneroComponents.StandardButton {
-                small: true
-                visible: pageNotes.unlocked
-                text: qsTr("Lock") + translationManager.emptyString
-                onClicked: pageNotes.lockNotes()
-            }
         }
 
         // ---------- locked ----------
@@ -263,8 +240,8 @@ Rectangle {
                     color: MoneroComponents.Style.defaultFontColor
                     themeTransition: false
                     text: (pageNotes.device
-                           ? qsTr("The notes are encrypted with the wallet keys and your Trezor. Enter the wallet password and then confirm on the Trezor.")
-                           : qsTr("The notes are encrypted with the wallet keys. Enter the wallet password to open them."))
+                           ? qsTr("The notes are encrypted with the wallet keys and your Trezor. Confirm on the Trezor to open them: they stay open until the wallet is closed.")
+                           : qsTr("The notes are encrypted with the wallet keys. They open with this wallet and stay open until it is closed."))
                           + translationManager.emptyString
                 }
 
@@ -282,46 +259,6 @@ Rectangle {
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 12
-
-                    Item {
-                        Layout.preferredWidth: 300
-                        Layout.maximumWidth: 300
-                        implicitHeight: 38
-                        MoneroComponents.NeonFrame {
-                            anchors.fill: parent
-                            cut: 6
-                            accent: pageNotes.neutral
-                            lineOpacity: passwordInput.activeFocus ? 0.9 : 0.4
-                            fillColor: pageNotes.neutral
-                            fillOpacity: 0.04
-                            ticks: false
-                        }
-                        TextInput {
-                            id: passwordInput
-                            anchors.fill: parent
-                            anchors.leftMargin: 12
-                            anchors.rightMargin: 12
-                            verticalAlignment: TextInput.AlignVCenter
-                            echoMode: TextInput.Password
-                            color: MoneroComponents.Style.defaultFontColor
-                            selectionColor: Qt.rgba(0.5, 0.5, 0.5, 0.4)
-                            font.family: MoneroComponents.Style.fontMonoMedium.name
-                            font.pixelSize: 14
-                            clip: true
-                            enabled: !pageNotes.busy
-                            onAccepted: pageNotes.unlock()
-                        }
-                        MoneroComponents.TextPlain {
-                            anchors.left: parent.left
-                            anchors.leftMargin: 12
-                            anchors.verticalCenter: parent.verticalCenter
-                            visible: passwordInput.text === "" && !passwordInput.activeFocus
-                            text: qsTr("Wallet password") + translationManager.emptyString
-                            font.pixelSize: 14
-                            color: MoneroComponents.Style.dimmedFontColor
-                            themeTransition: false
-                        }
-                    }
 
                     MoneroComponents.StandardButton {
                         enabled: !pageNotes.busy

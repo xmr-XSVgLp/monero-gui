@@ -36,7 +36,7 @@ Item {
         cut: 8
         accent: row.border
         lineOpacity: row.selected ? 0.95 : (row.hovered ? 0.45 : 0.18)
-        fillColor: row.dark ? "#0B0F0C" : "#F2F5F3"
+        fillColor: row.dark ? "#0B0F0C" : "#D8DDD9"
         fillOpacity: row.dark ? 0.92 : 0.9
         glow: row.selected ? 0.35 : 0.0
         ticks: row.selected

@@ -16,7 +16,7 @@ Rectangle {
     readonly property color textColor: dark ? "#ECECEC" : "#1E2421"
     readonly property color dimColor: dark ? "#8C8C8C" : "#6A716D"
 
-    color: dark ? "#07090A" : "#F4F6F5"
+    color: dark ? "#07090A" : "#D3D8D4"
     visible: false
     focus: visible
 
@@ -51,7 +51,7 @@ Rectangle {
             var cx = width / 2, cy = height * 0.42, r = Math.max(width, height) * 0.6;
             var g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
             g.addColorStop(0, dark ? "#1A1C1D" : "#FFFFFF");
-            g.addColorStop(1, dark ? "#07090A" : "#E9ECEA");
+            g.addColorStop(1, dark ? "#07090A" : "#C7CDC8");
             ctx.fillStyle = g;
             ctx.fillRect(0, 0, width, height);
         }

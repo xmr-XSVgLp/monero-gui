@@ -49,6 +49,22 @@ Rectangle {
     property alias recentWallets: recentList
     property string viewName: "wizardOpenWallet1"
     property int walletCount: walletKeysFilesModel.rowCount()
+    // wallets in the "XMR" folder of USB / SD volumes, checked every few seconds while this page is shown
+    property var usbWallets: []
+
+    function refreshUsbWallets() {
+        var list = oshelper.removableWallets();
+        if (JSON.stringify(list) !== JSON.stringify(usbWallets))
+            usbWallets = list;
+    }
+
+    Timer {
+        interval: 3000
+        repeat: true
+        running: wizardOpenWallet1.visible && wizardStateView.state === "wizardOpenWallet1"
+        triggeredOnStart: true
+        onTriggered: wizardOpenWallet1.refreshUsbWallets()
+    }
 
     WalletKeysFilesModel {
         id: walletKeysFilesModel
@@ -81,6 +97,153 @@ Rectangle {
                 Keys.onBacktabPressed: wizardNav.btnNext.forceActiveFocus();
                 Keys.onDownPressed: recentList.itemAt(0).forceActiveFocus();
                 Keys.onTabPressed: recentList.itemAt(0).forceActiveFocus();
+            }
+
+            // ---- wallets on USB / SD volumes ----
+            RowLayout {
+                visible: wizardOpenWallet1.usbWallets.length > 0
+                Layout.topMargin: 14
+                Layout.fillWidth: true
+                spacing: 10
+
+                Rectangle {
+                    width: 6; height: 6
+                    color: MoneroComponents.Style.blackTheme ? "#6CB8FF" : "#1565C0"
+                }
+
+                MoneroComponents.TextPlain {
+                    text: qsTr("USB / SD wallets").toUpperCase() + translationManager.emptyString
+                    font.family: MoneroComponents.Style.fontMonoMedium.name
+                    font.pixelSize: 13
+                    font.letterSpacing: 2
+                    color: MoneroComponents.Style.dimmedFontColor
+                    themeTransition: false
+                }
+
+                MoneroComponents.TextPlain {
+                    text: wizardOpenWallet1.usbWallets.length
+                    font.family: MoneroComponents.Style.fontMonoRegular.name
+                    font.pixelSize: 12
+                    color: MoneroComponents.Style.dimmedFontColor
+                    opacity: 0.7
+                    themeTransition: false
+                }
+
+                Item { Layout.fillWidth: true }
+
+                MoneroComponents.TextPlain {
+                    text: qsTr("Close the wallet before unplugging the drive") + translationManager.emptyString
+                    font.pixelSize: 11
+                    color: MoneroComponents.Style.dimmedFontColor
+                    themeTransition: false
+                }
+            }
+
+            Flow {
+                id: usbFlow
+                visible: wizardOpenWallet1.usbWallets.length > 0
+                spacing: 10
+                Layout.topMargin: 4
+                Layout.bottomMargin: 10
+                Layout.fillWidth: true
+                Layout.preferredHeight: implicitHeight
+
+                Repeater {
+                    model: wizardOpenWallet1.usbWallets
+
+                    delegate: Item {
+                        id: usbItem
+                        height: flow.itemHeight
+                        width: Math.floor((usbFlow.width - (flow.columns - 1) * usbFlow.spacing) / flow.columns)
+                        readonly property bool dark: MoneroComponents.Style.blackTheme
+                        readonly property color blue: dark ? "#6CB8FF" : "#1565C0"
+                        readonly property bool hovered: usbMouseArea.containsMouse || usbItem.focus
+                        activeFocusOnTab: true
+                        Accessible.role: Accessible.ListItem
+                        Accessible.name: modelData.fileName + ". " + modelData.volume
+                        Keys.onEnterPressed: wizardController.openWalletFile(modelData.path)
+                        Keys.onReturnPressed: wizardController.openWalletFile(modelData.path)
+
+                        MoneroComponents.NeonFrame {
+                            anchors.fill: parent
+                            cut: 9
+                            accent: usbItem.blue
+                            lineOpacity: usbItem.focus ? 1.0 : (usbItem.hovered ? 0.9 : 0.45)
+                            fillColor: usbItem.dark ? "#0C130E" : "#DADFDB"
+                            fillOpacity: usbItem.dark ? 0.92 : 0.9
+                            glow: usbItem.hovered ? 0.3 : 0.0
+                            ticks: usbItem.hovered
+                            Behavior on lineOpacity { NumberAnimation { duration: 150 } }
+                        }
+
+                        MoneroComponents.NeonFrame {
+                            anchors.fill: parent
+                            cut: 9
+                            lineOpacity: 0
+                            fillColor: usbItem.blue
+                            fillOpacity: usbItem.hovered ? 0.12 : 0.05
+                            ticks: false
+                        }
+
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 10
+                            anchors.rightMargin: 12
+                            spacing: 10
+
+                            Item {
+                                Layout.preferredWidth: 42
+                                Layout.preferredHeight: 42
+
+                                Image {
+                                    anchors.fill: parent
+                                    fillMode: Image.PreserveAspectFit
+                                    smooth: true
+                                    mipmap: true
+                                    source: /trezor|tzr/.test(modelData.fileName.toLowerCase()) ? "qrc:///images/open-wallet-from-file-trezor.png"
+                                          : modelData.networktype === 1 ? "qrc:///images/open-wallet-from-file-testnet.png"
+                                          : modelData.networktype === 2 ? "qrc:///images/open-wallet-from-file-stagenet.png"
+                                          : "qrc:///images/open-wallet-safe.png"
+                                }
+                            }
+
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                Layout.alignment: Qt.AlignVCenter
+                                spacing: 3
+
+                                MoneroComponents.TextPlain {
+                                    Layout.fillWidth: true
+                                    text: modelData.fileName
+                                    elide: Text.ElideRight
+                                    font.family: MoneroComponents.Style.fontMedium.name
+                                    font.pixelSize: 15
+                                    color: MoneroComponents.Style.defaultFontColor
+                                    themeTransition: false
+                                }
+
+                                // drive name and last change
+                                MoneroComponents.TextPlain {
+                                    Layout.fillWidth: true
+                                    text: modelData.volume + " · " + Qt.formatDate(new Date(modelData.modified * 1000), "dd/MM/yyyy")
+                                    elide: Text.ElideRight
+                                    font.family: MoneroComponents.Style.fontMonoRegular.name
+                                    font.pixelSize: 11
+                                    color: usbItem.blue
+                                    themeTransition: false
+                                }
+                            }
+                        }
+
+                        MouseArea {
+                            id: usbMouseArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: wizardController.openWalletFile(modelData.path)
+                        }
+                    }
+                }
             }
 
             RowLayout {
@@ -202,7 +365,7 @@ Rectangle {
                             cut: 9
                             accent: item.border
                             lineOpacity: item.focus ? 1.0 : (item.hovered ? 0.85 : 0.22)
-                            fillColor: item.dark ? "#0C130E" : "#EEF4EF"
+                            fillColor: item.dark ? "#0C130E" : "#DADFDB"
                             fillOpacity: item.dark ? 0.92 : 0.9
                             glow: item.hovered ? 0.3 : 0.0
                             ticks: item.hovered

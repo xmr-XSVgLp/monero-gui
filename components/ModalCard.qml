@@ -75,7 +75,7 @@ Item {
         cut: 14
         accent: card.kind === "warning" ? (card.dark ? "#FFC23D" : "#A86F00") : (card.dark ? "#E8ECE9" : "#2B3A30")
         lineOpacity: 0.6
-        fillColor: card.dark ? "#0C130E" : "#EEF4EF"
+        fillColor: card.dark ? "#0C130E" : "#DADFDB"
         fillOpacity: 0.98
         glow: 0.4
     }

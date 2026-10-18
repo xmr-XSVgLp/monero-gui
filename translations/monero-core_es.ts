@@ -2196,12 +2196,12 @@ El archivo de caché anterior del monedero será renombrado y puede ser posterio
     <message>
         <location filename="../pages/settings/SettingsNode.qml" line="271"/>
         <source>Start daemon</source>
-        <translation>Iniciar daemon</translation>
+        <translation>Iniciar demonio</translation>
     </message>
     <message>
         <location filename="../pages/settings/SettingsNode.qml" line="271"/>
         <source>Stop daemon</source>
-        <translation>Parar daemon</translation>
+        <translation>Detener demonio</translation>
     </message>
     <message>
         <location filename="../pages/settings/SettingsNode.qml" line="290"/>
@@ -3023,7 +3023,7 @@ Puedes cambiar la contraseña en las opciones del monedero.</translation>
     <message>
         <location filename="../pages/Transfer.qml" line="82"/>
         <source>Start daemon</source>
-        <translation>Iniciar daemon</translation>
+        <translation>Iniciar demonio</translation>
     </message>
     <message>
         <location filename="../pages/Transfer.qml" line="333"/>
@@ -5072,6 +5072,153 @@ Si no tienes la opción de ejecutar tu propio nodo, hay una opción de conectars
     </message>
 </context>
 <context>
+    <name>ConnectionCheck</name>
+    <message>
+        <source>No proxy: direct connection</source>
+        <translation>Sin proxy: conexión directa</translation>
+    </message>
+    <message>
+        <source>Answers (%1 ms)</source>
+        <translation>Responde (%1 ms)</translation>
+    </message>
+    <message>
+        <source>Does not answer: %1</source>
+        <translation>No responde: %1</translation>
+    </message>
+    <message>
+        <source>No answer: %1</source>
+        <translation>Sin respuesta: %1</translation>
+    </message>
+    <message>
+        <source>%1 on average (%2 to %3), %4 of 3 answered</source>
+        <translation>%1 de media (de %2 a %3), %4 de 3 respondieron</translation>
+    </message>
+    <message>
+        <source>%1 kB/s</source>
+        <translation>%1 kB/s</translation>
+    </message>
+    <message>
+        <source>only %1 kB of 1000 arrived (%2)</source>
+        <translation>solo llegaron %1 kB de 1000 (%2)</translation>
+    </message>
+    <message>
+        <source>%1 of %2 answer</source>
+        <translation>%1 de %2 responden</translation>
+    </message>
+    <message>
+        <source>Not running (%1)</source>
+        <translation>No está en marcha (%1)</translation>
+    </message>
+    <message>
+        <source>Block %1, %2 behind</source>
+        <translation>Bloque %1, faltan %2</translation>
+    </message>
+    <message>
+        <source>Block %1, synchronized</source>
+        <translation>Bloque %1, sincronizado</translation>
+    </message>
+    <message>
+        <source>%1 out, %2 in</source>
+        <translation>%1 salientes, %2 entrantes</translation>
+    </message>
+    <message>
+        <source>The NymVPN SOCKS5 proxy is not answering: press Restart in NYM VPN.</source>
+        <translation>El proxy SOCKS5 de NymVPN no responde: pulsa Reiniciar en NYM VPN.</translation>
+    </message>
+    <message>
+        <source>The SOCKS5 proxy is not answering: nothing can go out until it is back.</source>
+        <translation>El proxy SOCKS5 no responde: no sale nada hasta que vuelva.</translation>
+    </message>
+    <message>
+        <source>The Nym exit does not let Monero&apos;s P2P connections (port 18080) through, so the local node cannot sync through Nym. Press Restart in NYM VPN to get another exit.</source>
+        <translation>La salida de Nym no deja pasar las conexiones P2P de Monero (puerto 18080), así que el nodo local no puede sincronizar por Nym. Pulsa Reiniciar en NYM VPN para cambiar de salida.</translation>
+    </message>
+    <message>
+        <source>No Monero node answers on port 18080: check the internet connection or the firewall.</source>
+        <translation>Ningún nodo de Monero responde en el puerto 18080: revisa la conexión a internet o el cortafuegos.</translation>
+    </message>
+    <message>
+        <source>Monero nodes answer through Nym but the local node is behind: block downloads through the mixnet are slow. Give it time, or press Restart in NYM VPN for another route.</source>
+        <translation>Los nodos de Monero responden por Nym pero el nodo local va atrasado: la descarga de bloques por la mixnet es lenta. Dale tiempo o pulsa Reiniciar en NYM VPN para otra ruta.</translation>
+    </message>
+    <message>
+        <source>Monero nodes answer but the local node is behind: it is still syncing.</source>
+        <translation>Los nodos de Monero responden pero el nodo local va atrasado: todavía está sincronizando.</translation>
+    </message>
+    <message>
+        <source>Nym works. Expect a few seconds per request: that is normal for a mixnet.</source>
+        <translation>Nym funciona. Cada petición tarda unos segundos: es normal en una mixnet.</translation>
+    </message>
+    <message>
+        <source>The connection works.</source>
+        <translation>La conexión funciona.</translation>
+    </message>
+    <message>
+        <source>Some checks failed: try again in a while.</source>
+        <translation>Algunas pruebas fallaron: vuelve a probar dentro de un rato.</translation>
+    </message>
+    <message>
+        <source>Connection check</source>
+        <translation>Prueba de conexión</translation>
+    </message>
+    <message>
+        <source>Through NymVPN</source>
+        <translation>Por NymVPN</translation>
+    </message>
+    <message>
+        <source>Through the SOCKS5 proxy</source>
+        <translation>Por el proxy SOCKS5</translation>
+    </message>
+    <message>
+        <source>Direct connection</source>
+        <translation>Conexión directa</translation>
+    </message>
+    <message>
+        <source>checked at %1</source>
+        <translation>comprobado a las %1</translation>
+    </message>
+    <message>
+        <source>Checking…</source>
+        <translation>Comprobando…</translation>
+    </message>
+    <message>
+        <source>Check now</source>
+        <translation>Probar ahora</translation>
+    </message>
+    <message>
+        <source>Measures the proxy in use, the response time and speed, whether Monero nodes answer and how the local node is doing. It runs when you press the button, and by itself 20 seconds after NymVPN connects or restarts; through Nym it can take a few minutes.</source>
+        <translation>Mide el proxy en uso, el tiempo de respuesta y la velocidad, si los nodos de Monero responden y cómo va el nodo local. Se ejecuta al pulsar el botón, y sola 20 segundos después de que NymVPN se conecte o se reinicie; por Nym puede tardar unos minutos.</translation>
+    </message>
+    <message>
+        <source>Proxy</source>
+        <translation>Proxy</translation>
+    </message>
+    <message>
+        <source>Response time</source>
+        <translation>Respuesta</translation>
+    </message>
+    <message>
+        <source>Download</source>
+        <translation>Descarga</translation>
+    </message>
+    <message>
+        <source>Monero nodes</source>
+        <translation>Nodos Monero</translation>
+    </message>
+    <message>
+        <source>Local node</source>
+        <translation>Nodo local</translation>
+    </message>
+    <message>
+        <source>Unknown: %1</source>
+        <translation>Desconocida: %1</translation>
+    </message>
+    <message>
+        <source>Current IP</source>
+        <translation>IP actual</translation>
+    </message>
+</context>
+<context>
     <name>NymVpnPanel</name>
     <message>
         <source>Traffic and privacy</source>
@@ -5367,6 +5514,105 @@ Si no tienes la opción de ejecutar tu propio nodo, hay una opción de conectars
         <source>Write here. Everything is saved encrypted.</source>
         <translation>Escribe aquí. Todo se guarda cifrado.</translation>
     </message>
+    <message>
+        <source>The notes are encrypted with the wallet keys and your Trezor. Confirm on the Trezor to open them: they stay open until the wallet is closed.</source>
+        <translation>Las notas están cifradas con las claves del monedero y tu Trezor. Confirma en el Trezor para abrirlas: quedan abiertas hasta que cierres el monedero.</translation>
+    </message>
+    <message>
+        <source>The notes are encrypted with the wallet keys. They open with this wallet and stay open until it is closed.</source>
+        <translation>Las notas están cifradas con las claves del monedero. Se abren con el monedero y quedan abiertas hasta que lo cierres.</translation>
+    </message>
+</context>
+<context>
+    <name>WalletPlus</name>
+    <message>
+        <source>Connected: this app goes through the Nym mixnet</source>
+        <translation>Conectado: esta app sale por la mixnet de Nym</translation>
+    </message>
+    <message>
+        <source>Connecting…</source>
+        <translation>Conectando…</translation>
+    </message>
+    <message>
+        <source>NymVPN is not installed</source>
+        <translation>NymVPN no está instalado</translation>
+    </message>
+    <message>
+        <source>Off</source>
+        <translation>Apagado</translation>
+    </message>
+    <message>
+        <source>Extra tools that XMR Wallet+ adds to the Monero wallet. All of them are optional: open them from the menu under Wallet+ or from here. Links open in your browser, which does not go through Nym.</source>
+        <translation>Herramientas extra que XMR Wallet+ añade al monedero de Monero. Todas son opcionales: ábrelas desde el menú, bajo Wallet+, o desde aquí. Los enlaces se abren en tu navegador, que no pasa por Nym.</translation>
+    </message>
+    <message>
+        <source>Trading data</source>
+        <translation>Trading data</translation>
+    </message>
+    <message>
+        <source>XMR price in EUR, USD and BTC from 24 hours to all the history recorded, the value of this wallet over time, a converter and price alerts with a notification. Prices are saved in CSV files on this computer.</source>
+        <translation>Precio de XMR en EUR, USD y BTC desde 24 horas hasta todo el historial guardado, el valor de este monedero a lo largo del tiempo, un conversor y alertas de precio con notificación. Los precios se guardan en archivos CSV en este ordenador.</translation>
+    </message>
+    <message>
+        <source>Needs price conversion, which is off: nothing connects to the price services.</source>
+        <translation>Necesita la conversión de precios, que está apagada: nada se conecta a los servicios de precios.</translation>
+    </message>
+    <message>
+        <source>Open</source>
+        <translation>Abrir</translation>
+    </message>
+    <message>
+        <source>Settings</source>
+        <translation>Opciones</translation>
+    </message>
+    <message>
+        <source>Swaps</source>
+        <translation>Swaps</translation>
+    </message>
+    <message>
+        <source>Compares how much you get when changing XMR for BTC, ETH, SOL, USDT and other coins on Wagyu, NonKYC and ChangeNOW, shows the best route between exchanges and compares with earlier prices. It only shows quotes: the swap itself is done on each exchange.</source>
+        <translation>Compara cuánto recibes al cambiar XMR por BTC, ETH, SOL, USDT y otras monedas en Wagyu, NonKYC y ChangeNOW, muestra la mejor ruta entre exchanges y compara con precios anteriores. Solo muestra cotizaciones: el intercambio se hace en cada exchange.</translation>
+    </message>
+    <message>
+        <source>Notes</source>
+        <translation>Notas</translation>
+    </message>
+    <message>
+        <source>Private notes saved next to the wallet and encrypted with AES-256-GCM. They open with the wallet password and a confirmation on the Trezor, so the file is useless without that Trezor.</source>
+        <translation>Notas privadas guardadas junto al monedero y cifradas con AES-256-GCM. Se abren con la contraseña del monedero y una confirmación en el Trezor, así que el archivo no sirve de nada sin ese Trezor.</translation>
+    </message>
+    <message>
+        <source>Private notes saved next to the wallet and encrypted with AES-256-GCM. They open with the wallet password and the key comes from the wallet keys.</source>
+        <translation>Notas privadas guardadas junto al monedero y cifradas con AES-256-GCM. Se abren con la contraseña del monedero y la clave sale de las claves del monedero.</translation>
+    </message>
+    <message>
+        <source>Sends only this app through the Nym mixnet, including the local node, so nodes and price services do not see your IP. With &quot;Nym required&quot; nothing connects while Nym is down. You need the NymVPN app and an account.</source>
+        <translation>Envía solo esta app por la mixnet de Nym, incluido el nodo local, así que ni los nodos ni los servicios de precios ven tu IP. Con &quot;Nym obligatorio&quot; nada se conecta mientras Nym esté caído. Necesitas la app NymVPN y una cuenta.</translation>
+    </message>
+    <message>
+        <source>Node / Network</source>
+        <translation>Nodo / Red</translation>
+    </message>
+    <message>
+        <source>Support for the Trezor Safe 7 over USB and Bluetooth, with the new encrypted Trezor Host Protocol and pairing with the code shown on the device. The Trezor name appears in the title bar. Close Trezor Suite before opening the wallet.</source>
+        <translation>Soporte del Trezor Safe 7 por USB y Bluetooth, con el nuevo Trezor Host Protocol cifrado y emparejamiento con el código que muestra el dispositivo. El nombre del Trezor aparece en la barra de título. Cierra Trezor Suite antes de abrir el monedero.</translation>
+    </message>
+    <message>
+        <source>This wallet uses a hardware wallet</source>
+        <translation>Este monedero usa un monedero hardware</translation>
+    </message>
+    <message>
+        <source>Privacy</source>
+        <translation>Privacidad</translation>
+    </message>
+    <message>
+        <source>The marks in the title bar show at a glance whether Nym is on, whether the node is local or remote and whether a Trezor is in use. Turning price conversion off stops every request to price services and exchanges.</source>
+        <translation>Las marcas de la barra de título muestran de un vistazo si Nym está activo, si el nodo es local o remoto y si se usa un Trezor. Apagar la conversión de precios corta todas las peticiones a servicios de precios y exchanges.</translation>
+    </message>
+    <message>
+        <source>XMR Wallet+ is an unofficial fork of the Monero GUI.</source>
+        <translation>XMR Wallet+ es un fork no oficial de la GUI de Monero.</translation>
+    </message>
 </context>
 <context>
     <name>TradingData</name>
@@ -5525,6 +5771,903 @@ Si no tienes la opción de ejecutar tu propio nodo, hay una opción de conectars
     <message>
         <source>Remove</source>
         <translation>Quitar</translation>
+    </message>
+</context>
+<context>
+    <name>Security</name>
+    <message>
+        <source>Blocked: nothing goes out</source>
+        <translation>Bloqueado: no sale nada</translation>
+    </message>
+    <message>
+        <source>Direct: your real IP</source>
+        <translation>Directo: tu IP real</translation>
+    </message>
+    <message>
+        <source>NymVPN mixnet (%1)</source>
+        <translation>Mixnet de NymVPN (%1)</translation>
+    </message>
+    <message>
+        <source>SOCKS5 proxy %1</source>
+        <translation>Proxy SOCKS5 %1</translation>
+    </message>
+    <message>
+        <source>Connections</source>
+        <translation>Conexiones</translation>
+    </message>
+    <message>
+        <source>Nodes</source>
+        <translation>Nodos</translation>
+    </message>
+    <message>
+        <source>Extreme privacy</source>
+        <translation>Privacidad extrema</translation>
+    </message>
+    <message>
+        <source>Security center</source>
+        <translation>Centro de seguridad</translation>
+    </message>
+</context>
+<context>
+    <name>SecurityConnections</name>
+    <message>
+        <source>through %1 (extreme privacy)</source>
+        <translation>por %1 (privacidad extrema)</translation>
+    </message>
+    <message>
+        <source>blocked until there is an approved route</source>
+        <translation>bloqueado hasta que haya una ruta aprobada</translation>
+    </message>
+    <message>
+        <source>through NymVPN (--proxy)</source>
+        <translation>por NymVPN (--proxy)</translation>
+    </message>
+    <message>
+        <source>through the --proxy of the startup flags</source>
+        <translation>por el --proxy de las opciones de arranque</translation>
+    </message>
+    <message>
+        <source>direct, with your real IP</source>
+        <translation>directo, con tu IP real</translation>
+    </message>
+    <message>
+        <source>off</source>
+        <translation>apagado</translation>
+    </message>
+    <message>
+        <source>Local node (monerod)</source>
+        <translation>Nodo local (monerod)</translation>
+    </message>
+    <message>
+        <source>all the time; the wallet talks to it inside this computer</source>
+        <translation>todo el tiempo; el monedero habla con él dentro de este ordenador</translation>
+    </message>
+    <message>
+        <source>does not leave the computer</source>
+        <translation>no sale del ordenador</translation>
+    </message>
+    <message>
+        <source>Peers of the local node</source>
+        <translation>Pares del nodo local</translation>
+    </message>
+    <message>
+        <source>other Monero nodes, port 18080</source>
+        <translation>otros nodos de Monero, puerto 18080</translation>
+    </message>
+    <message>
+        <source>while monerod runs: blocks, transactions and peer lists</source>
+        <translation>mientras monerod está en marcha: bloques, transacciones y listas de pares</translation>
+    </message>
+    <message>
+        <source>Remote node</source>
+        <translation>Nodo remoto</translation>
+    </message>
+    <message>
+        <source>all the time: sync, balances, sending</source>
+        <translation>todo el tiempo: sincronización, saldos, envíos</translation>
+    </message>
+    <message>
+        <source>Direct: your real IP</source>
+        <translation>Directo: tu IP real</translation>
+    </message>
+    <message>
+        <source>Blocked: nothing goes out</source>
+        <translation>Bloqueado: no sale nada</translation>
+    </message>
+    <message>
+        <source>XMR price</source>
+        <translation>Precio de XMR</translation>
+    </message>
+    <message>
+        <source>every few minutes while price conversion is on</source>
+        <translation>cada pocos minutos mientras la conversión de precio está activada</translation>
+    </message>
+    <message>
+        <source>Trading data</source>
+        <translation>Datos de trading</translation>
+    </message>
+    <message>
+        <source>when the page opens and every 15 minutes, with price conversion on</source>
+        <translation>al abrir la página y cada 15 minutos, con la conversión de precio activada</translation>
+    </message>
+    <message>
+        <source>Swaps</source>
+        <translation>Swaps</translation>
+    </message>
+    <message>
+        <source>only when the Swaps page opens or refreshes</source>
+        <translation>solo al abrir o actualizar la página de Swaps</translation>
+    </message>
+    <message>
+        <source>Update check</source>
+        <translation>Búsqueda de actualizaciones</translation>
+    </message>
+    <message>
+        <source>at start and every hour. The DNS lookup is made by Monero's resolver and does not use the SOCKS5 proxy.</source>
+        <translation>al arrancar y cada hora. La consulta DNS la hace el resolvedor de Monero y no usa el proxy SOCKS5.</translation>
+    </message>
+    <message>
+        <source>DNS outside the proxy</source>
+        <translation>DNS fuera del proxy</translation>
+    </message>
+    <message>
+        <source>when Nym connects: gateway names and the exit IP</source>
+        <translation>cuando Nym conecta: nombres de pasarelas y la IP de salida</translation>
+    </message>
+    <message>
+        <source>Connection check</source>
+        <translation>Comprobación de conexión</translation>
+    </message>
+    <message>
+        <source>4 Monero seed nodes</source>
+        <translation>4 nodos semilla de Monero</translation>
+    </message>
+    <message>
+        <source>when you press the button, and 20 seconds after Nym connects</source>
+        <translation>al pulsar el botón, y 20 segundos después de que Nym conecte</translation>
+    </message>
+    <message>
+        <source>Node manager</source>
+        <translation>Administrador de nodos</translation>
+    </message>
+    <message>
+        <source>the nodes in the list</source>
+        <translation>los nodos de la lista</translation>
+    </message>
+    <message>
+        <source>only when you measure or rotate nodes</source>
+        <translation>solo al medir o rotar nodos</translation>
+    </message>
+    <message>
+        <source>Links in Wallet+</source>
+        <translation>Enlaces de Wallet+</translation>
+    </message>
+    <message>
+        <source>your browser</source>
+        <translation>tu navegador</translation>
+    </message>
+    <message>
+        <source>only if you click one; they open in the browser, outside the app and outside Nym</source>
+        <translation>solo si pulsas uno; se abren en el navegador, fuera de la app y fuera de Nym</translation>
+    </message>
+    <message>
+        <source>outside the app</source>
+        <translation>fuera de la app</translation>
+    </message>
+    <message>
+        <source>a local connection to the device; it does not use the internet</source>
+        <translation>conexión local con el dispositivo; no usa internet</translation>
+    </message>
+    <message>
+        <source>The local node does not answer (%1).</source>
+        <translation>El nodo local no responde (%1).</translation>
+    </message>
+    <message>
+        <source>Unexpected answer from the local node.</source>
+        <translation>Respuesta inesperada del nodo local.</translation>
+    </message>
+    <message>
+        <source>Every service this wallet connects to, when it does and which way it goes out. The app's own requests now leave:</source>
+        <translation>Todos los servicios a los que se conecta este monedero, cuándo lo hace y por dónde sale. Las peticiones propias de la app salen ahora por:</translation>
+    </message>
+    <message>
+        <source>External IPs of the local node</source>
+        <translation>IPs externas del nodo local</translation>
+    </message>
+    <message>
+        <source>%1 peers connected now. They see the IP monerod leaves with: %2.</source>
+        <translation>%1 pares conectados ahora. Ven la IP con la que sale monerod: %2.</translation>
+    </message>
+    <message>
+        <source>The Monero nodes monerod is connected to right now, with their IP and port.</source>
+        <translation>Los nodos de Monero a los que está conectado monerod ahora mismo, con su IP y puerto.</translation>
+    </message>
+    <message>
+        <source>Loading…</source>
+        <translation>Cargando…</translation>
+    </message>
+    <message>
+        <source>Show now</source>
+        <translation>Mostrar ahora</translation>
+    </message>
+    <message>
+        <source>block %1</source>
+        <translation>bloque %1</translation>
+    </message>
+    <message>
+        <source>What the nodes can learn about you</source>
+        <translation>Qué pueden saber los nodos de ti</translation>
+    </message>
+    <message>
+        <source>You use your own node</source>
+        <translation>Usas tu propio nodo</translation>
+    </message>
+    <message>
+        <source>No remote node sees the wallet's requests: balances, history and outputs are read from your own copy of the blockchain. Peers only see the IP monerod leaves with and the transactions it relays, mixed by Dandelion++.</source>
+        <translation>Ningún nodo remoto ve las consultas del monedero: saldos, historial y salidas se leen de tu propia copia de la cadena. Los pares solo ven la IP con la que sale monerod y las transacciones que reenvía, mezcladas por Dandelion++.</translation>
+    </message>
+    <message>
+        <source>Your IP</source>
+        <translation>Tu IP</translation>
+    </message>
+    <message>
+        <source>The node sees your real IP and can link it to everything below.</source>
+        <translation>El nodo ve tu IP real y puede vincularla con todo lo de abajo.</translation>
+    </message>
+    <message>
+        <source>The node sees the IP of the proxy or the Nym exit, not yours.</source>
+        <translation>El nodo ve la IP del proxy o de la salida de Nym, no la tuya.</translation>
+    </message>
+    <message>
+        <source>When you use the wallet</source>
+        <translation>Cuándo usas el monedero</translation>
+    </message>
+    <message>
+        <source>When the wallet is open, how long it stays connected and from which block it syncs, which hints at the wallet's age.</source>
+        <translation>Cuándo está abierto el monedero, cuánto tiempo sigue conectado y desde qué bloque sincroniza, lo que da una pista de su antigüedad.</translation>
+    </message>
+    <message>
+        <source>The transactions you send</source>
+        <translation>Las transacciones que envías</translation>
+    </message>
+    <message>
+        <source>The node receives your transaction first and knows it came from this connection, and which outputs were asked for as ring decoys.</source>
+        <translation>El nodo recibe tu transacción el primero y sabe que vino de esta conexión, y qué salidas se pidieron como señuelos del anillo.</translation>
+    </message>
+    <message>
+        <source>Unencrypted connection</source>
+        <translation>Conexión sin cifrar</translation>
+    </message>
+    <message>
+        <source>This node is reached over plain HTTP: whoever is in the middle (including the proxy or Nym exit) can see the same as the node.</source>
+        <translation>A este nodo se llega por HTTP sin cifrar: quien esté en medio (incluido el proxy o la salida de Nym) puede ver lo mismo que el nodo.</translation>
+    </message>
+    <message>
+        <source>What they never see</source>
+        <translation>Lo que nunca ven</translation>
+    </message>
+    <message>
+        <source>Your keys, your seed, your balance or your addresses: blocks are scanned on this computer and the keys never leave it (or the Trezor).</source>
+        <translation>Tus claves, tu semilla, tu saldo ni tus direcciones: los bloques se escanean en este ordenador y las claves nunca salen de él (ni del Trezor).</translation>
+    </message>
+</context>
+<context>
+    <name>SecurityNodes</name>
+    <message>
+        <source>Extreme privacy is on and there is no approved route: nodes are not measured.</source>
+        <translation>La privacidad extrema está activada y no hay ruta aprobada: no se miden los nodos.</translation>
+    </message>
+    <message>
+        <source>Measured through: %1</source>
+        <translation>Medido por: %1</translation>
+    </message>
+    <message>
+        <source>Now using %1 as remote node.</source>
+        <translation>Ahora se usa %1 como nodo remoto.</translation>
+    </message>
+    <message>
+        <source>No other node with a score of 50 or more. Measure the list first.</source>
+        <translation>No hay otro nodo con 50 puntos o más. Mide la lista primero.</translation>
+    </message>
+    <message>
+        <source>Write it as host:port, for example node.example.com:18089</source>
+        <translation>Escríbelo como host:puerto, por ejemplo node.example.com:18089</translation>
+    </message>
+    <message>
+        <source>Measure the nodes through the app's current route. The score weighs availability (35 %), being up to date with the network (25 %), version (15 %) and stability (15 %); speed only counts 10 %, so a fast node that fails or lags behind does not win.</source>
+        <translation>Mide los nodos por la ruta actual de la app. La puntuación pesa disponibilidad (35 %), estar al día con la red (25 %), versión (15 %) y estabilidad (15 %); la velocidad solo cuenta un 10 %, así que un nodo rápido que falla o va retrasado no gana.</translation>
+    </message>
+    <message>
+        <source>Measuring %1 / %2…</source>
+        <translation>Midiendo %1 / %2…</translation>
+    </message>
+    <message>
+        <source>Measure all</source>
+        <translation>Medir todos</translation>
+    </message>
+    <message>
+        <source>Rotate node</source>
+        <translation>Rotar nodo</translation>
+    </message>
+    <message>
+        <source>Switches to another node chosen at random among those with a good score</source>
+        <translation>Cambia a otro nodo elegido al azar entre los que tienen buena puntuación</translation>
+    </message>
+    <message>
+        <source>Only favourites</source>
+        <translation>Solo favoritos</translation>
+    </message>
+    <message>
+        <source>Route: </source>
+        <translation>Ruta: </translation>
+    </message>
+    <message>
+        <source>IN USE</source>
+        <translation>EN USO</translation>
+    </message>
+    <message>
+        <source>my list</source>
+        <translation>mi lista</translation>
+    </message>
+    <message>
+        <source>measuring…</source>
+        <translation>midiendo…</translation>
+    </message>
+    <message>
+        <source>not measured yet</source>
+        <translation>aún sin medir</translation>
+    </message>
+    <message>
+        <source>%1 % up (%2 tests)</source>
+        <translation>%1 % disponible (%2 pruebas)</translation>
+    </message>
+    <message>
+        <source>%1 ms ±%2</source>
+        <translation>%1 ms ±%2</translation>
+    </message>
+    <message>
+        <source>%1 blocks behind</source>
+        <translation>%1 bloques por detrás</translation>
+    </message>
+    <message>
+        <source>up to date</source>
+        <translation>al día</translation>
+    </message>
+    <message>
+        <source>last test failed</source>
+        <translation>la última prueba falló</translation>
+    </message>
+    <message>
+        <source>Test</source>
+        <translation>Probar</translation>
+    </message>
+    <message>
+        <source>Use</source>
+        <translation>Usar</translation>
+    </message>
+    <message>
+        <source>Add to my list: host:port</source>
+        <translation>Añadir a mi lista: host:puerto</translation>
+    </message>
+    <message>
+        <source>Add</source>
+        <translation>Añadir</translation>
+    </message>
+    <message>
+        <source>Add suggested</source>
+        <translation>Añadir sugeridos</translation>
+    </message>
+    <message>
+        <source>Cake Wallet, Seth for Privacy, HashVault and MoneroDevs public nodes</source>
+        <translation>Nodos públicos de Cake Wallet, Seth for Privacy, HashVault y MoneroDevs</translation>
+    </message>
+    <message>
+        <source>Each test asks the node for /get_info only (height, version, sync state); it does not send anything about your wallet. Using your own local node is still the most private option.</source>
+        <translation>Cada prueba solo pide /get_info al nodo (altura, versión, estado de sincronización); no envía nada sobre tu monedero. Usar tu propio nodo local sigue siendo la opción más privada.</translation>
+    </message>
+</context>
+<context>
+    <name>SecurityPrivacy</name>
+    <message>
+        <source>A profile for when privacy matters more than convenience. Nothing leaves the app except through an approved route, and the wallet does not sync until that route is up.</source>
+        <translation>Un perfil para cuando la privacidad importa más que la comodidad. Nada sale de la app salvo por una ruta aprobada, y el monedero no sincroniza hasta que esa ruta esté activa.</translation>
+    </message>
+    <message>
+        <source>Extreme privacy is ON</source>
+        <translation>Privacidad extrema ACTIVADA</translation>
+    </message>
+    <message>
+        <source>Extreme privacy is off</source>
+        <translation>Privacidad extrema desactivada</translation>
+    </message>
+    <message>
+        <source>The app works as usual.</source>
+        <translation>La app funciona como siempre.</translation>
+    </message>
+    <message>
+        <source>Approved route: %1</source>
+        <translation>Ruta aprobada: %1</translation>
+    </message>
+    <message>
+        <source>SYNC BLOCKED: there is no approved route. Connect NymVPN or turn on the SOCKS5 proxy.</source>
+        <translation>SINCRONIZACIÓN BLOQUEADA: no hay ruta aprobada. Conecta NymVPN o activa el proxy SOCKS5.</translation>
+    </message>
+    <message>
+        <source>Turn off</source>
+        <translation>Desactivar</translation>
+    </message>
+    <message>
+        <source>Turn on</source>
+        <translation>Activar</translation>
+    </message>
+    <message>
+        <source>Connect NymVPN</source>
+        <translation>Conectar NymVPN</translation>
+    </message>
+    <message>
+        <source>What it does</source>
+        <translation>Qué hace</translation>
+    </message>
+    <message>
+        <source>on</source>
+        <translation>activado</translation>
+    </message>
+    <message>
+        <source>off</source>
+        <translation>apagado</translation>
+    </message>
+    <message>
+        <source>Price queries off</source>
+        <translation>Consultas de precios apagadas</translation>
+    </message>
+    <message>
+        <source>Kraken, CoinPaprika, Frankfurter, CoinGecko and the swap rates stop. Trading data and Swaps hide from the menu.</source>
+        <translation>Se detienen Kraken, CoinPaprika, Frankfurter, CoinGecko y las cotizaciones de swaps. Datos de trading y Swaps se ocultan del menú.</translation>
+    </message>
+    <message>
+        <source>Update checks off</source>
+        <translation>Búsqueda de actualizaciones apagada</translation>
+    </message>
+    <message>
+        <source>The update lookup uses DNS outside the proxy, so it is turned off. Check for new versions by hand on GitHub.</source>
+        <translation>La búsqueda de actualizaciones usa DNS fuera del proxy, así que se apaga. Mira si hay versiones nuevas a mano en GitHub.</translation>
+    </message>
+    <message>
+        <source>No direct connections</source>
+        <translation>Sin conexiones directas</translation>
+    </message>
+    <message>
+        <source>The remote node, the connection check and the node manager only go out through the approved route. Without a route the app blocks them instead of falling back to your real IP.</source>
+        <translation>El nodo remoto, la comprobación de conexión y el administrador de nodos solo salen por la ruta aprobada. Sin ruta, la app los bloquea en vez de usar tu IP real.</translation>
+    </message>
+    <message>
+        <source>Local node behind the route</source>
+        <translation>Nodo local detrás de la ruta</translation>
+    </message>
+    <message>
+        <source>monerod is started with --proxy pointing to the route, without UPnP (--no-igd), without announcing its port (--hide-my-port) and without a bootstrap node. Without a route it does not start.</source>
+        <translation>monerod arranca con --proxy apuntando a la ruta, sin UPnP (--no-igd), sin anunciar su puerto (--hide-my-port) y sin nodo de arranque. Sin ruta no arranca.</translation>
+    </message>
+    <message>
+        <source>No accidental telemetry</source>
+        <translation>Sin telemetría accidental</translation>
+    </message>
+    <message>
+        <source>This wallet has no analytics. With these switches off, the only traffic left is the Monero network itself, through the route.</source>
+        <translation>Este monedero no tiene analíticas. Con esto apagado, el único tráfico que queda es la propia red de Monero, por la ruta.</translation>
+    </message>
+    <message>
+        <source>Restart the local node</source>
+        <translation>Reinicia el nodo local</translation>
+    </message>
+    <message>
+        <source>monerod is already running with the flags it had when it started. Stop it and start it again (Settings &gt; Node) so it uses the route.</source>
+        <translation>monerod ya está en marcha con las opciones con que arrancó. Detenlo y vuelve a iniciarlo (Opciones &gt; Nodo) para que use la ruta.</translation>
+    </message>
+    <message>
+        <source>Links open outside</source>
+        <translation>Los enlaces se abren fuera</translation>
+    </message>
+    <message>
+        <source>Links in Wallet+ open in your browser, which does not go through Nym or the app's proxy.</source>
+        <translation>Los enlaces de Wallet+ se abren en tu navegador, que no pasa por Nym ni por el proxy de la app.</translation>
+    </message>
+    <message>
+        <source>When you turn it off</source>
+        <translation>Al desactivarlo</translation>
+    </message>
+    <message>
+        <source>Price conversion and update checks go back to how they were before.</source>
+        <translation>La conversión de precio y la búsqueda de actualizaciones vuelven a como estaban antes.</translation>
+    </message>
+</context>
+<context>
+    <name>SecurityCenter</name>
+    <message>
+        <source>Keys file (.keys)</source>
+        <translation>Archivo de claves (.keys)</translation>
+    </message>
+    <message>
+        <source>Wallet cache</source>
+        <translation>Caché del monedero</translation>
+    </message>
+    <message>
+        <source>Encrypted notes</source>
+        <translation>Notas cifradas</translation>
+    </message>
+    <message>
+        <source>Wallet folder</source>
+        <translation>Carpeta del monedero</translation>
+    </message>
+    <message>
+        <source>today</source>
+        <translation>hoy</translation>
+    </message>
+    <message>
+        <source>%1 days ago</source>
+        <translation>hace %1 días</translation>
+    </message>
+    <message>
+        <source>Choose where to save the wallet backup</source>
+        <translation>Elige dónde guardar la copia del monedero</translation>
+    </message>
+    <message>
+        <source>Saved in %1: %2 (permissions 600). Keep it on a drive other than this computer.</source>
+        <translation>Guardado en %1: %2 (permisos 600). Guárdalo en un disco distinto de este ordenador.</translation>
+    </message>
+    <message>
+        <source>The copy could not be written in that folder.</source>
+        <translation>No se pudo escribir la copia en esa carpeta.</translation>
+    </message>
+    <message>
+        <source>Everything in order</source>
+        <translation>Todo en orden</translation>
+    </message>
+    <message>
+        <source>%1 checks need attention</source>
+        <translation>%1 comprobaciones necesitan atención</translation>
+    </message>
+    <message>
+        <source>These checks only look at file permissions, dates and settings. Your private keys and seed are never read or shown here.</source>
+        <translation>Estas comprobaciones solo miran permisos de archivos, fechas y ajustes. Tus claves privadas y tu semilla nunca se leen ni se muestran aquí.</translation>
+    </message>
+    <message>
+        <source>Check again</source>
+        <translation>Volver a comprobar</translation>
+    </message>
+    <message>
+        <source>File permissions</source>
+        <translation>Permisos de archivos</translation>
+    </message>
+    <message>
+        <source>Open a wallet to check its files.</source>
+        <translation>Abre un monedero para comprobar sus archivos.</translation>
+    </message>
+    <message>
+        <source>Other users of this Mac can read it.</source>
+        <translation>Otros usuarios de este Mac pueden leerlo.</translation>
+    </message>
+    <message>
+        <source>Only your user can read it.</source>
+        <translation>Solo tu usuario puede leerlo.</translation>
+    </message>
+    <message>
+        <source>Sets 600 on the files and 700 on the folder: only your user can open them.</source>
+        <translation>Pone 600 en los archivos y 700 en la carpeta: solo tu usuario podrá abrirlos.</translation>
+    </message>
+    <message>
+        <source>Fix permissions</source>
+        <translation>Corregir permisos</translation>
+    </message>
+    <message>
+        <source>Wallet password</source>
+        <translation>Contraseña del monedero</translation>
+    </message>
+    <message>
+        <source>No password</source>
+        <translation>Sin contraseña</translation>
+    </message>
+    <message>
+        <source>Weak</source>
+        <translation>Débil</translation>
+    </message>
+    <message>
+        <source>Fair</source>
+        <translation>Aceptable</translation>
+    </message>
+    <message>
+        <source>Strong</source>
+        <translation>Fuerte</translation>
+    </message>
+    <message>
+        <source>Very strong</source>
+        <translation>Muy fuerte</translation>
+    </message>
+    <message>
+        <source>~%1 bits</source>
+        <translation>~%1 bits</translation>
+    </message>
+    <message>
+        <source>Anyone with access to this Mac can open the wallet file.</source>
+        <translation>Cualquiera con acceso a este Mac puede abrir el archivo del monedero.</translation>
+    </message>
+    <message>
+        <source>12 characters or more</source>
+        <translation>12 caracteres o más</translation>
+    </message>
+    <message>
+        <source>shorter than 12 characters</source>
+        <translation>menos de 12 caracteres</translation>
+    </message>
+    <message>
+        <source>%1 of 4 character types</source>
+        <translation>%1 de 4 tipos de caracteres</translation>
+    </message>
+    <message>
+        <source>The spend key lives in the Trezor; this password protects the view key and the history.</source>
+        <translation>La clave de gasto está en el Trezor; esta contraseña protege la clave de vista y el historial.</translation>
+    </message>
+    <message>
+        <source>Change password</source>
+        <translation>Cambiar contraseña</translation>
+    </message>
+    <message>
+        <source>Backups</source>
+        <translation>Copias de seguridad</translation>
+    </message>
+    <message>
+        <source>Hardware wallet</source>
+        <translation>Monedero hardware</translation>
+    </message>
+    <message>
+        <source>Your funds are backed by the Trezor's own recovery words (the wallet backup you wrote down when setting it up). If the Trezor is lost, those words restore everything.</source>
+        <translation>Tus fondos dependen de las palabras de recuperación del propio Trezor (la copia que apuntaste al configurarlo). Si pierdes el Trezor, esas palabras lo recuperan todo.</translation>
+    </message>
+    <message>
+        <source>Seed written down</source>
+        <translation>Semilla apuntada</translation>
+    </message>
+    <message>
+        <source>You confirmed you keep the 25 words offline.</source>
+        <translation>Confirmaste que guardas las 25 palabras fuera de línea.</translation>
+    </message>
+    <message>
+        <source>Not confirmed yet. The 25 words are the only backup that restores the wallet anywhere.</source>
+        <translation>Aún sin confirmar. Las 25 palabras son la única copia que recupera el monedero en cualquier sitio.</translation>
+    </message>
+    <message>
+        <source>Show seed</source>
+        <translation>Ver semilla</translation>
+    </message>
+    <message>
+        <source>Asks for the password and opens Seed &amp; keys</source>
+        <translation>Pide la contraseña y abre Semilla y claves</translation>
+    </message>
+    <message>
+        <source>I have it on paper</source>
+        <translation>La tengo en papel</translation>
+    </message>
+    <message>
+        <source>Wallet backup</source>
+        <translation>Copia de seguridad del monedero</translation>
+    </message>
+    <message>
+        <source>Saved from here. Save again if you changed the password, labels or notes.</source>
+        <translation>Guardada desde aquí. Vuelve a guardar si cambias la contraseña, las etiquetas o las notas.</translation>
+    </message>
+    <message>
+        <source>Saves the wallet files (keys, cache with labels and history, encrypted notes) in a folder %1 on a USB drive or another disk. They need your password to open.</source>
+        <translation>Guarda los archivos del monedero (claves, caché con etiquetas e historial, notas cifradas) en una carpeta %1 en un USB u otro disco. Necesitan tu contraseña para abrirse.</translation>
+    </message>
+    <message>
+        <source>Save…</source>
+        <translation>Guardar…</translation>
+    </message>
+    <message>
+        <source>Node and network</source>
+        <translation>Nodo y red</translation>
+    </message>
+    <message>
+        <source>Local node</source>
+        <translation>Nodo local</translation>
+    </message>
+    <message>
+        <source>stopped</source>
+        <translation>detenido</translation>
+    </message>
+    <message>
+        <source>monerod is not running: the wallet cannot sync.</source>
+        <translation>monerod no está en marcha: el monedero no puede sincronizar.</translation>
+    </message>
+    <message>
+        <source>It does not answer (%1).</source>
+        <translation>No responde (%1).</translation>
+    </message>
+    <message>
+        <source>Asking the node…</source>
+        <translation>Consultando al nodo…</translation>
+    </message>
+    <message>
+        <source>%1 outgoing and %2 incoming peers · %3</source>
+        <translation>%1 pares salientes y %2 entrantes · %3</translation>
+    </message>
+    <message>
+        <source>synchronized</source>
+        <translation>sincronizado</translation>
+    </message>
+    <message>
+        <source>syncing %1 / %2</source>
+        <translation>sincronizando %1 / %2</translation>
+    </message>
+    <message>
+        <source>Remote node</source>
+        <translation>Nodo remoto</translation>
+    </message>
+    <message>
+        <source>on this computer</source>
+        <translation>en este ordenador</translation>
+    </message>
+    <message>
+        <source>encrypted (TLS)</source>
+        <translation>cifrado (TLS)</translation>
+    </message>
+    <message>
+        <source>unencrypted HTTP</source>
+        <translation>HTTP sin cifrar</translation>
+    </message>
+    <message>
+        <source>route: %1</source>
+        <translation>ruta: %1</translation>
+    </message>
+    <message>
+        <source>marked as trusted (it can see more: use it only if it is yours)</source>
+        <translation>marcado como de confianza (puede ver más: úsalo solo si es tuyo)</translation>
+    </message>
+    <message>
+        <source>not trusted</source>
+        <translation>sin confianza</translation>
+    </message>
+    <message>
+        <source>Nodes</source>
+        <translation>Nodos</translation>
+    </message>
+    <message>
+        <source>Network privacy</source>
+        <translation>Privacidad de red</translation>
+    </message>
+    <message>
+        <source>extreme</source>
+        <translation>extrema</translation>
+    </message>
+    <message>
+        <source>Nym required</source>
+        <translation>Nym obligatorio</translation>
+    </message>
+    <message>
+        <source>Extreme privacy on. Requests leave through: %1</source>
+        <translation>Privacidad extrema activada. Las peticiones salen por: %1</translation>
+    </message>
+    <message>
+        <source>The app's requests leave through: %1</source>
+        <translation>Las peticiones de la app salen por: %1</translation>
+    </message>
+    <message>
+        <source>Extreme privacy</source>
+        <translation>Privacidad extrema</translation>
+    </message>
+    <message>
+        <source>Session protection</source>
+        <translation>Protección de la sesión</translation>
+    </message>
+    <message>
+        <source>locks after %1 min of inactivity</source>
+        <translation>se bloquea tras %1 min de inactividad</translation>
+    </message>
+    <message>
+        <source>does not lock when idle</source>
+        <translation>no se bloquea por inactividad</translation>
+    </message>
+    <message>
+        <source>asks the password before sending</source>
+        <translation>pide la contraseña antes de enviar</translation>
+    </message>
+    <message>
+        <source>sends without asking the password</source>
+        <translation>envía sin pedir la contraseña</translation>
+    </message>
+    <message>
+        <source>Settings</source>
+        <translation>Opciones</translation>
+    </message>
+</context>
+<context>
+    <name>LeftPanel</name>
+    <message>
+        <source>Security</source>
+        <translation>Seguridad</translation>
+    </message>
+</context>
+<context>
+    <name>main</name>
+    <message>
+        <source>Extreme privacy</source>
+        <translation>Privacidad extrema</translation>
+    </message>
+    <message>
+        <source>The local node does not start until NymVPN is connected or the SOCKS5 proxy is turned on.</source>
+        <translation>El nodo local no arranca hasta que NymVPN esté conectado o el proxy SOCKS5 esté activado.</translation>
+    </message>
+</context>
+<context>
+    <name>SettingsNode</name>
+    <message>
+        <source>Off while extreme privacy is on (Wallet+ &gt; Security)</source>
+        <translation>Desactivado mientras la privacidad extrema esté activa (Wallet+ &gt; Seguridad)</translation>
+    </message>
+</context>
+<context>
+    <name>Receive</name>
+    <message>
+        <source>This address already received a transaction. Reusing it lets anyone who knows it link your payments, so copying is disabled. Use a new address.</source>
+        <translation>Esta dirección ya recibió una transacción. Reutilizarla permite que quien la conozca relacione tus pagos, así que no se puede copiar. Usa una dirección nueva.</translation>
+    </message>
+    <message>
+        <source>USED</source>
+        <translation>USADA</translation>
+    </message>
+    <message>
+        <source>Hide used addresses</source>
+        <translation>Ocultar direcciones usadas</translation>
+    </message>
+</context>
+<context>
+    <name>WizardOpenWallet1</name>
+    <message>
+        <source>USB / SD wallets</source>
+        <translation>Carteras USB / SD</translation>
+    </message>
+    <message>
+        <source>Close the wallet before unplugging the drive</source>
+        <translation>Cierra el monedero antes de desconectar la unidad</translation>
+    </message>
+</context>
+<context>
+    <name>SecurityCenter</name>
+    <message>
+        <source>Saved on %1 in %2. Open it from "USB / SD wallets" when opening a wallet, and unplug the drive after closing the wallet.</source>
+        <translation>Guardado en %1, en %2. Ábrelo desde "Carteras USB / SD" al abrir un monedero y desconecta la unidad después de cerrarlo.</translation>
+    </message>
+    <message>
+        <source>This wallet is already open from that folder.</source>
+        <translation>Este monedero ya está abierto desde esa carpeta.</translation>
+    </message>
+    <message>
+        <source>The copy could not be written on %1.</source>
+        <translation>No se pudo escribir la copia en %1.</translation>
+    </message>
+    <message>
+        <source>Wallet on a USB / SD drive</source>
+        <translation>Monedero en USB / SD</translation>
+    </message>
+    <message>
+        <source>open from %1</source>
+        <translation>abierto desde %1</translation>
+    </message>
+    <message>
+        <source>This wallet is running from the drive. Close it before unplugging, so the cache is saved.</source>
+        <translation>Este monedero funciona desde la unidad. Ciérralo antes de desconectarla para que se guarde la caché.</translation>
+    </message>
+    <message>
+        <source>Saves the wallet in XMR/%1 on a USB drive or SD card. Plug it in, open it from "USB / SD wallets" and unplug it when you close the wallet: while it is unplugged the wallet is not on any computer. Once it opens from the drive, you can delete the copy on this computer yourself.</source>
+        <translation>Guarda el monedero en XMR/%1 en un USB o tarjeta SD. Conéctalo, ábrelo desde "Carteras USB / SD" y desconéctalo al cerrar el monedero: mientras esté desconectado, el monedero no está en ningún ordenador. Cuando compruebes que abre desde la unidad, puedes borrar tú mismo la copia de este ordenador.</translation>
+    </message>
+    <message>
+        <source>Connect a USB drive or SD card to save it.</source>
+        <translation>Conecta un USB o una tarjeta SD para guardarlo.</translation>
+    </message>
+    <message>
+        <source>Save to %1</source>
+        <translation>Guardar en %1</translation>
     </message>
 </context>
 </TS>

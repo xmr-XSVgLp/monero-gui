@@ -82,7 +82,7 @@ Item {
         cut: 10
         accent: nymPanel.border
         lineOpacity: nymPanel.checked ? 0.6 : (nymPanel.hovered ? 0.6 : 0.25)
-        fillColor: nymPanel.dark ? "#0C130E" : "#EEF4EF"
+        fillColor: nymPanel.dark ? "#0C130E" : "#DADFDB"
         fillOpacity: nymPanel.dark ? 0.92 : 0.9
         ticks: false
         Behavior on lineOpacity { NumberAnimation { duration: 150 } }

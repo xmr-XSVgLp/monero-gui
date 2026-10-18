@@ -63,6 +63,8 @@ Rectangle {
     property Swaps swapsView: Swaps { }
     property TradingData tradingView: TradingData { }
     property Notes notesView: Notes { }
+    property WalletPlus walletPlusView: WalletPlus { }
+    property Security securityView: Security { }
 
     signal paymentClicked(var recipients, string paymentId, int mixinCount, int priority, string description)
     signal sweepUnmixableClicked()
@@ -91,11 +93,11 @@ Rectangle {
         end: Qt.point(height, width)
     }
 
-    // Matrix FX: rain behind the pages (dark theme)
+    // Matrix FX: rain behind the pages (dark green in the light theme)
     MoneroComponents.MatrixRain {
         anchors.fill: parent
-        visible: currentView !== merchantView && MoneroComponents.Style.blackTheme && persistentSettings.fxMatrixRain
-        opacity: 0.13
+        visible: currentView !== merchantView && persistentSettings.fxMatrixRain
+        opacity: MoneroComponents.Style.blackTheme ? 0.13 : 0.24
     }
 
     onCurrentViewChanged: {
@@ -188,6 +190,14 @@ Rectangle {
                 name: "Notes"
                 PropertyChanges { target: root; currentView: notesView }
                 PropertyChanges { target: mainFlickable; contentHeight: notesView.notesHeight + 80 }
+            }, State {
+                name: "WalletPlus"
+                PropertyChanges { target: root; currentView: walletPlusView }
+                PropertyChanges { target: mainFlickable; contentHeight: walletPlusView.walletPlusHeight + 80 }
+            }, State {
+                name: "Security"
+                PropertyChanges { target: root; currentView: securityView }
+                PropertyChanges { target: mainFlickable; contentHeight: securityView.securityHeight + 80 }
             }
         ]
 

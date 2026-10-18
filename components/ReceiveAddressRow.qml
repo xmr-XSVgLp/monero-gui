@@ -15,6 +15,8 @@ Item {
     property string historyTooltip: ""
     property string editTooltip: ""
     property string copyTooltip: ""
+    property bool used: false            // already received a transaction: do not hand it out again
+    property string usedText: ""
     signal clicked()
     signal historyClicked()
     signal editClicked()
@@ -23,6 +25,9 @@ Item {
     readonly property bool dark: MoneroComponents.Style.blackTheme
     readonly property color border: dark ? "#E8ECE9" : "#2B3A30"
     readonly property color accent: dark ? "#4E9E6A" : "#2E7D4A"
+    // same red as the red account cards (AccountRow)
+    readonly property color usedColor: dark ? "#FF3C3C" : "#C41E1E"
+    readonly property color frameColor: used ? usedColor : accent
     readonly property bool hovered: rowMouse.containsMouse || historyButton.hovered
                                     || editButton.hovered || copyButton.hovered
 
@@ -30,21 +35,44 @@ Item {
 
     MoneroComponents.CardPanel {
         anchors.fill: parent
+        visible: !row.used
         cut: 8
         hovered: row.hovered
         selected: row.selected
     }
 
+    // used address: red frame, red tint and glow, like a red account card
+    MoneroComponents.NeonFrame {
+        anchors.fill: parent
+        visible: row.used
+        cut: 8
+        accent: row.usedColor
+        lineOpacity: row.selected ? 0.95 : (row.hovered ? 0.8 : 0.6)
+        fillColor: row.dark ? "#0B0F0C" : "#D8DDD9"
+        fillOpacity: row.dark ? 0.92 : 0.9
+        glow: row.selected ? 0.35 : 0.15
+        ticks: row.selected
+    }
+    MoneroComponents.NeonFrame {
+        anchors.fill: parent
+        visible: row.used
+        cut: 8
+        lineOpacity: 0
+        fillColor: row.usedColor
+        fillOpacity: row.selected ? 0.14 : 0.08
+        ticks: false
+    }
+
     // active address: accent bar on the left
     Rectangle {
-        visible: row.selected
+        visible: row.selected || row.used
         anchors.left: parent.left
         anchors.leftMargin: 1
         anchors.verticalCenter: parent.verticalCenter
         width: 3
         height: parent.height - 18
         radius: 1
-        color: row.accent
+        color: row.frameColor
     }
 
     MouseArea {
@@ -69,10 +97,10 @@ Item {
             MoneroComponents.NeonFrame {
                 anchors.fill: parent
                 cut: 5
-                accent: row.selected ? row.accent : row.border
-                lineOpacity: row.selected ? 0.95 : 0.3
-                fillColor: row.accent
-                fillOpacity: row.selected ? 0.2 : 0.0
+                accent: row.selected || row.used ? row.frameColor : row.border
+                lineOpacity: row.selected || row.used ? 0.95 : 0.3
+                fillColor: row.frameColor
+                fillOpacity: row.selected || row.used ? 0.2 : 0.0
                 ticks: false
             }
 
@@ -81,7 +109,7 @@ Item {
                 text: "#" + row.addressIndex
                 font.family: MoneroComponents.Style.fontMonoMedium.name
                 font.pixelSize: row.addressIndex > 99 ? 10 : 12
-                color: row.selected ? MoneroComponents.Style.defaultFontColor : MoneroComponents.Style.dimmedFontColor
+                color: row.selected || row.used ? MoneroComponents.Style.defaultFontColor : MoneroComponents.Style.dimmedFontColor
                 themeTransition: false
             }
         }
@@ -94,6 +122,15 @@ Item {
             font.family: MoneroComponents.Style.fontMedium.name
             font.pixelSize: 15
             color: row.selected || row.hovered ? MoneroComponents.Style.defaultFontColor : MoneroComponents.Style.lightGreyFontColor
+            themeTransition: false
+        }
+
+        MoneroComponents.TextPlain {
+            visible: row.used
+            text: row.usedText
+            font.family: MoneroComponents.Style.fontMonoMedium.name
+            font.pixelSize: 11
+            color: row.usedColor
             themeTransition: false
         }
 
@@ -129,6 +166,8 @@ Item {
             MoneroComponents.ReceiveIconButton {
                 id: copyButton
                 icon: "copy"
+                enabled: !row.used
+                opacity: row.used ? 0.3 : 1
                 tooltip: row.copyTooltip
                 onClicked: row.copyClicked()
             }

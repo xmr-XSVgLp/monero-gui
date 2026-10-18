@@ -56,7 +56,7 @@ Item {
         cut: 12
         accent: rowlayout.border
         lineOpacity: rowlayout.hovered ? 0.85 : 0.28
-        fillColor: rowlayout.dark ? "#0C130E" : "#EEF4EF"
+        fillColor: rowlayout.dark ? "#0C130E" : "#DADFDB"
         fillOpacity: rowlayout.dark ? 0.92 : 0.9
         glow: rowlayout.hovered ? 0.3 : 0.0
         ticks: rowlayout.hovered

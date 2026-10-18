@@ -506,7 +506,7 @@ Rectangle {
             cut: 12
             accent: pageTrading.neutral
             lineOpacity: 0.35
-            fillColor: MoneroComponents.Style.blackTheme ? "#0C130E" : "#EEF4EF"
+            fillColor: MoneroComponents.Style.blackTheme ? "#0C130E" : "#DADFDB"
             fillOpacity: 0.92
             glow: 0.0
         }
@@ -720,7 +720,7 @@ Rectangle {
                 cut: 12
                 accent: pageTrading.neutral
                 lineOpacity: 0.35
-                fillColor: MoneroComponents.Style.blackTheme ? "#0C130E" : "#EEF4EF"
+                fillColor: MoneroComponents.Style.blackTheme ? "#0C130E" : "#DADFDB"
                 fillOpacity: 0.92
                 glow: 0.0
             }

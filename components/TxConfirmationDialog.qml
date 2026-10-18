@@ -58,7 +58,7 @@ Rectangle {
         cut: 14
         accent: root.darkTheme ? "#E8ECE9" : "#2B3A30"
         lineOpacity: 0.6
-        fillColor: root.darkTheme ? "#0C130E" : "#EEF4EF"
+        fillColor: root.darkTheme ? "#0C130E" : "#DADFDB"
         fillOpacity: 0.98
         glow: 0.4
     }

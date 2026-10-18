@@ -42,7 +42,9 @@ Rectangle {
 
     // Monero orange instead of the theme accent (Trading data / Swaps)
     property bool moneroOrange: false
-    readonly property color accent: moneroOrange ? "#FF6600" : MoneroComponents.Style.orange
+    // blue for the Trading section (Trading data / Swaps / Notes)
+    property bool blueAccent: false
+    readonly property color accent: blueAccent ? "#3B9EFF" : moneroOrange ? "#FF6600" : MoneroComponents.Style.orange
     readonly property bool hovered: buttonArea.containsMouse
 
     function doClick() {
@@ -171,10 +173,13 @@ Rectangle {
         // button text
         MoneroComponents.TextPlain {
             id: label
-            color: button.moneroOrange ? (MoneroComponents.Style.blackTheme ? (button.checked ? "#FFB27A" : "#FF8A3D") : "#D95700")
+            color: button.blueAccent ? (MoneroComponents.Style.blackTheme ? (button.checked ? "#B8DCFF" : "#6CB8FF") : "#1565C0")
+                 : button.moneroOrange ? (MoneroComponents.Style.blackTheme ? (button.checked ? "#FFB27A" : "#FF8A3D") : "#D95700")
                  : button.checked ? MoneroComponents.Style.textAccent : MoneroComponents.Style.menuButtonTextColor
             font.family: MoneroComponents.Style.fontMonoMedium.name
             font.letterSpacing: 0.5
+            // the theme fade would paint the coloured labels grey
+            themeTransition: !button.blueAccent && !button.moneroOrange
             themeTransitionBlackColor: MoneroComponents.Style._b_menuButtonTextColor
             themeTransitionWhiteColor: MoneroComponents.Style._w_menuButtonTextColor
             anchors.verticalCenter: parent.verticalCenter

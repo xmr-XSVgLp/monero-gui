@@ -64,6 +64,8 @@ Rectangle {
     signal swapsClicked()
     signal tradingClicked()
     signal notesClicked()
+    signal walletPlusClicked()
+    signal securityClicked()
 
     function selectItem(pos) {
         menuColumn.previousButton.checked = false
@@ -77,6 +79,8 @@ Rectangle {
         else if(pos === "Swaps") menuColumn.previousButton = swapsButton
         else if(pos === "Trading") menuColumn.previousButton = tradingButton
         else if(pos === "Notes") menuColumn.previousButton = notesButton
+        else if(pos === "WalletPlus") menuColumn.previousButton = walletPlusButton
+        else if(pos === "Security") menuColumn.previousButton = securityButton
         menuColumn.previousButton.checked = true
     }
 
@@ -362,7 +366,7 @@ Rectangle {
             id:flicker
             contentHeight: menuColumn.height
             anchors.top: parent.top
-            anchors.bottom: tradingColumn.top
+            anchors.bottom: separator.top
             width: parent.width
             boundsBehavior: isMac ? Flickable.DragAndOvershootBounds : Flickable.StopAtBounds
             clip: true
@@ -534,32 +538,54 @@ Rectangle {
                 anchors.leftMargin: 20
             }
 
-        } // Column
+            // ------------- Wallet+ section (Trading data, Swaps, Notes) ---------------
+            // set apart from the wallet pages by a gap and a blue line
+            Item {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                height: 22
 
-        } // Flickable
+                Rectangle {
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.leftMargin: 20
+                    anchors.rightMargin: 20
+                    anchors.verticalCenter: parent.verticalCenter
+                    height: 1
+                    color: "#3B9EFF"
+                    opacity: 0.55
+                }
+            }
 
-        // Trading data (+ Swaps under it) pinned at the bottom of the menu, above the sync status.
-        // Only with "Price conversion" on (Settings > Node / Network): off means no requests at all
-        Column {
-            id: tradingColumn
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.bottom: separator.top
-            height: implicitHeight
+            MoneroComponents.MenuButton {
+                id: walletPlusButton
+                anchors.left: parent.left
+                anchors.right: parent.right
+                blueAccent: true
+                text: "Wallet+"
+                onClicked: {
+                    menuColumn.previousButton.checked = false
+                    menuColumn.previousButton = walletPlusButton
+                    panel.walletPlusClicked()
+                }
+            }
 
             MoneroComponents.MenuButtonDivider {
+                visible: tradingButton.visible && tradingButton.present
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.leftMargin: 20
             }
 
+            // ------------- Trading data (subsection of Wallet+) ---------------
             MoneroComponents.MenuButton {
                 id: tradingButton
                 anchors.left: parent.left
                 anchors.right: parent.right
                 // price charts and swaps need the price connections; Notes stays available
                 visible: persistentSettings.fiatPriceEnabled
-                moneroOrange: true
+                blueAccent: true
+                under: walletPlusButton
                 text: qsTr("Trading data") + translationManager.emptyString
                 onClicked: {
                     menuColumn.previousButton.checked = false
@@ -575,15 +601,15 @@ Rectangle {
                 anchors.leftMargin: 20
             }
 
-            // ------------- Swaps tab (subsection of Trading data) ---------------
+            // ------------- Swaps (subsection of Wallet+) ---------------
             MoneroComponents.MenuButton {
                 id: swapsButton
                 anchors.left: parent.left
                 anchors.right: parent.right
-                moneroOrange: true
+                blueAccent: true
                 text: qsTr("Swaps") + translationManager.emptyString
                 visible: persistentSettings.fiatPriceEnabled
-                under: tradingButton
+                under: walletPlusButton
                 onClicked: {
                     menuColumn.previousButton.checked = false
                     menuColumn.previousButton = swapsButton
@@ -598,22 +624,45 @@ Rectangle {
                 anchors.leftMargin: 20
             }
 
-            // ------------- Notes tab (subsection of Trading data, encrypted) ---------------
+            // ------------- Notes (subsection of Wallet+, encrypted) ---------------
             MoneroComponents.MenuButton {
                 id: notesButton
                 anchors.left: parent.left
                 anchors.right: parent.right
-                moneroOrange: true
+                blueAccent: true
                 text: qsTr("Notes") + translationManager.emptyString
-                // without price conversion the Trading button is hidden, so Notes stands on its own
-                under: persistentSettings.fiatPriceEnabled ? tradingButton : null
+                under: walletPlusButton
                 onClicked: {
                     menuColumn.previousButton.checked = false
                     menuColumn.previousButton = notesButton
                     panel.notesClicked()
                 }
             }
-        }
+
+            MoneroComponents.MenuButtonDivider {
+                visible: securityButton.present
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.leftMargin: 20
+            }
+
+            // ------------- Security (subsection of Wallet+) ---------------
+            MoneroComponents.MenuButton {
+                id: securityButton
+                anchors.left: parent.left
+                anchors.right: parent.right
+                blueAccent: true
+                text: qsTr("Security") + translationManager.emptyString
+                under: walletPlusButton
+                onClicked: {
+                    menuColumn.previousButton.checked = false
+                    menuColumn.previousButton = securityButton
+                    panel.securityClicked()
+                }
+            }
+        } // Column
+
+        } // Flickable
 
         Rectangle {
             id: separator

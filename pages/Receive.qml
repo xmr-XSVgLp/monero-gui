@@ -61,6 +61,37 @@ Rectangle {
         inputDialog.open(appWindow.currentWallet.getSubaddressLabel(appWindow.currentWallet.currentSubaddressAccount, _index))
     }
 
+    // subaddresses of the current account that already received a transaction: { index: true }
+    property var usedAddresses: ({})
+    readonly property bool currentAddressUsed: usedAddresses[appWindow.current_subaddress_table_index] === true
+    readonly property color usedColor: MoneroComponents.Style.blackTheme ? "#FF5C5C" : "#C62828"
+
+    function updateUsedAddresses() {
+        var used = {};
+        if (appWindow.currentWallet) {
+            var list = appWindow.currentWallet.history.usedSubaddresses();
+            for (var i = 0; i < list.length; ++i)
+                used[list[i]] = true;
+        }
+        usedAddresses = used;
+    }
+
+    Connections {
+        target: appWindow.currentWallet ? appWindow.currentWallet.history : null
+        function onRefreshFinished() { pageReceive.updateUsedAddresses(); }
+    }
+
+    function createNewAddress() {
+        inputDialog.labelText = qsTr("Set the label of the new address:") + translationManager.emptyString
+        inputDialog.onAcceptedCallback = function() {
+            appWindow.currentWallet.subaddress.addRow(appWindow.currentWallet.currentSubaddressAccount, inputDialog.inputText)
+            current_subaddress_table_index = appWindow.currentWallet.numSubaddresses(appWindow.currentWallet.currentSubaddressAccount) - 1
+            subaddressListView.currentIndex = current_subaddress_table_index
+        }
+        inputDialog.onRejectedCallback = null;
+        inputDialog.open()
+    }
+
     function updateSelectedAddressDisplay() {
         appWindow.current_subaddress_table_index = subaddressListView.currentIndex;
         appWindow.current_address = appWindow.currentWallet.address(
@@ -297,6 +328,7 @@ Rectangle {
                             MoneroComponents.ReceiveFieldBackground {
                                 anchors.fill: parent
                                 focused: selectedAddressMouseArea.containsMouse
+                                warning: pageReceive.currentAddressUsed
                             }
 
                             MoneroComponents.TextPlain {
@@ -308,7 +340,8 @@ Rectangle {
                                 anchors.rightMargin: 10
                                 text: appWindow.current_address ? appWindow.current_address : ""
                                 wrapMode: Text.WrapAnywhere
-                                color: selectedAddressMouseArea.containsMouse ? MoneroComponents.Style.textAccent : MoneroComponents.Style.defaultFontColor
+                                color: pageReceive.currentAddressUsed ? pageReceive.usedColor
+                                       : selectedAddressMouseArea.containsMouse ? MoneroComponents.Style.textAccent : MoneroComponents.Style.defaultFontColor
                                 font.pixelSize: 13
                                 font.family: MoneroComponents.Style.fontMonoRegular.name
                                 lineHeight: 1.15
@@ -316,6 +349,7 @@ Rectangle {
                                 tooltip: qsTr("Copy address to clipboard") + translationManager.emptyString
                                 MouseArea {
                                     id: selectedAddressMouseArea
+                                    enabled: !pageReceive.currentAddressUsed
                                     hoverEnabled: true
                                     anchors.fill: parent
                                     cursorShape: Qt.PointingHandCursor
@@ -334,11 +368,34 @@ Rectangle {
                                 anchors.rightMargin: 8
                                 anchors.verticalCenter: parent.verticalCenter
                                 icon: "copy"
+                                enabled: !pageReceive.currentAddressUsed
+                                opacity: enabled ? 1 : 0.3
                                 tooltip: qsTr("Copy address to clipboard") + translationManager.emptyString
                                 onClicked: {
                                     clipboard.setText(appWindow.current_address);
                                     appWindow.showStatusMessage(qsTr("Address copied to clipboard") + translationManager.emptyString, 3);
                                 }
+                            }
+                        }
+
+                        // already used: warn and offer a fresh subaddress instead of reusing this one
+                        RowLayout {
+                            Layout.fillWidth: true
+                            visible: pageReceive.state == "Address" && pageReceive.currentAddressUsed
+                            spacing: 10
+                            MoneroComponents.TextPlain {
+                                Layout.fillWidth: true
+                                wrapMode: Text.WordWrap
+                                text: qsTr("This address already received a transaction. Reusing it lets anyone who knows it link your payments, so copying is disabled. Use a new address.") + translationManager.emptyString
+                                font.pixelSize: 13
+                                color: pageReceive.usedColor
+                                themeTransition: false
+                            }
+                            MoneroComponents.StandardButton {
+                                small: true
+                                text: qsTr("Create new address") + translationManager.emptyString
+                                fontSize: 13
+                                onClicked: pageReceive.createNewAddress()
                             }
                         }
 
@@ -623,9 +680,22 @@ Rectangle {
                 spacing: 12
 
                 MoneroComponents.SectionTitle {
-                    Layout.fillWidth: true
+                    Layout.fillWidth: false
                     text: qsTr("Addresses") + translationManager.emptyString
                 }
+
+                MoneroComponents.CheckBox {
+                    id: hideUsedCheckBox
+                    // CheckBox sizes itself from its label; give the layout that width so the text is not cut
+                    Layout.preferredWidth: hideUsedCheckBox.width
+                    Layout.leftMargin: 12
+                    text: qsTr("Hide used addresses") + translationManager.emptyString
+                    fontSize: 13
+                    checked: persistentSettings.hideUsedAddresses
+                    onClicked: persistentSettings.hideUsedAddresses = !persistentSettings.hideUsedAddresses
+                }
+
+                Item { Layout.fillWidth: true }
 
                 MoneroComponents.StandardButton {
                     id: createAddressButton
@@ -643,6 +713,7 @@ Rectangle {
                         inputDialog.open()
                     }
                 }
+
             }
 
             ColumnLayout {
@@ -652,8 +723,17 @@ Rectangle {
                 Layout.topMargin: 14
                 Layout.fillWidth: true
                 Layout.minimumWidth: 240
-                Layout.preferredHeight: (subaddressListItemHeight + subaddressListSpacing) * subaddressListView.count
-                visible: subaddressListView.count >= 1
+                // hidden (used) rows take no space
+                readonly property int shownCount: {
+                    if (!persistentSettings.hideUsedAddresses)
+                        return subaddressListView.count;
+                    var n = 0;
+                    for (var i = 0; i < subaddressListView.count; ++i)
+                        if (pageReceive.usedAddresses[i] !== true) n++;
+                    return n;
+                }
+                Layout.preferredHeight: (subaddressListItemHeight + subaddressListSpacing) * shownCount
+                visible: shownCount >= 1
 
                 ListView {
                     id: subaddressListView
@@ -662,9 +742,16 @@ Rectangle {
                     clip: true
                     boundsBehavior: ListView.StopAtBounds
                     interactive: false
-                    spacing: subaddressListRow.subaddressListSpacing
+                    // the spacing lives in each delegate, so a hidden row leaves no gap
+                    spacing: 0
 
-                    delegate: MoneroComponents.ReceiveAddressRow {
+                    delegate: Item {
+                      readonly property bool hiddenRow: persistentSettings.hideUsedAddresses && pageReceive.usedAddresses[index] === true
+                      width: subaddressListView.width
+                      height: hiddenRow ? 0 : subaddressListRow.subaddressListItemHeight + subaddressListRow.subaddressListSpacing
+                      visible: !hiddenRow
+
+                      MoneroComponents.ReceiveAddressRow {
                         id: tableItem2
                         width: subaddressListView.width
                         height: subaddressListRow.subaddressListItemHeight
@@ -675,6 +762,8 @@ Rectangle {
                         historyTooltip: qsTr("See transactions") + translationManager.emptyString
                         editTooltip: qsTr("Edit address label") + translationManager.emptyString
                         copyTooltip: qsTr("Copy address to clipboard") + translationManager.emptyString
+                        used: pageReceive.usedAddresses[index] === true
+                        usedText: qsTr("USED") + translationManager.emptyString
 
                         onClicked: subaddressListView.currentIndex = index
                         onHistoryClicked: doSearchInHistory(model.address)
@@ -684,6 +773,7 @@ Rectangle {
                             clipboard.setText(model.address);
                             appWindow.showStatusMessage(qsTr("Address copied to clipboard"),3);
                         }
+                      }
                     }
                     onCurrentItemChanged: updateSelectedAddressDisplay()
                 }
@@ -725,6 +815,7 @@ Rectangle {
                 subaddressListView.currentIndex = 0;
             }
             updateSelectedAddressDisplay();
+            updateUsedAddresses();
         }
     }
 

@@ -147,6 +147,43 @@ ApplicationWindow {
     // installed nym-vpnc: "" = not checked yet, "none" = not found, otherwise its version
     readonly property string nymVpncRequired: "2026.13.0"
     property string nymVpncVersion: ""
+
+    // connection check (Settings > Node / Network): manual, plus once 20 s after NymVPN connects or restarts
+    property var connTest: ({})
+    property bool connTesting: false
+    property string connTestVia: ""     // "nym", "proxy" or "direct"
+    property date connTestTime
+    function runConnectionTest() {
+        if (connTesting)
+            return;
+        var proxy = persistentSettings.getProxyAddress().replace(/^socks5:\/\//, "");
+        connTestVia = proxy === "" ? "direct" : (proxy === persistentSettings.nymVpnSocksAddress && nymVpnProxyUp() ? "nym" : "proxy");
+        connTesting = true;
+        connTest = ({});
+        oshelper.nymVpnTest(proxy, localDaemonAddress, function(json) {
+            var r = JSON.parse(json);
+            if (r.key === "done") {
+                connTesting = false;
+                connTestTime = new Date();
+                return;
+            }
+            var t = Object.assign({}, connTest);
+            t[r.key] = r;
+            connTest = t;
+        });
+    }
+    Timer {
+        id: connTestTimer
+        interval: 20000
+        onTriggered: if (appWindow.nymVpnProxyUp()) appWindow.runConnectionTest()
+    }
+    property bool nymVpnWasUp: false
+    onNymVpnStateChanged: {
+        var up = nymVpnState === "connected" || nymVpnState === "ready";
+        if (up && !nymVpnWasUp)
+            connTestTimer.restart();
+        nymVpnWasUp = up;
+    }
     readonly property bool nymVpncOk: nymVpncVersion !== "" && nymVpncVersion !== "none"
                                       && nymVpnVersionAtLeast(nymVpncVersion, nymVpncRequired)
 
@@ -502,6 +539,39 @@ ApplicationWindow {
         property int attempt: 0
         interval: 1500
         onTriggered: appWindow.nymVpnWaitDaemon(attempt)
+    }
+
+    // extreme privacy: the SOCKS5 address of an approved route (NymVPN up, or the SOCKS5 proxy turned on), "" if none
+    function approvedRoute() {
+        if (nymVpnProxyUp())
+            return persistentSettings.nymVpnSocksAddress;
+        if (!persistentSettings.nymVpnRequired && persistentSettings.proxyEnabled && persistentSettings.proxyAddress !== "")
+            return persistentSettings.proxyAddress;
+        return "";
+    }
+
+    function setExtremePrivacy(on) {
+        if (on === persistentSettings.extremePrivacy)
+            return;
+        if (on) {
+            persistentSettings.extremePrivacyPrev = JSON.stringify({
+                fiatPriceEnabled: persistentSettings.fiatPriceEnabled,
+                checkForUpdates: persistentSettings.checkForUpdates
+            });
+            persistentSettings.fiatPriceEnabled = false;
+            persistentSettings.checkForUpdates = false;
+            persistentSettings.extremePrivacy = true;
+        } else {
+            persistentSettings.extremePrivacy = false;
+            try {
+                var prev = JSON.parse(persistentSettings.extremePrivacyPrev);
+                if (prev.fiatPriceEnabled !== undefined) persistentSettings.fiatPriceEnabled = prev.fiatPriceEnabled;
+                if (prev.checkForUpdates !== undefined) persistentSettings.checkForUpdates = prev.checkForUpdates;
+            } catch (e) {}
+        }
+        // a remote node picks up the new proxy only when the wallet reconnects
+        if (currentWallet && persistentSettings.useRemoteNode)
+            connectRemoteNode();
     }
 
     function nymVpnProxyUp() {
@@ -1275,11 +1345,30 @@ ApplicationWindow {
 
         // with NymVPN on (or "Nym required") monerod also reaches its peers through the Nym SOCKS5 proxy
         flags = (flags || "").trim();
-        if ((persistentSettings.nymVpnEnabled || persistentSettings.nymVpnRequired) && flags.indexOf("--proxy") < 0)
+        if (persistentSettings.extremePrivacy) {
+            // extreme privacy: no sync without an approved route, peers only through it, no UPnP, port hidden
+            var route = approvedRoute();
+            if (route === "") {
+                daemonStartStopInProgress = 0;
+                currentWallet.startRefresh();
+                informationPopup.title = qsTr("Extreme privacy") + translationManager.emptyString;
+                informationPopup.text = qsTr("The local node does not start until NymVPN is connected or the SOCKS5 proxy is turned on.") + translationManager.emptyString;
+                informationPopup.onCloseCallback = null;
+                informationPopup.open();
+                return;
+            }
+            if (flags.indexOf("--proxy") < 0)
+                flags = (flags !== "" ? flags + " " : "") + "--proxy " + route;
+            if (flags.indexOf("--no-igd") < 0)
+                flags += " --no-igd";
+            if (flags.indexOf("--hide-my-port") < 0)
+                flags += " --hide-my-port";
+        } else if ((persistentSettings.nymVpnEnabled || persistentSettings.nymVpnRequired) && flags.indexOf("--proxy") < 0)
             flags = (flags !== "" ? flags + " " : "") + "--proxy " + persistentSettings.nymVpnSocksAddress;
 
         const noSync = appWindow.walletMode === 0;
-        const bootstrapNodeAddress = persistentSettings.walletMode < 2 ? "auto" : persistentSettings.bootstrapNodeAddress
+        // extreme privacy: no bootstrap node (it would answer for the wallet while monerod syncs)
+        const bootstrapNodeAddress = persistentSettings.extremePrivacy ? "" : persistentSettings.walletMode < 2 ? "auto" : persistentSettings.bootstrapNodeAddress
         daemonManager.start(flags, persistentSettings.nettype, persistentSettings.blockchainDataDir, bootstrapNodeAddress, noSync, persistentSettings.pruneBlockchain);
     }
 
@@ -2213,7 +2302,18 @@ ApplicationWindow {
         property string nymVpnSocksAddress: "127.0.0.1:1080"
         property bool nymVpnPrevProxyEnabled: false
         property string nymVpnPrevProxyAddress: "127.0.0.1:9050"
+        // Security page
+        property bool extremePrivacy: false        // only through an approved route (NymVPN or the SOCKS5 proxy)
+        property string extremePrivacyPrev: "{}"   // settings to restore when it is turned off
+        property string securityNodes: "[]"        // node manager: [{ address, favorite, mine, samples: [{ t, ok, ms, height, version }] }]
+        property string securityBackups: "{}"
+        property bool hideUsedAddresses: false     // Receive: hide subaddresses that already received a transaction      // per wallet path: { seed, keys } (dates of the confirmations / copies)
         function getProxyAddress() {
+            if (extremePrivacy) {
+                // extreme privacy: an approved route or nothing at all
+                var route = appWindow.approvedRoute();
+                return route !== "" ? "socks5://" + route : "socks5://127.0.0.1:0";
+            }
             if (nymVpnRequired) {
                 // only through NymVPN; while it is not up every proxied request fails
                 return appWindow.nymVpnProxyUp() ? "socks5://" + nymVpnSocksAddress : "socks5://127.0.0.1:0";
@@ -2645,6 +2745,16 @@ ApplicationWindow {
                     middlePanel.state = "Notes";
                     middlePanel.flickable.contentY = 0;
                 }
+
+                onWalletPlusClicked: {
+                    middlePanel.state = "WalletPlus";
+                    middlePanel.flickable.contentY = 0;
+                }
+
+                onSecurityClicked: {
+                    middlePanel.state = "Security";
+                    middlePanel.flickable.contentY = 0;
+                }
             }
 
             MiddlePanel {
@@ -3047,9 +3157,6 @@ ApplicationWindow {
         // prompt password after X seconds of inactivity
         var inactivity = Utils.epoch() - appWindow.userLastActive;
         if(inactivity < (persistentSettings.lockOnUserInActivityInterval * 60)) return;
-
-        // encrypted notes need the password again after the lock
-        middlePanel.notesView.lockNotes();
 
         if (inputDialogVisible) inputDialog.close()
         remoteNodeDialog.close();

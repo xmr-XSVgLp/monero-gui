@@ -35,6 +35,7 @@
 #include <QList>
 #include <QReadWriteLock>
 #include <QDateTime>
+#include <QVariantList>
 
 namespace Monero {
 struct TransactionHistory;
@@ -56,6 +57,8 @@ public:
     // Q_INVOKABLE TransactionInfo * transaction(const QString &id);
     Q_INVOKABLE void refresh(quint32 accountIndex);
     Q_INVOKABLE QString writeCSV(quint32 accountIndex, QString out);
+    // subaddress indices of the loaded account that already received a transaction (incoming, not failed)
+    Q_INVOKABLE QVariantList usedSubaddresses() const;
     quint64 count() const;
     QDateTime firstDateTime() const;
     QDateTime lastDateTime() const;

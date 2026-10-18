@@ -14,13 +14,13 @@ QtObject {
     property QtObject fontMonoLight: FontLoader { id: _fontMonoLight; source: "qrc:/fonts/RobotoMono-Light.ttf"; }
     property QtObject fontMonoRegular: FontLoader { id: _fontMonoRegular; source: "qrc:/fonts/RobotoMono-Regular.ttf"; }
 
-    property string grey: blackTheme ? "#0A1F0A" : "#C5DCC9"
+    property string grey: blackTheme ? "#0A1F0A" : "#BDC4BE"
     property string orange: blackTheme ? "#00FF41" : "#00A82D"
     // text that must stand out: white on dark, accent green on light
     property string textAccent: blackTheme ? "#FFFFFF" : orange
     property string white: blackTheme ? "#00FF41" : "#FFFFFF"
     property string green: blackTheme ? "#00FF41" : "#00A82D"
-    property string moneroGrey: blackTheme ? "#0D2B0D" : "#B5CFBA"
+    property string moneroGrey: blackTheme ? "#0D2B0D" : "#ADB6AF"
     property string warningColor: "#ADFF2F"
 
     property string defaultFontColor: blackTheme ? _b_defaultFontColor : _w_defaultFontColor
@@ -160,9 +160,9 @@ property string _w_textSelectionColor: "#9CF0AE"
     
 property string _w_textSelectedColor: "#003B00"
     
-property string _w_inputBoxBackground: "#FFFFFF"
+property string _w_inputBoxBackground: "#E2E6E3"
     
-property string _w_inputBoxBackgroundDisabled: "#E3F2E6"
+property string _w_inputBoxBackgroundDisabled: "#D2D8D3"
     
 property string _w_inputBoxBackgroundError: "#FFDDDD"
     
@@ -184,17 +184,17 @@ property string _w_buttonBackgroundColorDisabled: "#C5DCC9"
     
 property string _w_buttonBackgroundColorDisabledHover: "#B5CFBA"
     
-property string _w_buttonInlineBackgroundColor: "#D4EDD9"
+property string _w_buttonInlineBackgroundColor: "#C2CBC4"
     
-property string _w_buttonInlineBackgroundColorHover: "#C0E4C8"
+property string _w_buttonInlineBackgroundColorHover: "#B4BEB6"
     
 property string _w_buttonTextColor: "#FFFFFF"
     
 property string _w_buttonTextColorDisabled: "#5E7A64"
     
-property string _w_buttonSecondaryBackgroundColor: "#D4EDD9"
+property string _w_buttonSecondaryBackgroundColor: "#C2CBC4"
     
-property string _w_buttonSecondaryBackgroundColorHover: "#C0E4C8"
+property string _w_buttonSecondaryBackgroundColorHover: "#B4BEB6"
     
 property string _w_buttonSecondaryTextColor: "#003B00"
     
@@ -202,11 +202,11 @@ property string _w_dividerColor: "#003B00"
     
 property real _w_dividerOpacity: 0.20
     
-property string _w_titleBarBackgroundGradientStart: "#F4FFF6"
+property string _w_titleBarBackgroundGradientStart: "#CDD3CE"
     
-property string _w_titleBarBackgroundGradientStop: "#EAF8ED"
+property string _w_titleBarBackgroundGradientStop: "#C4CAC5"
     
-property string _w_titleBarBackgroundBorderColor: "#BFE3C6"
+property string _w_titleBarBackgroundBorderColor: "#AAB3AC"
     
 property string _w_titleBarLogoSource: "qrc:///images/themes/white/titlebarLogo.png"
     
@@ -218,13 +218,13 @@ property string _w_titleBarCloseSource: "qrc:///images/themes/white/close.svg"
     
 property string _w_titleBarButtonHoverColor: "#1100A82D"
     
-property string _w_wizardBackgroundGradientStart: "#F7FFF8"
+property string _w_wizardBackgroundGradientStart: "#D3D8D4"
     
-property string _w_middlePanelBackgroundGradientStart: "#F7FFF8"
+property string _w_middlePanelBackgroundGradientStart: "#D3D8D4"
     
-property string _w_middlePanelBackgroundGradientStop: "#E6F5E9"
+property string _w_middlePanelBackgroundGradientStop: "#C7CDC8"
     
-property string _w_middlePanelBackgroundColor: "#EEF9F0"
+property string _w_middlePanelBackgroundColor: "#CDD3CE"
     
 property string _w_menuButtonFallbackBackgroundColor: "#0900A82D"
     
@@ -246,17 +246,17 @@ property string _w_inlineButtonTextColor: "#003B00"
     
 property string _w_inlineButtonBorderColor: "transparent"
     
-property string _w_appWindowBackgroundColor: "white"
+property string _w_appWindowBackgroundColor: "#CDD3CE"
     
-property string _w_appWindowBorderColor: "#BFE3C6"
+property string _w_appWindowBorderColor: "#AAB3AC"
     
 property bool _w_progressBarProgressTextBold: false
     
 property string _w_progressBarBackgroundColor: "#2400A82D"
     
-property string _w_leftPanelBackgroundGradientStart: "#F7FFF8"
+property string _w_leftPanelBackgroundGradientStart: "#CBD1CC"
     
-property string _w_leftPanelBackgroundGradientStop: "#E6F5E9"
+property string _w_leftPanelBackgroundGradientStop: "#BFC6C0"
     
 property string _w_historyHeaderTextColor: "#1F5A2B"
     

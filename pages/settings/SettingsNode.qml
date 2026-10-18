@@ -143,8 +143,12 @@ Rectangle{
                     Layout.fillWidth: true
                     spacing: 18
 
+                    // red while it can stop the daemon
                     MoneroComponents.StandardButton {
+                        Layout.alignment: Qt.AlignHCenter
                         small: true
+                        accent: appWindow.daemonRunning ? (MoneroComponents.Style.blackTheme ? "#FF4D4D" : "#C62828") : MoneroComponents.Style.orange
+                        textColor: appWindow.daemonRunning ? (MoneroComponents.Style.blackTheme ? "#FFD6D6" : "#C62828") : MoneroComponents.Style.textAccent
                         text: (appWindow.daemonRunning ? qsTr("Stop daemon") : qsTr("Start daemon")) + translationManager.emptyString
                         onClicked: {
                             if (appWindow.daemonRunning) {
@@ -154,6 +158,17 @@ Rectangle{
                                 appWindow.startDaemon(persistentSettings.daemonFlags);
                             }
                         }
+                    }
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 1
+                        color: MoneroComponents.Style.blackTheme ? "#E8ECE9" : "#2B3A30"
+                        opacity: 0.15
+                    }
+
+                    MoneroComponents.ConnectionCheck {
+                        Layout.fillWidth: true
                     }
                 }
             }
@@ -262,10 +277,19 @@ Rectangle{
                 id: enableConvertCurrency
                 text: qsTr("Show the balance in other currencies and the swap prices") + translationManager.emptyString
                 checked: persistentSettings.fiatPriceEnabled
+                enabled: !persistentSettings.extremePrivacy
+                tooltip: persistentSettings.extremePrivacy ? qsTr("Off while extreme privacy is on (Wallet+ > Security)") + translationManager.emptyString : ""
                 onCheckedChanged: {
                     if (!checked) {
                         console.log("Disabled price conversion");
                         persistentSettings.fiatPriceEnabled = false;
+                    }
+                }
+                Connections {
+                    target: persistentSettings
+                    function onExtremePrivacyChanged() {
+                        if (persistentSettings.extremePrivacy)
+                            enableConvertCurrency.checked = false;
                     }
                 }
             }
