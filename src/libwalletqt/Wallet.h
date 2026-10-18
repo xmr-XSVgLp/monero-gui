@@ -221,6 +221,12 @@ public:
     //! name set on the hardware wallet (e.g. the Trezor label), empty for software wallets
     Q_INVOKABLE QString deviceLabel() const;
 
+    //! Trezor customization (Wallet+ > Trezor page); results arrive via the signals below
+    Q_INVOKABLE void deviceFeaturesAsync();
+    //! keys: label, autoLockMs, haptic, wallpaper (file path or qrc url), wallpaperReset
+    Q_INVOKABLE void deviceApplySettingsAsync(const QVariantMap &settings);
+    Q_INVOKABLE void deviceSetBrightnessAsync();
+
     //! returns if view only wallet
     Q_INVOKABLE bool viewOnly() const;
 
@@ -435,6 +441,9 @@ signals:
     void transactionCommitted(bool status, PendingTransaction *t, const QStringList& txid);
     void heightRefreshed(quint64 walletHeight, quint64 daemonHeight, quint64 targetHeight) const;
     void deviceShowAddressShowed();
+    void deviceFeaturesReceived(const QString &json, const QString &error);
+    void deviceSettingsApplied(bool ok, const QString &error);
+    void deviceBrightnessDone(bool ok, const QString &error);
 
     // emitted when transaction is created async
     void transactionCreated(
@@ -523,11 +532,14 @@ private:
     mutable SubaddressAccountModel * m_subaddressAccountModel;
     QMutex m_asyncMutex;
     QMutex m_connectionStatusMutex;
-    bool m_connectionStatusRunning;
+    std::atomic<bool> m_connectionStatusRunning;
+    std::atomic<bool> m_heightRefreshRunning{false};
     QString m_daemonUsername;
     QString m_daemonPassword;
     QString m_proxyAddress;
     mutable QMutex m_proxyMutex;
+    QMutex m_proxyUpdateMutex;
+    std::atomic<size_t> m_proxyGeneration{0};
     std::atomic<bool> m_refreshNow;
     std::atomic<bool> m_refreshEnabled;
     std::atomic<bool> m_refreshing;

@@ -14,6 +14,9 @@ WORK="$(pwd -P)"
 JOBS="$(sysctl -n hw.ncpu)"
 APP=build/release/bin/monero-wallet-gui.app
 
+# Build the wallet-owned mixnet helper before configuring the bundle.
+bash "$WORK/external/nym-client/build.sh"
+
 # The UI sounds need Qt Multimedia linked into the app (upstream only links it for the webcam
 # QR scanner). Harmless if the fork already has this change.
 perl -0pi -e 's/if\(WITH_SCANNER\)\n  list\(APPEND QT_COMPONENTS Multimedia\)\nendif\(\)/list(APPEND QT_COMPONENTS Multimedia)/' CMakeLists.txt
@@ -91,7 +94,8 @@ if [ "${1:-}" = "rapido" ]; then
       "-DCMAKE_C_COMPILER_LAUNCHER=$LAUNCHER" "-DCMAKE_CXX_COMPILER_LAUNCHER=$LAUNCHER"
   fi
   pkill -x monero-wallet-gui || true
-  cmake --build build/release --target monero-wallet-gui
+  cmake --build build/release --target bundle_nym_client
+  source "$WORK/firmar-macos.sh"; firmar_app "$APP"
   open "$APP"
   exit 0
 fi
@@ -183,6 +187,8 @@ cmake --build build/release -j "$JOBS"
 if [ "${EMPAQUETAR:-0}" = "1" ]; then
   cmake --build build/release --target deploy || echo "WARNING: packaging (deploy) failed; the app in build/release/bin still runs on this Mac"
 fi
+
+source "$WORK/firmar-macos.sh"; firmar_app "$APP"
 
 echo
 echo "Done: $APP"

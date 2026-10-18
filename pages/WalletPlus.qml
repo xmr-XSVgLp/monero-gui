@@ -174,7 +174,7 @@ Rectangle {
             rowSpacing: 16
 
             Card {
-                title: qsTr("Trading data") + translationManager.emptyString
+                title: qsTr("Markets") + translationManager.emptyString
                 body: qsTr("XMR price in EUR, USD and BTC from 24 hours to all the history recorded, the value of this wallet over time, a converter and price alerts with a notification. Prices are saved in CSV files on this computer.") + translationManager.emptyString
                 status: pageWalletPlus.pricesOn ? "" : (qsTr("Needs price conversion, which is off: nothing connects to the price services.") + translationManager.emptyString)
                 statusColor: pageWalletPlus.warn
@@ -241,6 +241,11 @@ Rectangle {
                 body: qsTr("Support for the Trezor Safe 7 over USB and Bluetooth, with the new encrypted Trezor Host Protocol and pairing with the code shown on the device. The Trezor name appears in the title bar. Close Trezor Suite before opening the wallet.") + translationManager.emptyString
                 status: pageWalletPlus.hardware ? (qsTr("This wallet uses a hardware wallet") + translationManager.emptyString) : ""
                 statusColor: pageWalletPlus.good
+                MoneroComponents.StandardButton {
+                    small: true
+                    text: qsTr("Customize") + translationManager.emptyString
+                    onClicked: pageWalletPlus.openPage("Trezor")
+                }
                 Link { url: "https://trezor.io/trezor-safe-7" }
             }
 

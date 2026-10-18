@@ -1,0 +1,27 @@
+[package]
+name = "xmr-nym-client"
+version = "0.2.0"
+edition = "2021"
+license = "GPL-3.0-only"
+
+[dependencies]
+nym-sdk.workspace = true
+nym-bandwidth-controller.workspace = true
+nym-offline-monitor.workspace = true
+nym-vpn-account-controller.workspace = true
+nym-vpn-api-client.workspace = true
+nym-vpn-lib-types.workspace = true
+nym-vpn-network-config.workspace = true
+nym-vpn-store.workspace = true
+nym-http-api-client.workspace = true
+nym-validator-client.workspace = true
+async-trait.workspace = true
+sha2.workspace = true
+rand.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+zeroize.workspace = true
+libc.workspace = true
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "io-std", "io-util", "signal"] }
+tokio-util.workspace = true
+tracing-subscriber = { workspace = true, features = ["env-filter"] }

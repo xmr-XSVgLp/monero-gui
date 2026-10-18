@@ -46,6 +46,7 @@ Rectangle {
     property string walletName: ""
     property string deviceLabel: ""        // Trezor name, shown after the wallet name
     property bool hardwareWallet: false    // Trezor icon instead of the safe
+    property bool removableWallet: false   // opened from a USB / SD drive: purple USB stick instead of the safe
 
     height: {
         if(!persistentSettings.customDecorations) return 0;
@@ -116,6 +117,7 @@ Rectangle {
         property color dot: "#8C8C8C"
         property string tip: ""
         property bool blink: false
+        property string page: ""      // page opened on click; Settings > Node / Network when empty
         width: chipRow.implicitWidth + 18
         height: 24
         MoneroComponents.NeonFrame {
@@ -166,6 +168,11 @@ Rectangle {
             onExited: chipTip.tooltipPopup.close()
             onClicked: {
                 chipTip.tooltipPopup.close();
+                if (chip.page !== "") {
+                    appWindow.showPageRequest(chip.page);
+                    middlePanel.flickable.contentY = 0;
+                    return;
+                }
                 middlePanel.settingsView.settingsStateViewState = "Node";
                 appWindow.showPageRequest("Settings");
             }
@@ -387,15 +394,24 @@ Rectangle {
                 id: walletTitle
                 anchors.centerIn: parent
                 spacing: 10
-                readonly property color accent: MoneroComponents.Style.orange
+                readonly property color accent: root.removableWallet ? (MoneroComponents.Style.blackTheme ? "#A66BFF" : "#6B2FD6")
+                                                                     : MoneroComponents.Style.orange
                 readonly property color ink: MoneroComponents.Style.blackTheme ? "#FFFFFF" : "#0B1F0F"
                 readonly property int nameMax: Math.max(40, parent.width - 120)
 
                 MoneroComponents.SafeIcon {
-                    visible: !root.hardwareWallet
+                    visible: !root.hardwareWallet && !root.removableWallet
                     anchors.verticalCenter: parent.verticalCenter
                     width: 22
                     height: 22
+                }
+
+                MoneroComponents.UsbIcon {
+                    visible: !root.hardwareWallet && root.removableWallet
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 22
+                    height: 22
+                    accent: walletTitle.accent
                 }
 
                 MoneroComponents.TrezorIcon {
@@ -403,6 +419,17 @@ Rectangle {
                     anchors.verticalCenter: parent.verticalCenter
                     width: 22
                     height: 24
+
+                    // opens Wallet+ > Trezor
+                    MouseArea {
+                        anchors.fill: parent
+                        anchors.margins: -4
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            appWindow.showPageRequest("Trezor");
+                            middlePanel.flickable.contentY = 0;
+                        }
+                    }
                 }
 
                 Text {
@@ -505,6 +532,7 @@ Rectangle {
             Chip {
                 visible: root.hardwareWallet
                 label: "TREZOR"
+                page: "Trezor"
                 dot: "#3DDC84"
                 tip: qsTr("Hardware wallet: %1. The keys never leave the device.").arg(root.deviceLabel !== "" ? root.deviceLabel : "Trezor") + translationManager.emptyString
             }

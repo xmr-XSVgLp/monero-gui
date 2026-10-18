@@ -684,7 +684,7 @@ Rectangle {
             MoneroComponents.LabelSubheader {
                 Layout.fillWidth: true
                 fontSize: 24
-                text: qsTr("Trading data") + translationManager.emptyString
+                text: qsTr("Markets") + translationManager.emptyString
             }
 
             MoneroComponents.TextPlain {

@@ -40,6 +40,7 @@ public:
     static bool openFolderAndSelectItem(const QUrl &path);
     static QString bundlePath();
     static void disableWindowTabbing();
+    static bool notify(const QString &title, const QString &message);
 };
 
 #endif //MACOSHELPER_H

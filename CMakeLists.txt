@@ -382,3 +382,18 @@ add_custom_command(TARGET monero-wallet-gui POST_BUILD
 )
 
 install(TARGETS monero-wallet-gui DESTINATION bin)
+
+# Built separately with a pinned Rust SDK. Quick builds reuse the Rust cache.
+set(NYM_CLIENT_BINARY "${CMAKE_SOURCE_DIR}/build/nym-client/xmr-nym-client" CACHE FILEPATH "Bundled independent Nym client")
+if(EXISTS "${NYM_CLIENT_BINARY}")
+  add_custom_target(bundle_nym_client ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${NYM_CLIENT_BINARY}" $<TARGET_FILE_DIR:monero-wallet-gui>/xmr-nym-client
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/build/nym-client/NYM-LICENSE" $<TARGET_FILE_DIR:monero-wallet-gui>/NYM-LICENSE
+    DEPENDS monero-wallet-gui
+  )
+  add_custom_command(TARGET monero-wallet-gui POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${NYM_CLIENT_BINARY}" $<TARGET_FILE_DIR:monero-wallet-gui>/xmr-nym-client
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/build/nym-client/NYM-LICENSE" $<TARGET_FILE_DIR:monero-wallet-gui>/NYM-LICENSE
+  )
+  install(PROGRAMS "${NYM_CLIENT_BINARY}" DESTINATION bin)
+endif()

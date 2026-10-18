@@ -65,6 +65,11 @@ Rectangle {
     property var usedAddresses: ({})
     readonly property bool currentAddressUsed: usedAddresses[appWindow.current_subaddress_table_index] === true
     readonly property color usedColor: MoneroComponents.Style.blackTheme ? "#FF5C5C" : "#C62828"
+    // primary address (account 0, address 0, starts with 4): blue, only copied through the QR code
+    readonly property bool currentIsPrimary: appWindow.currentWallet ? appWindow.currentWallet.currentSubaddressAccount === 0
+                                                                       && appWindow.current_subaddress_table_index === 0 : false
+    readonly property bool copyBlocked: currentAddressUsed || currentIsPrimary
+    readonly property color primaryColor: MoneroComponents.Style.blackTheme ? "#6CB8FF" : "#1565C0"
 
     function updateUsedAddresses() {
         var used = {};
@@ -329,6 +334,7 @@ Rectangle {
                                 anchors.fill: parent
                                 focused: selectedAddressMouseArea.containsMouse
                                 warning: pageReceive.currentAddressUsed
+                                info: pageReceive.currentIsPrimary
                             }
 
                             MoneroComponents.TextPlain {
@@ -341,6 +347,7 @@ Rectangle {
                                 text: appWindow.current_address ? appWindow.current_address : ""
                                 wrapMode: Text.WrapAnywhere
                                 color: pageReceive.currentAddressUsed ? pageReceive.usedColor
+                                       : pageReceive.currentIsPrimary ? pageReceive.primaryColor
                                        : selectedAddressMouseArea.containsMouse ? MoneroComponents.Style.textAccent : MoneroComponents.Style.defaultFontColor
                                 font.pixelSize: 13
                                 font.family: MoneroComponents.Style.fontMonoRegular.name
@@ -349,7 +356,7 @@ Rectangle {
                                 tooltip: qsTr("Copy address to clipboard") + translationManager.emptyString
                                 MouseArea {
                                     id: selectedAddressMouseArea
-                                    enabled: !pageReceive.currentAddressUsed
+                                    enabled: !pageReceive.copyBlocked
                                     hoverEnabled: true
                                     anchors.fill: parent
                                     cursorShape: Qt.PointingHandCursor
@@ -368,7 +375,7 @@ Rectangle {
                                 anchors.rightMargin: 8
                                 anchors.verticalCenter: parent.verticalCenter
                                 icon: "copy"
-                                enabled: !pageReceive.currentAddressUsed
+                                enabled: !pageReceive.copyBlocked
                                 opacity: enabled ? 1 : 0.3
                                 tooltip: qsTr("Copy address to clipboard") + translationManager.emptyString
                                 onClicked: {
@@ -399,14 +406,35 @@ Rectangle {
                             }
                         }
 
+                        // primary address: explain why it is blue and cannot be copied from the box
+                        RowLayout {
+                            Layout.fillWidth: true
+                            visible: pageReceive.state == "Address" && pageReceive.currentIsPrimary && !pageReceive.currentAddressUsed
+                            spacing: 10
+                            MoneroComponents.TextPlain {
+                                Layout.fillWidth: true
+                                wrapMode: Text.WordWrap
+                                text: qsTr("This is your primary address (it starts with 4). Everyone who has it can link all the payments you receive on it, so it cannot be copied from here: use the QR code (right click to copy it) or, better, a new address.") + translationManager.emptyString
+                                font.pixelSize: 13
+                                color: pageReceive.primaryColor
+                                themeTransition: false
+                            }
+                            MoneroComponents.StandardButton {
+                                small: true
+                                text: qsTr("Create new address") + translationManager.emptyString
+                                fontSize: 13
+                                onClicked: pageReceive.createNewAddress()
+                            }
+                        }
+
                         MoneroComponents.StandardButton {
-                            Layout.preferredWidth: 220
                             Layout.topMargin: 4
                             small: true
                             text: qsTr("Show on device") + translationManager.emptyString
                             fontSize: 14
                             visible: pageReceive.state == "Address" && (appWindow.currentWallet ? appWindow.currentWallet.isHwBacked() : false)
                             onClicked: {
+                                appWindow.deviceShowAddress = appWindow.current_address;
                                 appWindow.currentWallet.deviceShowAddressAsync(
                                     appWindow.currentWallet.currentSubaddressAccount,
                                     appWindow.current_subaddress_table_index,
@@ -764,6 +792,8 @@ Rectangle {
                         copyTooltip: qsTr("Copy address to clipboard") + translationManager.emptyString
                         used: pageReceive.usedAddresses[index] === true
                         usedText: qsTr("USED") + translationManager.emptyString
+                        primary: index === 0 && appWindow.currentWallet && appWindow.currentWallet.currentSubaddressAccount === 0
+                        primaryText: qsTr("PRIMARY") + translationManager.emptyString
 
                         onClicked: subaddressListView.currentIndex = index
                         onHistoryClicked: doSearchInHistory(model.address)

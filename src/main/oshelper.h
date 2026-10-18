@@ -30,6 +30,9 @@
 #define OSHELPER_H
 
 #include <QJSValue>
+#include "NymClient.h"
+#include <atomic>
+#include <memory>
 #include <QList>
 #include <QObject>
 #include <QString>
@@ -41,6 +44,7 @@ class OSHelper : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(bool installed READ installed CONSTANT);
+    Q_PROPERTY(QObject* nymClient READ nymClient CONSTANT)
 
 public:
     explicit OSHelper(QObject *parent = 0);
@@ -58,20 +62,12 @@ public:
     Q_INVOKABLE QString readTextFile(const QString &path) const;
     Q_INVOKABLE bool writeTextFile(const QString &path, const QString &text) const;
     Q_INVOKABLE void notify(const QString &title, const QString &message) const;
-    // NymVPN command line client (nym-vpnc): path, and an async run with callback(exitCode, output)
-    Q_INVOKABLE QString nymVpncPath() const;
-    Q_INVOKABLE void runNymVpnc(const QStringList &args, const QJSValue &callback);
-    // restarts the NymVPN daemon: with sudo -n (no prompt, needs a sudoers rule) or, with askPassword,
-    // through the macOS administrator password dialog; callback(exitCode, output)
-    Q_INVOKABLE void restartNymVpnDaemon(bool askPassword, const QJSValue &callback);
-    // on quit: disable the SOCKS5 proxy and restart the daemon in a process that outlives the app
-    Q_INVOKABLE void stopNymVpnDetached() const;
+    QObject *nymClient() { return &m_nymClient; }
     // ends the process after `seconds` if the graceful shutdown has not finished by then
     Q_INVOKABLE void armShutdownWatchdog(int seconds) const;
-    // end of the NymVPN daemon log (it names the entry gateway and the exit Network Requester); "" if unreadable
-    Q_INVOKABLE QString nymVpnLogTail() const;
     // connection check: SOCKS5 proxy (empty: direct), web latency and speed through it, Monero P2P ping
     // through it and the local node's state. Runs in its own thread; callback(json) once per finished check, last {"key":"done"}
+    Q_INVOKABLE void cancelConnectionTest();
     Q_INVOKABLE void nymVpnTest(const QString &socksAddress, const QString &daemonAddress, const QJSValue &callback);
     // Security page: one HTTP(S) request to a node's RPC (path, JSON body) through a SOCKS5 proxy ("" = direct),
     // in its own thread; callback(ok, ms, body, error). "https://" or port 443 use TLS.
@@ -90,6 +86,9 @@ public:
     // wallets inside the "XMR" folder of removable volumes: [{ path, fileName, volume, modified, networktype, address }]
     Q_INVOKABLE QVariantList removableWallets() const;
     Q_INVOKABLE bool isWritableDirectory(const QString &path) const;
+    // images (jpg, jpeg, png) directly inside a folder of the app resources, e.g. "images/trezor-wallpapers",
+    // as qrc:/ urls sorted by name; used by the Trezor wallpaper galleries
+    Q_INVOKABLE QStringList resourceImages(const QString &folder) const;
     Q_INVOKABLE QString randomPassword(int numBytes = 32) const;
     Q_INVOKABLE bool isCapsLock() const;
     Q_INVOKABLE quint8 getNetworkTypeFromFile(const QString &keysPath, quint8 fallbackNetworkType) const;
@@ -98,7 +97,8 @@ public:
 
     static std::pair<quint8, QString> getNetworkTypeAndAddressFromFile(const QString &wallet);
 private:
-    void runProcess(const QString &program, const QStringList &args, const QJSValue &callback, int timeoutMs);
+    std::shared_ptr<std::atomic<bool>> m_connectionTestCancellation;
+    NymClient m_nymClient;
 
 signals:
 

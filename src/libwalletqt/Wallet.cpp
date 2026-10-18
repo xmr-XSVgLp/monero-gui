@@ -59,6 +59,9 @@
 #include <QSaveFile>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QBuffer>
+#include <QImage>
+#include <QImageReader>
 #include <QMessageAuthenticationCode>
 #include <QRandomGenerator>
 
@@ -154,7 +157,7 @@ Wallet::ConnectionStatus Wallet::connected(bool forceCheck)
     }
 
     // cache connection status
-    if (forceCheck || (m_connectionStatusTime.elapsed() / 1000 > m_connectionStatusTtl && !m_connectionStatusRunning) || m_connectionStatusTime.elapsed() > 30000) {
+    if (!m_connectionStatusRunning && (forceCheck || m_connectionStatusTime.elapsed() / 1000 > m_connectionStatusTtl || m_connectionStatusTime.elapsed() > 30000)) {
         qDebug() << "Checking connection status";
         m_connectionStatusRunning = true;
         updateConnectionStatusAsync();
@@ -208,15 +211,22 @@ QString Wallet::getProxyAddress() const
 
 void Wallet::setProxyAddress(QString address)
 {
-    m_scheduler.run([this, address] {
+    const size_t generation = ++m_proxyGeneration;
+    m_scheduler.run([this, address, generation] {
+        QMutexLocker updateLock(&m_proxyUpdateMutex);
+        if (generation != m_proxyGeneration.load()) return;
         {
-            QMutexLocker locker(&m_proxyMutex);
-
-            if (!m_walletImpl->setProxy(address.toStdString()))
-            {
-                qCritical() << "failed to set proxy" << address;
-            }
-
+            QMutexLocker cacheLock(&m_proxyMutex);
+            if (m_proxyAddress == address) return;
+        }
+        // setProxy can wait for an outstanding RPC. Never hold the cache lock
+        // used by the QML getter while waiting on network I/O.
+        if (!m_walletImpl->setProxy(address.toStdString())) {
+            qCritical() << "failed to set proxy" << address;
+            return;
+        }
+        {
+            QMutexLocker cacheLock(&m_proxyMutex);
             m_proxyAddress = address;
         }
         emit proxyAddressChanged();
@@ -279,14 +289,14 @@ bool Wallet::init(const QString &daemonAddress, const QString &daemonUsername, c
     }
 
     {
-        QMutexLocker locker(&m_proxyMutex);
+        QMutexLocker updateLock(&m_proxyUpdateMutex);
 
         if (!m_walletImpl->init(daemonAddress.toStdString(), upperTransactionLimit, daemonUsername.toStdString(), daemonPassword.toStdString(), false, false, proxyAddress.toStdString()))
         {
             return false;
         }
 
-
+        QMutexLocker cacheLock(&m_proxyMutex);
         m_proxyAddress = proxyAddress;
     }
     emit proxyAddressChanged();
@@ -743,33 +753,117 @@ void Wallet::deviceShowAddressAsync(quint32 accountIndex, quint32 addressIndex, 
     });
 }
 
-void Wallet::refreshHeightAsync()
+namespace {
+// Trezor homescreens must be a baseline JPEG of exactly the display size and at most maxBytes
+// (64 KiB on the Safe 7, 16 KiB on the Safe 5).
+bool prepareTrezorHomescreen(const QString &source, int width, int height, int maxBytes, QByteArray &jpeg, QString &error)
+{
+    QString path = source;
+    if (path.startsWith("qrc:"))
+        path = QStringLiteral(":") + QUrl(path).path();
+    else if (path.startsWith("file:"))
+        path = QUrl(path).toLocalFile();
+
+    QImageReader reader(path);
+    reader.setAutoTransform(true);
+    QImage image = reader.read();
+    if (image.isNull())
+    {
+        error = QStringLiteral("image: ") + reader.errorString();
+        return false;
+    }
+
+    image = image.scaled(width, height, Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
+    image = image.copy((image.width() - width) / 2, (image.height() - height) / 2, width, height)
+                 .convertToFormat(QImage::Format_RGB888);
+
+    for (int quality = 92; quality >= 20; quality -= 6)
+    {
+        QByteArray data;
+        QBuffer buffer(&data);
+        buffer.open(QIODevice::WriteOnly);
+        if (!image.save(&buffer, "JPG", quality))
+        {
+            error = QStringLiteral("image: JPEG encoding failed");
+            return false;
+        }
+        if (data.size() <= maxBytes)
+        {
+            jpeg = data;
+            return true;
+        }
+    }
+    error = QStringLiteral("image: too detailed to fit in %1 KB").arg(maxBytes / 1024);
+    return false;
+}
+}
+
+void Wallet::deviceFeaturesAsync()
 {
     m_scheduler.run([this] {
-        quint64 daemonHeight;
-        QPair<bool, QFuture<void>> daemonHeightFuture = m_scheduler.run([this, &daemonHeight] {
-            daemonHeight = daemonBlockChainHeight();
-        });
-        if (!daemonHeightFuture.first)
+        std::string error;
+        const std::string json = m_walletImpl->deviceFeatures(error);
+        emit deviceFeaturesReceived(QString::fromStdString(json), QString::fromStdString(error));
+    });
+}
+
+void Wallet::deviceApplySettingsAsync(const QVariantMap &settings)
+{
+    m_scheduler.run([this, settings] {
+        QString error;
+        const bool setLabel = settings.contains("label");
+        const std::string label = settings.value("label").toString().toStdString();
+        const qint64 autoLockMs = settings.contains("autoLockMs") ? settings.value("autoLockMs").toLongLong() : -1;
+        const int haptic = settings.contains("haptic") ? (settings.value("haptic").toBool() ? 1 : 0) : -1;
+
+        bool setHomescreen = false;
+        QByteArray jpeg;
+        if (settings.value("wallpaperReset").toBool())
         {
-            return;
+            setHomescreen = true;
+        }
+        else if (settings.contains("wallpaper"))
+        {
+            const int width = settings.value("width", 380).toInt();
+            const int height = settings.value("height", 520).toInt();
+            const int maxBytes = settings.value("maxBytes", 65536).toInt();
+            if (!prepareTrezorHomescreen(settings.value("wallpaper").toString(), width, height, maxBytes, jpeg, error))
+            {
+                emit deviceSettingsApplied(false, error);
+                return;
+            }
+            setHomescreen = true;
         }
 
-        quint64 targetHeight;
-        QPair<bool, QFuture<void>> targetHeightFuture = m_scheduler.run([this, &targetHeight] {
-            targetHeight = daemonBlockChainTargetHeight();
-        });
-        if (!targetHeightFuture.first)
-        {
-            return;
-        }
+        std::string err;
+        const bool ok = m_walletImpl->deviceApplySettings(setLabel, label, autoLockMs, haptic, setHomescreen,
+                                                          std::string(jpeg.constData(), jpeg.size()), err);
+        emit deviceSettingsApplied(ok, QString::fromStdString(err));
+    });
+}
 
-        quint64 walletHeight = blockChainHeight();
-        daemonHeightFuture.second.waitForFinished();
-        targetHeightFuture.second.waitForFinished();
+void Wallet::deviceSetBrightnessAsync()
+{
+    m_scheduler.run([this] {
+        std::string err;
+        const bool ok = m_walletImpl->deviceSetBrightness(err);
+        emit deviceBrightnessDone(ok, QString::fromStdString(err));
+    });
+}
 
+void Wallet::refreshHeightAsync()
+{
+    if (m_heightRefreshRunning.exchange(true))
+        return;
+    const auto scheduled = m_scheduler.run([this] {
+        const auto cleanup = sg::make_scope_guard([this]() noexcept { m_heightRefreshRunning = false; });
+        const quint64 walletHeight = blockChainHeight();
+        const quint64 daemonHeight = daemonBlockChainHeight();
+        const quint64 targetHeight = daemonBlockChainTargetHeight();
         emit heightRefreshed(walletHeight, daemonHeight, targetHeight);
     });
+    if (!scheduled.first)
+        m_heightRefreshRunning = false;
 }
 
 quint64 Wallet::blockChainHeight() const

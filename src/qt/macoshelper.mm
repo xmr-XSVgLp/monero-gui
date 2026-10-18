@@ -40,6 +40,19 @@
 
 #include "ScopeGuard.h"
 
+// Shows our notifications even while the app is in front (macOS hides them by default).
+@interface WalletNotificationDelegate : NSObject <NSUserNotificationCenterDelegate>
+@end
+
+@implementation WalletNotificationDelegate
+- (BOOL)userNotificationCenter:(NSUserNotificationCenter *)center shouldPresentNotification:(NSUserNotification *)notification
+{
+    Q_UNUSED(center);
+    Q_UNUSED(notification);
+    return YES;
+}
+@end
+
 void MacOSHelper::disableWindowTabbing()
 {
 #ifdef __MAC_10_12
@@ -80,4 +93,28 @@ QString MacOSHelper::bundlePath()
         return {};
     }
     return QString::fromNSString(bundlePathString);
+}
+
+// Native notification, posted by the app itself so macOS shows the app icon
+// (osascript notifications carry the Script Editor icon). Returns false when the
+// app runs outside a bundle, where macOS refuses to post them.
+bool MacOSHelper::notify(const QString &title, const QString &message)
+{
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    if (![[NSBundle mainBundle] bundleIdentifier])
+        return false;
+    NSUserNotificationCenter *center = [NSUserNotificationCenter defaultUserNotificationCenter];
+    if (!center)
+        return false;
+    static WalletNotificationDelegate *delegate = [[WalletNotificationDelegate alloc] init];
+    center.delegate = delegate;
+    NSUserNotification *note = [[NSUserNotification alloc] init];
+    note.title = title.toNSString();
+    note.informativeText = message.toNSString();
+    note.soundName = @"Glass";
+    [center deliverNotification:note];
+    [note release];
+    return true;
+#pragma clang diagnostic pop
 }

@@ -137,3 +137,7 @@ if(WITH_SCANNER)
 endif()
 
 include(Deploy)
+
+if(APPLE)
+    target_link_libraries(monero-wallet-gui PRIVATE "-framework Security")
+endif()

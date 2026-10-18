@@ -36,7 +36,7 @@
   <string>Copyright © 2014-2020 The Monero Project</string>
 
   <key>CFBundleIdentifier</key>
-  <string>org.monero-project.monero-wallet-gui</string>
+  <string>org.xmr-wallet-plus.gui</string>
 
   <key>CFBundleVersion</key>
   <string>@VERSION_LONG@</string>

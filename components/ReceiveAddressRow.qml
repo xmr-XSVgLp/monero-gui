@@ -17,6 +17,8 @@ Item {
     property string copyTooltip: ""
     property bool used: false            // already received a transaction: do not hand it out again
     property string usedText: ""
+    property bool primary: false         // primary address (starts with 4): shown blue, not copied from here
+    property string primaryText: ""
     signal clicked()
     signal historyClicked()
     signal editClicked()
@@ -27,7 +29,10 @@ Item {
     readonly property color accent: dark ? "#4E9E6A" : "#2E7D4A"
     // same red as the red account cards (AccountRow)
     readonly property color usedColor: dark ? "#FF3C3C" : "#C41E1E"
-    readonly property color frameColor: used ? usedColor : accent
+    readonly property color primaryColor: dark ? "#3B9EFF" : "#1565C0"
+    readonly property bool marked: used || primary
+    readonly property color markColor: used ? usedColor : primaryColor
+    readonly property color frameColor: marked ? markColor : accent
     readonly property bool hovered: rowMouse.containsMouse || historyButton.hovered
                                     || editButton.hovered || copyButton.hovered
 
@@ -35,18 +40,18 @@ Item {
 
     MoneroComponents.CardPanel {
         anchors.fill: parent
-        visible: !row.used
+        visible: !row.marked
         cut: 8
         hovered: row.hovered
         selected: row.selected
     }
 
-    // used address: red frame, red tint and glow, like a red account card
+    // used address (red) or primary address (blue): coloured frame, tint and glow, like a coloured account card
     MoneroComponents.NeonFrame {
         anchors.fill: parent
-        visible: row.used
+        visible: row.marked
         cut: 8
-        accent: row.usedColor
+        accent: row.markColor
         lineOpacity: row.selected ? 0.95 : (row.hovered ? 0.8 : 0.6)
         fillColor: row.dark ? "#0B0F0C" : "#D8DDD9"
         fillOpacity: row.dark ? 0.92 : 0.9
@@ -55,17 +60,17 @@ Item {
     }
     MoneroComponents.NeonFrame {
         anchors.fill: parent
-        visible: row.used
+        visible: row.marked
         cut: 8
         lineOpacity: 0
-        fillColor: row.usedColor
+        fillColor: row.markColor
         fillOpacity: row.selected ? 0.14 : 0.08
         ticks: false
     }
 
     // active address: accent bar on the left
     Rectangle {
-        visible: row.selected || row.used
+        visible: row.selected || row.marked
         anchors.left: parent.left
         anchors.leftMargin: 1
         anchors.verticalCenter: parent.verticalCenter
@@ -97,10 +102,10 @@ Item {
             MoneroComponents.NeonFrame {
                 anchors.fill: parent
                 cut: 5
-                accent: row.selected || row.used ? row.frameColor : row.border
-                lineOpacity: row.selected || row.used ? 0.95 : 0.3
+                accent: row.selected || row.marked ? row.frameColor : row.border
+                lineOpacity: row.selected || row.marked ? 0.95 : 0.3
                 fillColor: row.frameColor
-                fillOpacity: row.selected || row.used ? 0.2 : 0.0
+                fillOpacity: row.selected || row.marked ? 0.2 : 0.0
                 ticks: false
             }
 
@@ -109,7 +114,7 @@ Item {
                 text: "#" + row.addressIndex
                 font.family: MoneroComponents.Style.fontMonoMedium.name
                 font.pixelSize: row.addressIndex > 99 ? 10 : 12
-                color: row.selected || row.used ? MoneroComponents.Style.defaultFontColor : MoneroComponents.Style.dimmedFontColor
+                color: row.selected || row.marked ? MoneroComponents.Style.defaultFontColor : MoneroComponents.Style.dimmedFontColor
                 themeTransition: false
             }
         }
@@ -126,11 +131,11 @@ Item {
         }
 
         MoneroComponents.TextPlain {
-            visible: row.used
-            text: row.usedText
+            visible: row.marked
+            text: row.used ? row.usedText : row.primaryText
             font.family: MoneroComponents.Style.fontMonoMedium.name
             font.pixelSize: 11
-            color: row.usedColor
+            color: row.markColor
             themeTransition: false
         }
 
@@ -166,8 +171,8 @@ Item {
             MoneroComponents.ReceiveIconButton {
                 id: copyButton
                 icon: "copy"
-                enabled: !row.used
-                opacity: row.used ? 0.3 : 1
+                enabled: !row.marked
+                opacity: row.marked ? 0.3 : 1
                 tooltip: row.copyTooltip
                 onClicked: row.copyClicked()
             }

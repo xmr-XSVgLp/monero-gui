@@ -62,7 +62,7 @@ ColumnLayout {
                     hosts: provider + ", api.frankfurter.dev, api-beta.wagyu.xyz",
                     when: qsTr("every few minutes while price conversion is on") + translationManager.emptyString,
                     via: appRoute(prices) });
-        list.push({ name: qsTr("Trading data") + translationManager.emptyString,
+        list.push({ name: qsTr("Markets") + translationManager.emptyString,
                     hosts: "api.coingecko.com",
                     when: qsTr("when the page opens and every 15 minutes, with price conversion on") + translationManager.emptyString,
                     via: appRoute(prices) });

@@ -89,7 +89,7 @@ ColumnLayout {
             dot: tab.on ? securityPage.goodColor : securityPage.offColor
             tag: (persistentSettings.fiatPriceEnabled ? qsTr("on") : qsTr("off")) + translationManager.emptyString
             title: qsTr("Price queries off") + translationManager.emptyString
-            detail: qsTr("Kraken, CoinPaprika, Frankfurter, CoinGecko and the swap rates stop. Trading data and Swaps hide from the menu.") + translationManager.emptyString
+            detail: qsTr("Kraken, CoinPaprika, Frankfurter, CoinGecko and the swap rates stop. Markets and Swaps hide from the menu.") + translationManager.emptyString
         }
         SecRow {
             dot: tab.on ? securityPage.goodColor : securityPage.offColor

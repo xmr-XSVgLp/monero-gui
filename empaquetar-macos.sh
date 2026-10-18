@@ -113,6 +113,11 @@ done
 echo "== Removing Homebrew rpaths from every library and plugin"
 # otherwise, on this Mac, a copied library could load Homebrew's Qt next to the bundled one
 while IFS= read -r bin; do
+  # Frameworks copied with ditto retain their Homebrew install ID.
+  case "$bin" in "$FW"/*.framework/*)
+    install_name_tool -id "@rpath/${bin#"$FW"/}" "$bin"
+    ;;
+  esac
   while IFS= read -r rp; do
     case "$rp" in /opt/homebrew/*|/usr/local/*|"$HOME"/*) install_name_tool -delete_rpath "$rp" "$bin" 2>/dev/null || true ;; esac
   done < <(otool -l "$bin" | awk '/LC_RPATH/{getline; getline; print $2}')
@@ -148,8 +153,8 @@ else
   echo "OK: every library is inside the app"
 fi
 
-echo "== Signing (ad hoc, required on Apple Silicon)"
-codesign --force --deep --sign - "$APP"
+echo "== Signing (local certificate, ad hoc as fallback; required on Apple Silicon)"
+source "$(dirname "$0")/firmar-macos.sh"; firmar_app "$APP"
 codesign --verify --deep --strict "$APP" && echo "OK: signature valid"
 
 echo "== Testing monerod from inside the app"

@@ -199,8 +199,9 @@ Rectangle {
         height: 14
         width: 8
         image: MoneroComponents.Style.menuButtonImageRightSource
-        color: button.checked ? MoneroComponents.Style.menuButtonImageRightColorActive : MoneroComponents.Style.menuButtonImageRightColor
-        opacity: button.checked ? 0.8 : 0.25
+        color: button.blueAccent || button.moneroOrange ? button.accent
+               : button.checked ? MoneroComponents.Style.menuButtonImageRightColorActive : MoneroComponents.Style.menuButtonImageRightColor
+        opacity: button.checked ? 0.8 : (button.blueAccent || button.moneroOrange ? 0.45 : 0.25)
     }
 
     MoneroComponents.TextPlain {

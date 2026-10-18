@@ -66,6 +66,7 @@ Rectangle {
     signal notesClicked()
     signal walletPlusClicked()
     signal securityClicked()
+    signal trezorClicked()
 
     function selectItem(pos) {
         menuColumn.previousButton.checked = false
@@ -81,6 +82,7 @@ Rectangle {
         else if(pos === "Notes") menuColumn.previousButton = notesButton
         else if(pos === "WalletPlus") menuColumn.previousButton = walletPlusButton
         else if(pos === "Security") menuColumn.previousButton = securityButton
+        else if(pos === "Trezor") menuColumn.previousButton = trezorButton
         menuColumn.previousButton.checked = true
     }
 
@@ -586,7 +588,7 @@ Rectangle {
                 visible: persistentSettings.fiatPriceEnabled
                 blueAccent: true
                 under: walletPlusButton
-                text: qsTr("Trading data") + translationManager.emptyString
+                text: qsTr("Markets") + translationManager.emptyString
                 onClicked: {
                     menuColumn.previousButton.checked = false
                     menuColumn.previousButton = tradingButton
@@ -658,6 +660,28 @@ Rectangle {
                     menuColumn.previousButton.checked = false
                     menuColumn.previousButton = securityButton
                     panel.securityClicked()
+                }
+            }
+
+            MoneroComponents.MenuButtonDivider {
+                visible: trezorButton.present
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.leftMargin: 20
+            }
+
+            // ------------- Trezor (subsection of Wallet+, device customization) ---------------
+            MoneroComponents.MenuButton {
+                id: trezorButton
+                anchors.left: parent.left
+                anchors.right: parent.right
+                blueAccent: true
+                text: "Trezor"
+                under: walletPlusButton
+                onClicked: {
+                    menuColumn.previousButton.checked = false
+                    menuColumn.previousButton = trezorButton
+                    panel.trezorClicked()
                 }
             }
         } // Column

@@ -393,12 +393,24 @@ Rectangle {
             RowLayout {
                 id: bottomMessage
                 Layout.fillWidth: true
-                Layout.preferredHeight: 50
+                Layout.preferredHeight: bottomTextAnimation.running ? 90 : 50
 
                 BusyIndicator {
                     visible: !bottomTextAnimation.running
                     running: !bottomTextAnimation.running
                     scale: .5
+                }
+
+                // waiting for the Trezor: small animated device
+                Item {
+                    visible: bottomTextAnimation.running
+                    Layout.preferredWidth: 70
+                    Layout.preferredHeight: 90
+                    MoneroComponents.TrezorDeviceAnim {
+                        anchors.centerIn: parent
+                        running: parent.visible
+                        scale: 0.46
+                    }
                 }
 
                 Text {

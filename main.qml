@@ -86,6 +86,18 @@ ApplicationWindow {
     property alias toolTip: toolTip
     property string walletName
     property string walletDeviceLabel: ""   // Trezor name shown in the title bar
+    property string deviceShowAddress: ""   // address sent to the Trezor screen, shown in the splash to compare
+
+    // true when the path lives on a USB stick / SD card (oshelper.removableVolumes)
+    function isRemovablePath(path) {
+        if (!path)
+            return false;
+        var volumes = oshelper.removableVolumes();
+        for (var i = 0; i < volumes.length; ++i)
+            if (path.indexOf(volumes[i].root + "/") === 0)
+                return true;
+        return false;
+    }
     property bool viewOnly: false
     property bool foundNewBlock: false
     property bool qrScannerEnabled: (typeof builtWithScanner != "undefined") && builtWithScanner
@@ -109,8 +121,6 @@ ApplicationWindow {
     property bool isQuitting: false
     // open StandardDialogs (information, confirmation, page popups): the window behind is blurred
     property int modalDialogs: 0
-    // "Keep it running" on close: the local node goes on syncing through Nym, so NymVPN stays up too
-    property bool keepNymVpnOnClose: false
 
     // fiat price conversion
     property real fiatPrice: 0
@@ -130,8 +140,7 @@ ApplicationWindow {
     property real priceBtc: 0             // BTC received for 1 XMR (Wagyu swap quote, fee included)
     property double priceBtcTimestamp: 0
 
-    // NymVPN: the app's own traffic goes through the SOCKS5 proxy of the NymVPN daemon (mixnet),
-    // driven with the nym-vpnc command line client. States: off, missing, working, ready, connected, error
+    // Nym SDK: a bundled process owns the wallet's independent mixnet session. States: off, missing, working, ready, connected, error
     property string nymVpnState: "off"
     property string nymVpnMessage: ""
     property string nymVpnLog: ""
@@ -144,13 +153,16 @@ ApplicationWindow {
     property bool nymVpnInfoLoading: false
     // kill switch: while restarting, every proxied request goes to a dead address (see getProxyAddress)
     property bool nymVpnRestarting: false
-    // installed nym-vpnc: "" = not checked yet, "none" = not found, otherwise its version
-    readonly property string nymVpncRequired: "2026.13.0"
-    property string nymVpncVersion: ""
-
-    // connection check (Settings > Node / Network): manual, plus once 20 s after NymVPN connects or restarts
+    // Connection diagnostics are manual: never compete with initial blockchain sync.
     property var connTest: ({})
     property bool connTesting: false
+    property int connTestGen: 0
+    function cancelConnectionTest() {
+        connTestGen++;
+        connTesting = false;
+        connTest = ({});
+        oshelper.cancelConnectionTest();
+    }
     property string connTestVia: ""     // "nym", "proxy" or "direct"
     property date connTestTime
     function runConnectionTest() {
@@ -159,8 +171,10 @@ ApplicationWindow {
         var proxy = persistentSettings.getProxyAddress().replace(/^socks5:\/\//, "");
         connTestVia = proxy === "" ? "direct" : (proxy === persistentSettings.nymVpnSocksAddress && nymVpnProxyUp() ? "nym" : "proxy");
         connTesting = true;
+        var gen = ++connTestGen;
         connTest = ({});
         oshelper.nymVpnTest(proxy, localDaemonAddress, function(json) {
+            if (gen !== connTestGen) return;
             var r = JSON.parse(json);
             if (r.key === "done") {
                 connTesting = false;
@@ -172,55 +186,19 @@ ApplicationWindow {
             connTest = t;
         });
     }
-    Timer {
-        id: connTestTimer
-        interval: 20000
-        onTriggered: if (appWindow.nymVpnProxyUp()) appWindow.runConnectionTest()
-    }
-    property bool nymVpnWasUp: false
-    onNymVpnStateChanged: {
-        var up = nymVpnState === "connected" || nymVpnState === "ready";
-        if (up && !nymVpnWasUp)
-            connTestTimer.restart();
-        nymVpnWasUp = up;
-    }
-    readonly property bool nymVpncOk: nymVpncVersion !== "" && nymVpncVersion !== "none"
-                                      && nymVpnVersionAtLeast(nymVpncVersion, nymVpncRequired)
-
-    function nymVpnVersionAtLeast(v, min) {
-        var a = v.split("."), b = min.split(".");
-        for (var i = 0; i < 3; i++) {
-            var x = parseInt(a[i]) || 0, y = parseInt(b[i]) || 0;
-            if (x !== y) return x > y;
-        }
-        return true;
-    }
-
-    // runs `nym-vpnc --version` (works without the daemon) and updates nymVpncVersion
+    readonly property bool nymClientAvailable: oshelper.nymClient.available()
     function nymVpnCheckInstall(callback) {
-        if (oshelper.nymVpncPath() === "") {
-            nymVpncVersion = "none";
-            if (callback) callback();
-            return;
+        if (!oshelper.nymClient.available()) {
+            nymVpnState = "missing";
+            nymVpnMessage = qsTr("The bundled Nym client is missing. Rebuild the app with compilar-macos.sh.") + translationManager.emptyString;
         }
-        oshelper.runNymVpnc(["--version"], function(code, output) {
-            var m = /(\d+\.\d+\.\d+)/.exec(output || "");
-            nymVpncVersion = code === 0 && m ? m[1] : "none";
-            if (nymVpnState === "missing" && nymVpncOk) {
-                nymVpnState = "off";
-                nymVpnMessage = "";
-            } else if (!nymVpncOk && nymVpnState === "off") {
-                nymVpnState = "missing";
-            }
-            if (callback) callback();
-        });
+        if (callback) callback();
     }
     property var nymVpnGateways: ({})   // identity key -> { name, place }
 
-    // public IP services, asked at the same time; each request goes through the proxy, so it shows the exit IP
+    // Public IP services, used as sequential fallbacks; each request goes through the proxy, so it shows the exit IP
     readonly property var nymVpnIpServices: ["https://ipwho.is/", "https://ipinfo.io/json", "https://api.ipify.org?format=json"]
     property int nymVpnInfoGen: 0      // ignores answers from an older lookup
-    property int nymVpnIpPending: 0
     property bool nymVpnDirectoryLoading: false
 
     function nymVpnParseIp(url, j) {
@@ -233,7 +211,7 @@ ApplicationWindow {
     }
 
     function nymVpnLoadInfo() {
-        if (!persistentSettings.nymVpnEnabled) return;
+        if (!nymVpnProxyUp() || nymVpnInfoLoading) return;
         nymVpnInfoGen++;
         nymVpnInfoLoading = true;
         nymVpnIp = "";
@@ -243,40 +221,30 @@ ApplicationWindow {
         nymVpnTryIp(nymVpnInfoGen, 0);
     }
 
-    // the first requests after a (re)start can fail while the mixnet client starts: up to 3 rounds
-    function nymVpnTryIp(gen, round) {
-        if (gen !== nymVpnInfoGen) return;
-        nymVpnIpPending = nymVpnIpServices.length;
-        for (var i = 0; i < nymVpnIpServices.length; i++) {
-            (function(url) {
-                network.getJSON(url, function(u, resp, error) {
-                    if (gen !== nymVpnInfoGen || nymVpnIp !== "") return;
-                    var info = null;
-                    try {
-                        if (!error) info = nymVpnParseIp(url, JSON.parse(resp));
-                    } catch (e) {}
-                    if (info && info.ip) {
-                        nymVpnIp = info.ip;
-                        nymVpnIpPlace = info.place + "  (" + url.split("/")[2] + ")";
-                        nymVpnInfoLoading = false;
-                        nymVpnReadRoute();   // the IP request started the mixnet client: its log lines exist now
-                        return;
-                    }
-                    console.log("NymVPN: IP lookup via " + url + " failed: " + (error || "bad answer"));
-                    nymVpnIpPending--;
-                    if (nymVpnIpPending > 0) return;
-                    if (round + 1 < 2) {
-                        nymVpnIpRetryTimer.gen = gen;
-                        nymVpnIpRetryTimer.round = round + 1;
-                        nymVpnIpRetryTimer.restart();
-                    } else {
-                        nymVpnIpPlace = qsTr("Could not get the IP through Nym") + translationManager.emptyString;
-                        nymVpnInfoLoading = false;
-                        nymVpnReadRoute();
-                    }
-                });
-            })(nymVpnIpServices[i]);
-        }
+    // Try one IP provider at a time, leaving bandwidth for blockchain synchronization.
+    function nymVpnTryIp(gen, index) {
+        if (gen !== nymVpnInfoGen || !nymVpnProxyUp()) return;
+        var url = nymVpnIpServices[index];
+        network.getJSON(url, function(u, resp, error) {
+            if (gen !== nymVpnInfoGen || !nymVpnProxyUp()) return;
+            var info = null;
+            try { if (!error) info = nymVpnParseIp(url, JSON.parse(resp)); } catch (e) {}
+            if (info && info.ip) {
+                nymVpnIp = info.ip;
+                nymVpnIpPlace = info.place + "  (" + url.split("/")[2] + ")";
+                nymVpnInfoLoading = false;
+                nymVpnInfoWatchdog.stop();
+                nymVpnReadRoute();
+            } else if (index + 1 < nymVpnIpServices.length) {
+                nymVpnIpRetryTimer.gen = gen;
+                nymVpnIpRetryTimer.round = index + 1;
+                nymVpnIpRetryTimer.restart();
+            } else {
+                nymVpnIpPlace = qsTr("Could not get the IP through Nym") + translationManager.emptyString;
+                nymVpnInfoLoading = false;
+                nymVpnInfoWatchdog.stop();
+            }
+        });
     }
 
     Timer {
@@ -301,47 +269,11 @@ ApplicationWindow {
         }
     }
 
-    function nymVpnLastMatch(text, re) {
-        var m, last = "";
-        while ((m = re.exec(text)) !== null) last = m[1];
-        return last;
-    }
-
     function nymVpnReadRoute() {
-        var log = oshelper.nymVpnLogTail();
-        if (log === "") {
-            nymVpnRouteNote = qsTr("The NymVPN log (/var/log/nym-vpnd) can't be read, so the entry and exit nodes are unknown") + translationManager.emptyString;
-            return;
-        }
-        // Do not combine an old route with a newly enabled proxy.
-        var sessionStart = log.lastIndexOf("Enabling SOCKS5 client:");
-        if (sessionStart >= 0) log = log.slice(sessionStart);
+        nymVpnEntryId = oshelper.nymClient.entry;
+        nymVpnExitId = oshelper.nymClient.exit;
         nymVpnRouteNote = "";
-        // Nym addresses are client.key@gateway: the gateway after @ is the node
-        nymVpnEntryId = nymVpnLastMatch(log, /SOCKS5 mixnet backend connected \(address: [^@\s]*@([1-9A-HJ-NP-Za-km-z]+)\)/g);
-        nymVpnExitId = nymVpnLastMatch(log, /Using Network Requester: [^@\s]*@([1-9A-HJ-NP-Za-km-z]+)/g);
-        // when the NymVPN app is connected in anonymous (mixnet) mode, nym-vpnd sends SOCKS5
-        // connections through that tunnel instead of its own Network Requester, so the exit is
-        // the tunnel's exit gateway: take the nodes from `nym-vpnc status`
-        if (nymVpnLastMatch(log, /Routing connection from \S+ via (existing|new) Mixnet tunnel/g) === "existing")
-            nymVpnReadTunnelRoute();
-        // the new route's internal SOCKS5 server could not bind: traffic still leaves through an older exit
-        var nrAt = log.lastIndexOf("Using Network Requester:");
-        if (nrAt >= 0 && log.indexOf("Failed to bind to address", nrAt) >= 0)
-            nymVpnRouteNote = qsTr("NymVPN kept an older internal proxy running, so traffic may still leave through a previous exit node and not the one shown. Press Restart to restart the NymVPN service.") + translationManager.emptyString;
         nymVpnLoadDirectory();
-    }
-
-    function nymVpnReadTunnelRoute() {
-        oshelper.runNymVpnc(["status"], function(code, output) {
-            // State: Connected mix to <ip> [ENTRY] → <ip> [EXIT]
-            var m = /Connected mix to \S+ \[([1-9A-HJ-NP-Za-km-z]+)\] \S+ \S+ \[([1-9A-HJ-NP-Za-km-z]+)\]/.exec(output || "");
-            if (code !== 0 || !m) return;
-            nymVpnEntryId = m[1];
-            nymVpnExitId = m[2];
-            nymVpnRouteNote = qsTr("The NymVPN app is connected in anonymous mode, so this app goes out through that tunnel (its exit node), not through a separate SOCKS5 node. Restart only changes the route when the NymVPN app is disconnected or in fast mode.") + translationManager.emptyString;
-            nymVpnLoadDirectory();
-        });
     }
 
     function nymVpnLoadDirectory() {
@@ -371,174 +303,68 @@ ApplicationWindow {
         return g ? (g.name + (g.place !== "" ? " · " + g.place : "")) : id.slice(0, 10) + "…";
     }
 
-    function nymVpnRun(args, callback) {
-        // never log the account words, only the command
-        var label = args.slice(0, 2).join(" ");
-        oshelper.runNymVpnc(args, function(code, output) {
-            console.log("NymVPN: nym-vpnc " + label + " -> " + code);
-            nymVpnLog = "$ nym-vpnc " + label + "\n" + output;
-            callback(code, output);
-        });
-    }
-
     function nymVpnFail(message) {
-        if (nymVpnRestarting) {
-            nymVpnRestarting = false;
-            message += "\n" + qsTr("App traffic stays blocked (it still points at the Nym proxy). Press Restart again or Disconnect.") + translationManager.emptyString;
-        }
-        nymVpnState = message === "nym-vpnc not found" ? "missing" : "error";
-        nymVpnMessage = nymVpnState === "missing"
-            ? qsTr("NymVPN command line client (nym-vpnc) not found") + translationManager.emptyString
-            : message;
+        nymVpnRestarting = true;
+        nymVpnState = "error";
+        nymVpnMessage = message + "\n" + qsTr("App traffic stays blocked. Press Reconnect again or Disconnect.") + translationManager.emptyString;
     }
 
-    function nymVpnParseStatus(output) {
-        var state = (/State:\s*(\w+)/.exec(output) || [])[1] || "";
-        var address = (/SOCKS5 Listen Address:\s*Some\(([^)]+)\)/.exec(output) || [])[1] || "";
-        var error = (/Error:\s*(.+)/.exec(output) || [])[1] || "";
-        return { state: state, address: address, error: error === "None" ? "" : error };
+    function nymVpnResetInfo() {
+        cancelConnectionTest();
+        nymVpnInfoGen++;
+        nymVpnIpRetryTimer.stop();
+        nymVpnInfoWatchdog.stop();
+        nymVpnInfoLoading = false;
+        nymVpnIp = ""; nymVpnIpPlace = "";
+        nymVpnEntryId = ""; nymVpnExitId = ""; nymVpnRouteNote = "";
     }
 
-    // words: the account recovery phrase, or "" to use the account already stored in NymVPN
-    // fresh: start a new route (used at startup, so a reopened app never reuses the last exit)
-    function nymVpnConnect(words, fresh) {
-        nymVpnState = "working";
-        nymVpnMessage = qsTr("Connecting to NymVPN…") + translationManager.emptyString;
-        words = (words || "").trim().replace(/\s+/g, " ");
-        if (words !== "") {
-            // a stored account must be forgotten before another one is set
-            nymVpnRun(["account", "forget"], function() {
-                nymVpnRun(["account", "set", words], function(code, output) {
-                    if (code !== 0) { nymVpnFail(output || qsTr("Could not set the NymVPN account") + translationManager.emptyString); return; }
-                    nymVpnEnableSocks();
-                });
-            });
-        } else {
-            nymVpnRun(["account", "get"], function(code, output) {
-                if (code !== 0) { nymVpnFail(output); return; }
-                if (/Account identity:\s*unset/.test(output)) {
-                    nymVpnFail(qsTr("Enter the recovery phrase of your NymVPN account") + translationManager.emptyString);
-                    return;
-                }
-                if (fresh) nymVpnFreshStart(); else nymVpnEnableSocks();
-            });
-        }
-    }
+    function nymVpnOpenAccount() { nymAccountDialog.open(); }
 
-    function nymVpnEnableSocks() {
-        var address = persistentSettings.nymVpnSocksAddress;
-        nymVpnRun(["socks5", "status"], function(code, output) {
-            if (code !== 0) { nymVpnFail(output); return; }
-            var st = nymVpnParseStatus(output);
-            if (st.state !== "Disabled" && st.state !== "Error" && st.address === address) {
-                nymVpnApplyProxy(st.state);
-                return;
-            }
-            var enable = function() {
-                var args = ["socks5", "enable", "--socks5-address", address, "--exit-random"];
-                nymVpnRun(args, function(code2, output2) {
-                    if (code2 !== 0) { nymVpnFail(output2); return; }
-                    nymVpnPoll(0);
-                });
-            };
-            if (st.state !== "Disabled")
-                nymVpnRun(["socks5", "disable"], enable);
-            else
-                enable();
-        });
-    }
-
-    function nymVpnPoll(attempt) {
-        nymVpnRun(["socks5", "status"], function(code, output) {
-            var st = nymVpnParseStatus(output);
-            if (code === 0 && (st.state === "Idle" || st.state === "Connected")) {
-                nymVpnApplyProxy(st.state);
-            } else if (st.state === "Error") {
-                nymVpnFail(st.error || output);
-            } else if (attempt < 15) {
-                nymVpnPollTimer.attempt = attempt + 1;
-                nymVpnPollTimer.restart();
-            } else {
-                nymVpnFail(qsTr("NymVPN did not start the SOCKS5 proxy") + translationManager.emptyString);
-            }
-        });
-    }
-
-    function nymVpnApplyProxy(state) {
+    function nymVpnConnect(words) {
+        if (nymVpnState === "working") return;
+        // Block first, including failed starts, before changing the selected proxy.
+        nymVpnRestarting = true;
         if (!persistentSettings.nymVpnEnabled) {
             persistentSettings.nymVpnPrevProxyEnabled = persistentSettings.proxyEnabled;
             persistentSettings.nymVpnPrevProxyAddress = persistentSettings.proxyAddress;
         }
         persistentSettings.nymVpnEnabled = true;
-        persistentSettings.proxyAddress = persistentSettings.nymVpnSocksAddress;
+        persistentSettings.proxyAddress = oshelper.nymClient.address;
         persistentSettings.proxyEnabled = true;
-        nymVpnState = state === "Connected" ? "connected" : "ready";
-        nymVpnRestarting = false;
-        nymVpnMessage = qsTr("The app goes through the Nym mixnet (SOCKS5 %1)").arg(persistentSettings.nymVpnSocksAddress) + translationManager.emptyString;
-        if (nymVpnIp === "")
-            Qt.callLater(nymVpnLoadInfo);
+        nymVpnResetInfo();
+        oshelper.nymClient.start(words || "");
     }
 
-    // disconnect and connect again (new route); app traffic stays blocked until the proxy is back
     function nymVpnRestart() {
         if (!persistentSettings.nymVpnEnabled || nymVpnState === "working") return;
         nymVpnRestarting = true;
-        persistentSettings.proxyAddress = persistentSettings.nymVpnSocksAddress;
-        persistentSettings.proxyEnabled = true;
-        nymVpnIp = ""; nymVpnIpPlace = ""; nymVpnEntryId = ""; nymVpnExitId = ""; nymVpnRouteNote = "";
-        nymVpnInfoGen++;
-        nymVpnState = "working";
-        nymVpnMessage = qsTr("Restarting… app traffic is blocked until Nym is back") + translationManager.emptyString;
-        nymVpnRun(["socks5", "disable"], function() {
-            // nym-vpnd keeps its old internal SOCKS5 server alive, so a new route only takes effect
-            // after restarting the daemon (macOS asks for the administrator password)
-            nymVpnRestartDaemon(function(code, output) {
-                if (code !== 0) {
-                    nymVpnFail(qsTr("The NymVPN service was not restarted: ") + output + translationManager.emptyString);
-                    return;
-                }
-                nymVpnMessage = qsTr("Waiting for the NymVPN service…") + translationManager.emptyString;
-                nymVpnWaitDaemon(0);
-            });
-        });
+        nymVpnResetInfo();
+        oshelper.nymClient.reconnect();
     }
 
-    // disable + restart the daemon (frees the old internal SOCKS5 server), then enable: new entry, exit and IP
-    function nymVpnFreshStart() {
-        nymVpnMessage = qsTr("Starting a new Nym route…") + translationManager.emptyString;
-        nymVpnRun(["socks5", "disable"], function() {
-            nymVpnRestartDaemon(function(code, output) {
-                if (code !== 0) { nymVpnEnableSocks(); return; }   // could not restart: connect anyway
-                nymVpnMessage = qsTr("Waiting for the NymVPN service…") + translationManager.emptyString;
-                nymVpnWaitDaemon(0);
-            });
-        });
-    }
-
-    // first without a prompt (works once the sudoers rule is installed), else ask for the password
-    function nymVpnRestartDaemon(callback) {
-        oshelper.restartNymVpnDaemon(false, function(code, output) {
-            if (code === 0) { callback(code, output); return; }
-            nymVpnMessage = qsTr("Restarting the NymVPN service (macOS will ask for your password)… app traffic is blocked") + translationManager.emptyString;
-            oshelper.restartNymVpnDaemon(true, callback);
-        });
-    }
-
-    // the daemon takes a few seconds to answer again after a restart
-    function nymVpnWaitDaemon(attempt) {
-        nymVpnRun(["socks5", "status"], function(code, output) {
-            if (code === 0) { nymVpnEnableSocks(); return; }
-            if (attempt >= 20) { nymVpnFail(output); return; }
-            nymVpnDaemonTimer.attempt = attempt + 1;
-            nymVpnDaemonTimer.restart();
-        });
-    }
-
-    Timer {
-        id: nymVpnDaemonTimer
-        property int attempt: 0
-        interval: 1500
-        onTriggered: appWindow.nymVpnWaitDaemon(attempt)
+    Connections {
+        target: oshelper.nymClient
+        function onChanged() {
+            if (isQuitting || !persistentSettings.nymVpnEnabled) return;
+            var client = oshelper.nymClient;
+            if (client.state === "error") {
+                nymVpnFail(client.message);
+            } else if (client.state === "connected") {
+                nymVpnState = "connected";
+                nymVpnRestarting = false;
+                nymVpnMessage = qsTr("Independent Nym client · SOCKS5 %1").arg(client.address) + translationManager.emptyString
+                    + (client.message !== "" ? " · " + client.message : "");
+                nymVpnReadRoute();
+                Qt.callLater(nymVpnLoadInfo);
+            } else if (client.state === "working") {
+                nymVpnState = "working";
+                nymVpnRestarting = true;
+                nymVpnMessage = qsTr("Connecting the independent Nym client…") + translationManager.emptyString;
+            } else {
+                nymVpnFail(qsTr("The independent Nym client stopped.") + translationManager.emptyString);
+            }
+        }
     }
 
     // extreme privacy: the SOCKS5 address of an approved route (NymVPN up, or the SOCKS5 proxy turned on), "" if none
@@ -580,56 +406,20 @@ ApplicationWindow {
     }
 
     function nymVpnDisconnect() {
-        nymVpnState = "working";
-        nymVpnMessage = qsTr("Disconnecting…") + translationManager.emptyString;
-        nymVpnRun(["socks5", "disable"], function(code, output) {
-            // restart the daemon too, so it does not keep the old internal SOCKS5 server (and exit) alive
-            nymVpnRestartDaemon(function(code2, output2) {
-                var note = code2 !== 0 ? qsTr("The NymVPN service was not restarted: ") + output2 + translationManager.emptyString : "";
-                nymVpnFinishDisconnect(code, output, note);
-            });
-        });
-    }
-
-    function nymVpnFinishDisconnect(code, output, note) {
-        if (persistentSettings.nymVpnEnabled) {
+        nymVpnResetInfo();
+        // Clear enabled before the synchronous state signal from stop().
+        var wasEnabled = persistentSettings.nymVpnEnabled;
+        persistentSettings.nymVpnEnabled = false;
+        oshelper.nymClient.stop();
+        if (wasEnabled) {
             persistentSettings.proxyEnabled = persistentSettings.nymVpnPrevProxyEnabled;
             persistentSettings.proxyAddress = persistentSettings.nymVpnPrevProxyAddress;
         }
-        persistentSettings.nymVpnEnabled = false;
-        nymVpnIp = ""; nymVpnIpPlace = ""; nymVpnEntryId = ""; nymVpnExitId = ""; nymVpnRouteNote = "";
-        nymVpnInfoGen++;
-        nymVpnState = code === 0 ? "off" : "error";
-        nymVpnMessage = [code === 0 ? "" : output, note].filter(Boolean).join("\n");
+        nymVpnRestarting = false;
+        nymVpnState = "off";
+        nymVpnMessage = qsTr("The wallet's Nym client is disconnected. NymVPN is unchanged; a local node using this proxy will wait until you reconnect.") + translationManager.emptyString;
     }
 
-    // keeps the state shown in the panel up to date while NymVPN is on
-    function nymVpnRefreshStatus() {
-        if (!persistentSettings.nymVpnEnabled || nymVpnState === "working") return;
-        nymVpnRun(["socks5", "status"], function(code, output) {
-            if (nymVpnState === "working") return;
-            var st = nymVpnParseStatus(output);
-            if (code !== 0) nymVpnFail(output);
-            else if (st.state === "Connected") { nymVpnState = "connected"; if (nymVpnEntryId === "") nymVpnReadRoute(); }
-            else if (st.state === "Idle") nymVpnState = "ready";
-            else if (st.state === "Error") nymVpnFail(st.error);
-            else nymVpnConnect("");   // the daemon dropped the proxy (e.g. after a restart): enable it again
-        });
-    }
-
-    Timer {
-        id: nymVpnPollTimer
-        property int attempt: 0
-        interval: 2000
-        onTriggered: appWindow.nymVpnPoll(attempt)
-    }
-
-    Timer {
-        interval: 30000
-        repeat: true
-        running: persistentSettings.nymVpnEnabled
-        onTriggered: appWindow.nymVpnRefreshStatus()
-    }
     readonly property var fiatCurrencies: [
         "USD", "EUR", "GBP", "AUD", "BRL", "CAD", "CHF", "CNY", "CZK", "DKK",
         "HKD", "HUF", "IDR", "ILS", "INR", "ISK", "JPY", "KRW", "MXN", "MYR",
@@ -1015,7 +805,8 @@ ApplicationWindow {
     }
 
     function onDeviceButtonRequest(code){
-        devicePrompt.show(txConfirmationPopup.visible);
+        // the Trezor animation lives inside the window that is already open (no full-window overlay)
+        playFx("alert");
         if (txConfirmationPopup.visible) {
             txConfirmationPopup.bottomTextAnimation.running = true
             if (!txConfirmationPopup.errorText.visible) {
@@ -1026,12 +817,19 @@ ApplicationWindow {
         } else {
             prevSplashText = splash.messageText;
             splashDisplayedBeforeButtonRequest = splash.visible;
+            splash.addressText = deviceShowAddress;
+            splash.subText = deviceShowAddress !== ""
+                ? qsTr("Check that the address on the device is exactly this one:") + translationManager.emptyString
+                : qsTr("Check the details on the device screen and confirm them there.") + translationManager.emptyString;
+            splash.deviceMode = true;
             appWindow.showProcessingSplash(qsTr("Please proceed to the device..."));
         }
     }
 
     function onDeviceButtonPressed(){
         devicePrompt.hide();
+        splash.deviceMode = false;
+        deviceShowAddress = "";
         if (txConfirmationPopup.visible) {
             txConfirmationPopup.bottomTextAnimation.running = false;
             txConfirmationPopup.bottomText.text  = qsTr("Signing transaction in the device...") + translationManager.emptyString;
@@ -1365,6 +1163,11 @@ ApplicationWindow {
                 flags += " --hide-my-port";
         } else if ((persistentSettings.nymVpnEnabled || persistentSettings.nymVpnRequired) && flags.indexOf("--proxy") < 0)
             flags = (flags !== "" ? flags + " " : "") + "--proxy " + persistentSettings.nymVpnSocksAddress;
+
+        if ((persistentSettings.nymVpnEnabled || persistentSettings.nymVpnRequired) && flags.indexOf("--proxy") >= 0) {
+            if (!/(^|\s)--out-peers(?:=|\s)/.test(flags)) flags += " --out-peers 4";
+            if (!/(^|\s)--block-sync-size(?:=|\s)/.test(flags)) flags += " --block-sync-size 5";
+        }
 
         const noSync = appWindow.walletMode === 0;
         // extreme privacy: no bootstrap node (it would answer for the wallet while monerod syncs)
@@ -1786,6 +1589,8 @@ ApplicationWindow {
 
     function hideProcessingSplash() {
         devicePrompt.hide();
+        splash.deviceMode = false;
+        deviceShowAddress = "";
         console.log("Hiding processing splash")
         splash.close();
 
@@ -2009,6 +1814,85 @@ ApplicationWindow {
             : NaN;
 
         appWindow.updateBalance();
+        appWindow.fiatCacheSave();
+    }
+
+    // last known prices in a CSV (precio-actual.csv next to the other Wallet+ CSVs), read at start so the
+    // balance shows a value right away instead of "?.??" until the price services answer
+    property bool fiatCacheLoading: false
+    property string fiatCacheText: ""
+
+    function fiatCachePath() {
+        if (typeof oshelper === "undefined" || !oshelper.swapsLogPath)
+            return "";
+        var p = oshelper.swapsLogPath();
+        return p.substring(0, p.lastIndexOf("/")) + "/precio-actual.csv";
+    }
+
+    function fiatCacheSave() {
+        if (appWindow.fiatCacheLoading || appWindow.fiatPriceUSD <= 0)
+            return;
+        var rows = [
+            "fecha_utc," + new Date().toISOString(),
+            "usd," + appWindow.fiatPriceUSD,
+            "usd_7d," + appWindow.fiatPriceUSD7d,
+            "usd_24h," + appWindow.fiatPriceUSD24h,
+            "btc," + appWindow.priceBtc,
+            "fx_7d_fecha," + appWindow.fiatRates7dDate
+        ];
+        var k;
+        for (k in appWindow.fiatRates)
+            rows.push("fx_" + k + "," + appWindow.fiatRates[k]);
+        for (k in appWindow.fiatRates7d)
+            rows.push("fx7d_" + k + "," + appWindow.fiatRates7d[k]);
+        // the date alone changes on every save: only write when a price or rate changed
+        var body = rows.slice(1).join("\n");
+        if (body === appWindow.fiatCacheText)
+            return;
+        appWindow.fiatCacheText = body;
+        var path = appWindow.fiatCachePath();
+        if (path !== "")
+            oshelper.writeTextFile(path, "clave,valor\n" + rows.join("\n") + "\n");
+    }
+
+    function fiatCacheLoad() {
+        var path = appWindow.fiatCachePath();
+        if (path === "")
+            return;
+        var text = oshelper.readTextFile(path);
+        if (!text)
+            return;
+        var v = {};
+        text.split("\n").forEach(function(line) {
+            var i = line.indexOf(",");
+            if (i > 0)
+                v[line.substring(0, i)] = line.substring(i + 1).trim();
+        });
+        var usd = parseFloat(v.usd);
+        if (!(usd > 0))
+            return;
+        var rates = {"USD": 1}, rates7d = {"USD": 1};
+        for (var key in v) {
+            var n = parseFloat(v[key]);
+            if (!(n > 0))
+                continue;
+            if (key.indexOf("fx7d_") === 0)
+                rates7d[key.substring(5)] = n;
+            else if (key.indexOf("fx_") === 0)
+                rates[key.substring(3)] = n;
+        }
+        appWindow.fiatCacheLoading = true;
+        appWindow.fiatPriceUSD = usd;
+        appWindow.fiatPriceUSD7d = parseFloat(v.usd_7d) || 0;
+        appWindow.fiatPriceUSD24h = parseFloat(v.usd_24h) || 0;
+        if (parseFloat(v.btc) > 0)
+            appWindow.priceBtc = parseFloat(v.btc);
+        appWindow.fiatRates = rates;
+        appWindow.fiatRates7d = rates7d;
+        // timestamps stay 0, so the first refresh still asks the services for fresh prices
+        appWindow.fiatApiUpdatePrice();
+        appWindow.fiatCacheLoading = false;
+        console.log("fiat price: last known values from " + (v.fecha_utc || path));
     }
 
     function priceBtcReceived(url, resp, error) {
@@ -2143,9 +2027,13 @@ ApplicationWindow {
 
         applyWalletMode(persistentSettings.walletMode);
 
+        // last known XMR price until the price services answer
+        if (persistentSettings.fiatPriceEnabled)
+            fiatCacheLoad();
+
         // NymVPN was on last time, or is required: make sure its SOCKS5 proxy is running again
         if (persistentSettings.nymVpnEnabled || persistentSettings.nymVpnRequired)
-            nymVpnConnect("", true);
+            nymVpnConnect();
 
         //
         walletManager.walletOpened.connect(onWalletOpened);
@@ -2299,7 +2187,7 @@ ApplicationWindow {
         property bool proxyEnabled: isTails
         property bool nymVpnEnabled: false
         property bool nymVpnRequired: false   // "Nym required": nothing leaves the app outside NymVPN
-        property string nymVpnSocksAddress: "127.0.0.1:1080"
+        readonly property string nymVpnSocksAddress: oshelper.nymClient.address
         property bool nymVpnPrevProxyEnabled: false
         property string nymVpnPrevProxyAddress: "127.0.0.1:9050"
         // Security page
@@ -2320,6 +2208,9 @@ ApplicationWindow {
             }
             if (appWindow.nymVpnRestarting) {
                 return "socks5://127.0.0.1:0";   // NymVPN restarting: block everything
+            }
+            if (nymVpnEnabled) {
+                return appWindow.nymVpnProxyUp() ? "socks5://" + nymVpnSocksAddress : "socks5://127.0.0.1:0";
             }
             if (socksProxyFlagSet) {
                 return socksProxyFlag == "" ? "" : "socks5://" + socksProxyFlag;
@@ -2610,6 +2501,12 @@ ApplicationWindow {
         anchors.fill: parent
     }
 
+    NymAccountDialog {
+        id: nymAccountDialog
+        anchors.fill: parent
+        z: 20
+    }
+
     InputDialog {
         id: inputDialog
         visible: false
@@ -2639,7 +2536,7 @@ ApplicationWindow {
     ProcessingSplash {
         id: splash
         width: appWindow.width / 2
-        height: appWindow.height / 2.66
+        height: deviceMode ? Math.max(appWindow.height / 2.66, contentHeight + 70) : appWindow.height / 2.66
         x: (appWindow.width - width) / 2
         y: (appWindow.height - height) / 2
         messageText: qsTr("Please wait...") + translationManager.emptyString
@@ -2755,6 +2652,11 @@ ApplicationWindow {
                     middlePanel.state = "Security";
                     middlePanel.flickable.contentY = 0;
                 }
+
+                onTrezorClicked: {
+                    middlePanel.state = "Trezor";
+                    middlePanel.flickable.contentY = 0;
+                }
             }
 
             MiddlePanel {
@@ -2843,6 +2745,7 @@ ApplicationWindow {
             walletName: persistentSettings.displayWalletNameInTitleBar && rootItem.state != "wizard" ? appWindow.walletName : ""
             deviceLabel: appWindow.walletDeviceLabel
             hardwareWallet: currentWallet !== undefined && currentWallet !== null && currentWallet.isTrezor()
+            removableWallet: currentWallet !== undefined && currentWallet !== null && appWindow.isRemovablePath(currentWallet.path)
             anchors.left: parent.left
             anchors.right: parent.right
             onCloseClicked: appWindow.close();
@@ -3013,7 +2916,7 @@ ApplicationWindow {
     function showDaemonIsRunningDialog(onClose) {
         // small card with "Force stop" / "Keep it running" (Cancel or Esc keeps the app open)
         daemonRunningDialog.open(function() { stopDaemon(onClose); },
-                                 function() { keepNymVpnOnClose = true; onClose(); });
+                                 function() { onClose(); });
     }
 
     onClosing: function(close) {
@@ -3066,10 +2969,9 @@ ApplicationWindow {
         console.log("close accepted");
         // closing never waits more than 20 s (slow requests through the Nym mixnet)
         oshelper.armShutdownWatchdog(20);
-        // don't leave NymVPN running the app's route after quitting, unless the local node
-        // was left running and needs it (the next start asks for a new route anyway)
-        if (persistentSettings.nymVpnEnabled && !keepNymVpnOnClose)
-            oshelper.stopNymVpnDetached();
+        // Stop only the wallet-owned helper, never the official VPN service.
+        oshelper.nymClient.stop();
+        cancelConnectionTest();
         daemonManager.exit();
         p2poolManager.exit();
         closeWallet(function() {

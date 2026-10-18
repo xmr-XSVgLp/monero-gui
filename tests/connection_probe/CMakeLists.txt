@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.16)
+project(connection_probe_tests LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 17)
+find_package(Qt6 REQUIRED COMPONENTS Core Network)
+add_executable(connection_probe_tests probe_tests.cpp)
+target_link_libraries(connection_probe_tests PRIVATE Qt6::Core Qt6::Network)
+enable_testing()
+add_test(NAME connection_probe COMMAND connection_probe_tests)

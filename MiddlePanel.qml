@@ -65,6 +65,7 @@ Rectangle {
     property Notes notesView: Notes { }
     property WalletPlus walletPlusView: WalletPlus { }
     property Security securityView: Security { }
+    property TrezorDevice trezorView: TrezorDevice { }
 
     signal paymentClicked(var recipients, string paymentId, int mixinCount, int priority, string description)
     signal sweepUnmixableClicked()
@@ -198,6 +199,10 @@ Rectangle {
                 name: "Security"
                 PropertyChanges { target: root; currentView: securityView }
                 PropertyChanges { target: mainFlickable; contentHeight: securityView.securityHeight + 80 }
+            }, State {
+                name: "Trezor"
+                PropertyChanges { target: root; currentView: trezorView }
+                PropertyChanges { target: mainFlickable; contentHeight: trezorView.trezorHeight + 80 }
             }
         ]
 

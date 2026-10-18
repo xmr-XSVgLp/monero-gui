@@ -52,10 +52,22 @@ Rectangle {
     // wallets in the "XMR" folder of USB / SD volumes, checked every few seconds while this page is shown
     property var usbWallets: []
 
+    property var usbRoots: []
+
     function refreshUsbWallets() {
         var list = oshelper.removableWallets();
         if (JSON.stringify(list) !== JSON.stringify(usbWallets))
             usbWallets = list;
+        var roots = oshelper.removableVolumes().map(function(v) { return v.root + "/"; });
+        if (JSON.stringify(roots) !== JSON.stringify(usbRoots))
+            usbRoots = roots;
+    }
+
+    function onDrive(path) {
+        for (var i = 0; i < usbRoots.length; ++i)
+            if (path.indexOf(usbRoots[i]) === 0)
+                return true;
+        return false;
     }
 
     Timer {
@@ -195,15 +207,26 @@ Rectangle {
                                 Layout.preferredWidth: 42
                                 Layout.preferredHeight: 42
 
+                                readonly property bool trezor: /trezor|tzr/.test(modelData.fileName.toLowerCase())
+
                                 Image {
+                                    visible: parent.trezor || modelData.networktype === 1 || modelData.networktype === 2
                                     anchors.fill: parent
                                     fillMode: Image.PreserveAspectFit
                                     smooth: true
                                     mipmap: true
-                                    source: /trezor|tzr/.test(modelData.fileName.toLowerCase()) ? "qrc:///images/open-wallet-from-file-trezor.png"
+                                    source: parent.trezor ? "qrc:///images/open-wallet-from-file-trezor.png"
                                           : modelData.networktype === 1 ? "qrc:///images/open-wallet-from-file-testnet.png"
                                           : modelData.networktype === 2 ? "qrc:///images/open-wallet-from-file-stagenet.png"
-                                          : "qrc:///images/open-wallet-safe.png"
+                                          : ""
+                                }
+
+                                // mainnet wallet on the drive: purple USB stick instead of the safe
+                                MoneroComponents.UsbIcon {
+                                    visible: !parent.trezor && modelData.networktype !== 1 && modelData.networktype !== 2
+                                    anchors.centerIn: parent
+                                    width: 34
+                                    height: 34
                                 }
                             }
 
@@ -391,8 +414,19 @@ Rectangle {
                                 Layout.preferredWidth: 42
                                 Layout.preferredHeight: 42
 
+                                readonly property bool usb: networktype === 0 && wizardOpenWallet1.onDrive(path)
+                                                            && !/viewonly|trezor|tzr|trial|ledger/.test(fileName.toLowerCase())
+
+                                MoneroComponents.UsbIcon {
+                                    visible: parent.usb
+                                    anchors.centerIn: parent
+                                    width: 34
+                                    height: 34
+                                }
+
                                 Image {
                                     id: icon
+                                    visible: !parent.usb
                                     anchors.fill: parent
                                     fillMode: Image.PreserveAspectFit
                                     smooth: true

@@ -29,7 +29,7 @@
 
 // Connection check of Settings > Node / Network: the proxy in use (NymVPN, another SOCKS5 or none), web latency
 // and speed, Monero P2P ping and the local node. Results live in main.qml (runConnectionTest), which runs it
-// when asked, and once 20 seconds after NymVPN connects or restarts.
+// only when requested, so diagnostics do not compete with initial synchronization.
 
 import QtQuick
 import QtQuick.Layouts
@@ -79,12 +79,12 @@ ColumnLayout {
             return [qsTr("%1 on average (%2 to %3), %4 of 3 answered").arg(seconds(avg)).arg(seconds(min)).arg(seconds(max)).arg(r.times.length) + translationManager.emptyString,
                     r.failed > 0 || avg > 8000 ? badColor : avg > 3000 ? warnColor : goodColor];
         case "speed":
-            if (!r.ok && r.bytes === undefined)
-                return [r.error, badColor];
-            var text = qsTr("%1 kB/s").arg(Math.round(r.kBps)) + translationManager.emptyString;
-            if (!r.ok)
-                text += " · " + qsTr("only %1 kB of 1000 arrived (%2)").arg(Math.round(r.bytes / 1000)).arg(r.error) + translationManager.emptyString;
-            return [text, !r.ok || r.kBps < 20 ? badColor : r.kBps < 100 ? warnColor : goodColor];
+            if (r.bytes === undefined || r.bytes === 0)
+                return [r.error || qsTr("No download data received") + translationManager.emptyString, badColor];
+            var text = qsTr("%1 kB/s").arg(r.kBps < 10 ? r.kBps.toFixed(1) : Math.round(r.kBps)) + translationManager.emptyString;
+            text += " · " + qsTr("%1 of %2 kB in %3 s").arg(Math.round(r.bytes / 1000)).arg(Math.round(r.requestedBytes / 1000)).arg(Math.round(r.ms / 1000)) + translationManager.emptyString;
+            if (!r.ok) text += " · " + qsTr("Partial download: %1").arg(r.error) + translationManager.emptyString;
+            return [text, !r.ok || r.kBps < 20 ? warnColor : goodColor];
         case "p2p":
             var pings = [], errors = [];
             for (var j = 0; j < r.peers.length; ++j) {
@@ -106,6 +106,7 @@ ColumnLayout {
                 states.push(st + " " + r.states[st]);
             return [(behind > 0 ? qsTr("Block %1, %2 behind").arg(r.height).arg(behind) : qsTr("Block %1, synchronized").arg(r.height)) + translationManager.emptyString
                     + " · " + qsTr("%1 out, %2 in").arg(r.outgoing_connections_count).arg(r.incoming_connections_count) + translationManager.emptyString
+                    + (r.downloadKBps !== undefined ? " · " + qsTr("Receiving %1 kB/s").arg(r.downloadKBps.toFixed(1)) + translationManager.emptyString : "")
                     + (states.length ? " · " + states.join(", ") : ""),
                     behind === 0 ? goodColor : behind > 30 ? badColor : warnColor];
         }
@@ -118,13 +119,13 @@ ColumnLayout {
             return "";
         var nym = via === "nym";
         if (!test.socks.ok)
-            return (nym ? qsTr("The NymVPN SOCKS5 proxy is not answering: press Restart in NYM VPN.")
+            return (nym ? qsTr("The independent Nym client is not answering. Press Reconnect in the wallet.")
                         : qsTr("The SOCKS5 proxy is not answering: nothing can go out until it is back.")) + translationManager.emptyString;
-        if (test.p2p && test.p2p.reached === 0)
-            return (nym ? qsTr("The Nym exit does not let Monero's P2P connections (port 18080) through, so the local node cannot sync through Nym. Press Restart in NYM VPN to get another exit.")
+        if (test.p2p && test.p2p.reached === 0 && !(test.node && test.node.ok && test.node.outgoing_connections_count > 0))
+            return (nym ? qsTr("The test peers did not reply through Nym. This alone does not prove that port 18080 is blocked; check the local node connections below.")
                         : qsTr("No Monero node answers on port 18080: check the internet connection or the firewall.")) + translationManager.emptyString;
         if (test.node && test.node.ok && test.node.target_height > test.node.height + 30)
-            return (nym ? qsTr("Monero nodes answer through Nym but the local node is behind: block downloads through the mixnet are slow. Give it time, or press Restart in NYM VPN for another route.")
+            return (nym ? qsTr("The local node is still syncing through the mixnet. Web download speed is not blockchain speed. Reconnect to try another exit.")
                         : qsTr("Monero nodes answer but the local node is behind: it is still syncing.")) + translationManager.emptyString;
         if (test.latency && test.latency.ok && test.speed && test.speed.ok)
             return (nym ? qsTr("Nym works. Expect a few seconds per request: that is normal for a mixnet.")
@@ -151,7 +152,7 @@ ColumnLayout {
                 visible: text !== ""
                 Layout.fillWidth: true
                 wrapMode: Text.WordWrap
-                text: [check.via === "nym" ? qsTr("Through NymVPN") : check.via === "proxy" ? qsTr("Through the SOCKS5 proxy") : check.via === "direct" ? qsTr("Direct connection") : "",
+                text: [check.via === "nym" ? qsTr("Through Nym mixnet") : check.via === "proxy" ? qsTr("Through the SOCKS5 proxy") : check.via === "direct" ? qsTr("Direct connection") : "",
                        !check.testing && check.test.socks ? qsTr("checked at %1").arg(Qt.formatTime(appWindow.connTestTime, "HH:mm")) : ""].filter(function(t) { return t !== ""; }).join(" · ") + translationManager.emptyString
                 font.pixelSize: 12
                 color: MoneroComponents.Style.dimmedFontColor
@@ -171,7 +172,7 @@ ColumnLayout {
         visible: !check.testing && !check.test.socks
         Layout.fillWidth: true
         wrapMode: Text.WordWrap
-        text: qsTr("Measures the proxy in use, the response time and speed, whether Monero nodes answer and how the local node is doing. It runs when you press the button, and by itself 20 seconds after NymVPN connects or restarts; through Nym it can take a few minutes.") + translationManager.emptyString
+        text: qsTr("Runs only when requested and shares bandwidth with synchronization. Measures a small web download, test peers and the local node; through Nym it can take a few minutes.") + translationManager.emptyString
         font.pixelSize: 12
         color: MoneroComponents.Style.dimmedFontColor
         themeTransition: false

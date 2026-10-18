@@ -26,12 +26,11 @@
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-// Collapsible "NYM VPN" panel (same style as the advanced options panel of the wizard home).
-// The account words go to the NymVPN daemon (nym-vpnc account set); the app itself never stores them.
-// When connected, the app's SOCKS5 proxy setting points at the NymVPN mixnet proxy.
+// The bundled Nym SDK helper owns this wallet's mixnet session.
 
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Controls as Controls
 
 import "../components" as MoneroComponents
 
@@ -46,6 +45,7 @@ Item {
     readonly property color accent: dark ? "#4E9E6A" : "#2E7D4A"
     readonly property bool hovered: headerMouse.containsMouse
     readonly property string state_: appWindow.nymVpnState
+    readonly property string statusMessage: oshelper.nymClient.message || appWindow.nymVpnMessage
     readonly property bool active: state_ === "ready" || state_ === "connected"
 
     readonly property color stateColor: state_ === "connected" || state_ === "ready" ? (dark ? "#5FD08F" : "#1E8E4E")
@@ -63,11 +63,16 @@ Item {
         }
     }
 
+    onActiveChanged: if (active) nymWords.clear()
+    onState_Changed: if (state_ === "off" || (state_ === "error" && nymWords.text === ""))
+        nymWords.text = oshelper.nymClient.accountSettings().mnemonic || ""
+
     implicitHeight: column.implicitHeight
 
-    readonly property bool needsInstall: appWindow.nymVpncVersion !== "" && !appWindow.nymVpncOk
+    readonly property bool needsInstall: !appWindow.nymClientAvailable
 
     Component.onCompleted: {
+        if (!active) nymWords.text = oshelper.nymClient.accountSettings().mnemonic || "";
         appWindow.nymVpnCheckInstall();
         appWindow.nymVpnLoadDirectory();
     }
@@ -100,6 +105,7 @@ Item {
             Layout.preferredHeight: 48
 
             RowLayout {
+                z: 1
                 anchors.fill: parent
                 anchors.leftMargin: 16
                 anchors.rightMargin: 16
@@ -126,7 +132,7 @@ Item {
                 }
 
                 MoneroComponents.TextPlain {
-                    text: "NYM VPN"
+                    text: "NYM MIXNET"
                     font.family: MoneroComponents.Style.fontMonoMedium.name
                     font.pixelSize: 13
                     font.letterSpacing: 2
@@ -135,7 +141,28 @@ Item {
                     themeTransition: false
                 }
 
-                Item { Layout.fillWidth: true }
+                MoneroComponents.TextPlain {
+                    visible: nymPanel.active
+                    Layout.fillWidth: true
+                    Layout.minimumWidth: 0
+                    elide: Text.ElideRight
+                    text: qsTr("ID Dispositivo: ") + oshelper.nymClient.device
+                    font.family: MoneroComponents.Style.fontMonoRegular.name
+                    font.pixelSize: 12
+                    color: deviceMouse.containsMouse ? nymPanel.accent : MoneroComponents.Style.defaultFontColor
+                    themeTransition: false
+                    Controls.ToolTip.visible: deviceMouse.containsMouse
+                    Controls.ToolTip.text: oshelper.nymClient.device
+                    MouseArea {
+                        id: deviceMouse
+                        objectName: "nymDeviceLink"
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: appWindow.nymVpnOpenAccount()
+                    }
+                }
+                Item { visible: !nymPanel.active; Layout.fillWidth: true }
 
                 Rectangle {
                     width: 8; height: 8; radius: 4
@@ -208,7 +235,7 @@ Item {
                     MoneroComponents.TextPlain {
                         text: qsTr("Nym required") + translationManager.emptyString
                         tooltipIconVisible: true
-                        tooltip: qsTr("When checked, every connection of the app goes only through NymVPN: remote node, local node, prices, swaps and updates. If Nym is not connected, nothing goes out directly: those connections wait until Nym is up. The option is saved, and NymVPN connects automatically every time the app starts.") + translationManager.emptyString
+                        tooltip: qsTr("When checked, the app waits for its independent Nym client before connecting. A local node must be started with this proxy. The option is saved and Nym connects at startup.") + translationManager.emptyString
                         font.pixelSize: 14
                         font.bold: true
                         color: nymPanel.requiredTextColor
@@ -227,12 +254,11 @@ Item {
                 MoneroComponents.StandardButton {
                     Layout.alignment: Qt.AlignVCenter
                     small: true
-                    visible: !nymPanel.active && !nymPanel.needsInstall
+                    visible: !nymPanel.active && nymPanel.state_ !== "working" && !nymPanel.needsInstall
                     enabled: nymPanel.state_ !== "working"
                     text: qsTr("Connect") + translationManager.emptyString
                     onClicked: {
-                        appWindow.nymVpnConnect(wordsInput.text);
-                        wordsInput.text = "";
+                        appWindow.nymVpnConnect(nymWords.text);
                     }
                 }
 
@@ -240,22 +266,22 @@ Item {
                 MoneroComponents.StandardButton {
                     Layout.alignment: Qt.AlignVCenter
                     small: true
-                    visible: persistentSettings.nymVpnEnabled && (nymPanel.active || nymPanel.state_ === "error" || appWindow.nymVpnRestarting)
+                    visible: nymPanel.active
                     enabled: nymPanel.state_ !== "working"
                     accent: nymPanel.dark ? "#3D8BFF" : "#1F5FD1"
                     textColor: nymPanel.dark ? "#CFE0FF" : "#1F5FD1"
-                    text: qsTr("Restart") + translationManager.emptyString
+                    text: qsTr("Reconnect") + translationManager.emptyString
                     onClicked: appWindow.nymVpnRestart()
                 }
 
                 MoneroComponents.StandardButton {
                     Layout.alignment: Qt.AlignVCenter
                     small: true
-                    visible: nymPanel.active || (persistentSettings.nymVpnEnabled && nymPanel.state_ === "error")
-                    enabled: nymPanel.state_ !== "working"
+                    visible: nymPanel.active || nymPanel.state_ === "working"
+                    enabled: true
                     accent: nymPanel.dark ? "#FF4D4D" : "#C62828"
                     textColor: nymPanel.dark ? "#FFD6D6" : "#C62828"
-                    text: qsTr("Disconnect") + translationManager.emptyString
+                    text: (nymPanel.state_ === "working" ? qsTr("Cancel") : qsTr("Disconnect")) + translationManager.emptyString
                     onClicked: appWindow.nymVpnDisconnect()
                 }
             }
@@ -268,94 +294,58 @@ Item {
                 fontSize: 13
                 tooltipIconVisible: true
                 tooltip: [
-                    qsTr("All of this app's traffic (remote or local node, prices, swaps and updates) goes through the Nym mixnet, using the SOCKS5 proxy of NymVPN. The rest of your Mac is not affected."),
-                    qsTr("NymVPN picks the exit node at random. The app asks for a new route every time it starts and when you press Restart, so the public IP changes."),
+                    qsTr("The wallet uses its own Nym mixnet client. Connecting, reconnecting and disconnecting here do not control the official NymVPN app."),
+                    qsTr("Reconnect closes this session and selects a random exit different from the previous node. Different nodes can share a public IP. If no alternative is found, traffic stays blocked."),
                     qsTr("The local node (monerod) is started with the Nym proxy too, so its peer connections also go through the mixnet; syncing is slower. If it was already running before Nym connected, stop and start it again."),
-                    qsTr("It needs NymVPN installed with its command line client (nym-vpnc) and an account with credit.")
+                    qsTr("Se requiere una cuenta NymVPN activa y sus 24 palabras. La wallet registra su propio dispositivo. Al conectar, las palabras se guardan automáticamente en Monero/xmr-wallet-plus/nym.conf, fuera del programa empaquetado.")
                 ].join("<br><br>") + translationManager.emptyString
                        + (nymPanel.active && appWindow.nymVpnMessage !== ""
                           ? "<br><br>" + appWindow.nymVpnMessage : "")
             }
 
-            // nym-vpnc missing or too old: how to install it
-            Rectangle {
+            MoneroComponents.TextPlain {
                 visible: nymPanel.needsInstall
                 Layout.fillWidth: true
-                implicitHeight: installCol.implicitHeight + 28
-                color: nymPanel.dark ? "#14FFC23D" : "#14A86F00"
-                border.width: 1
-                border.color: nymPanel.dark ? "#66FFC23D" : "#66A86F00"
-
-                ColumnLayout {
-                    id: installCol
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.top: parent.top
-                    anchors.margins: 14
-                    spacing: 10
-
-                    MoneroComponents.Label {
-                        Layout.topMargin: 0
-                        Layout.rightMargin: 24
-                        text: qsTr("Installation help") + translationManager.emptyString
-                        fontSize: 13
-                        tooltipIconVisible: true
-                        tooltip: (appWindow.nymVpncVersion === "none"
-                                  ? qsTr("The NymVPN command line client (nym-vpnc %1) is not installed.").arg(appWindow.nymVpncRequired)
-                                  : qsTr("Your nym-vpnc is version %1; version %2 or newer is needed.").arg(appWindow.nymVpncVersion).arg(appWindow.nymVpncRequired))
-                                 + "<br><br>" + [
-                                     qsTr("Open the NymVPN %1 download page with the button below.").arg(appWindow.nymVpncRequired),
-                                     qsTr("In the macOS section, download nym-vpnc-%1.pkg (and NymVPN-%1.pkg too if you don't have the NymVPN app).").arg(appWindow.nymVpncRequired),
-                                     qsTr("Open the downloaded .pkg and follow the installer (it asks for your Mac password)."),
-                                     qsTr("Come back here and press \"Check again\".")
-                                 ].join("<br><br>") + translationManager.emptyString
-                    }
-
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: 12
-                        MoneroComponents.StandardButton {
-                            small: true
-                            text: qsTr("Open download page") + translationManager.emptyString
-                            onClicked: Qt.openUrlExternally("https://github.com/nymtech/nym-vpn-client/releases/tag/nym-vpn-v" + appWindow.nymVpncRequired)
-                        }
-                        MoneroComponents.StandardButton {
-                            small: true
-                            text: qsTr("Check again") + translationManager.emptyString
-                            onClicked: appWindow.nymVpnCheckInstall()
-                        }
-                        Item { Layout.fillWidth: true }
-                    }
-                }
-            }
-
-            MoneroComponents.LineEditMulti {
-                id: wordsInput
-                visible: !nymPanel.active && !nymPanel.needsInstall
-                Layout.fillWidth: true
-                labelText: qsTr("Recovery phrase of your NymVPN account") + translationManager.emptyString
-                labelFontSize: 14
-                placeholderText: qsTr("Leave empty to use the account already set in NymVPN") + translationManager.emptyString
-                placeholderFontSize: 14
-                fontSize: 14
                 wrapMode: Text.WordWrap
-                pasteButton: true
+                text: qsTr("The bundled Nym client is missing. Rebuild the app with compilar-macos.sh.") + translationManager.emptyString
+                color: nymPanel.stateColor
             }
 
-            MoneroComponents.TextPlain {
-                visible: wordsInput.visible && wordsInput.text.trim() !== ""
-                text: qsTr("%1 words").arg(wordsInput.text.trim().split(/\s+/).length) + translationManager.emptyString
-                font.pixelSize: 12
-                color: MoneroComponents.Style.dimmedFontColor
-                themeTransition: false
+            Controls.TextArea {
+                id: nymWords
+                FontMetrics { id: seedMetrics; font: nymWords.font }
+                objectName: "nymSeedInput"
+                clip: true
+                Layout.fillWidth: true
+                Layout.preferredHeight: 2 * seedMetrics.height + topPadding + bottomPadding
+                visible: !nymPanel.active
+                enabled: nymPanel.state_ !== "working"
+                placeholderText: qsTr("Las 24 palabras de tu cuenta NymVPN")
+                wrapMode: TextEdit.Wrap
+                selectByMouse: true
+                font.family: MoneroComponents.Style.fontMonoRegular.name
+                font.pixelSize: 14
+                color: MoneroComponents.Style.defaultFontColor
+                placeholderTextColor: MoneroComponents.Style.dimmedFontColor
+                selectionColor: MoneroComponents.Style.textSelectionColor
+                padding: 12
+                inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText
+                background: MoneroComponents.NeonFrame {
+                    cut: 6
+                    ticks: false
+                    accent: nymWords.activeFocus ? nymPanel.accent : nymPanel.border
+                    lineOpacity: nymWords.activeFocus ? 0.9 : 0.35
+                    fillColor: nymPanel.dark ? "#050806" : "#FFFFFF"
+                    fillOpacity: 0.9
+                }
             }
 
             // what happened last
             MoneroComponents.TextPlain {
-                visible: appWindow.nymVpnMessage !== "" && !nymPanel.active && nymPanel.state_ !== "missing"
+                visible: nymPanel.statusMessage !== "" && !nymPanel.active && nymPanel.state_ !== "missing"
                 Layout.fillWidth: true
                 wrapMode: Text.WordWrap
-                text: appWindow.nymVpnMessage
+                text: nymPanel.statusMessage
                 font.family: MoneroComponents.Style.fontMonoRegular.name
                 font.pixelSize: 12
                 color: nymPanel.state_ === "error" ? nymPanel.stateColor : MoneroComponents.Style.defaultFontColor

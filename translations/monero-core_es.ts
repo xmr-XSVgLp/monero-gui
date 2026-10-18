@@ -851,8 +851,8 @@ Es recomendable escribirla en la billetera física para mayor seguridad.</transl
         <translation>Opciones</translation>
     </message>
     <message>
-        <source>Trading data</source>
-        <translation>Trading data</translation>
+        <source>Markets</source>
+        <translation>Mercados</translation>
     </message>
     <message>
         <source>Notes</source>
@@ -1469,6 +1469,14 @@ Minar también te da una posibilidad pequeña de ganar algo de Monero. Tu ordena
 </context>
 <context>
     <name>Receive</name>
+    <message>
+        <source>This is your primary address (it starts with 4). Everyone who has it can link all the payments you receive on it, so it cannot be copied from here: use the QR code (right click to copy it) or, better, a new address.</source>
+        <translation>Esta es tu dirección principal (empieza por 4). Cualquiera que la tenga puede relacionar todos los pagos que recibas en ella, por eso no se puede copiar desde aquí: usa el código QR (clic derecho para copiarlo) o, mejor, una dirección nueva.</translation>
+    </message>
+    <message>
+        <source>PRIMARY</source>
+        <translation>PRINCIPAL</translation>
+    </message>
     <message>
         <location filename="../pages/Receive.qml" line="56"/>
         <source>Set the label of the selected address:</source>
@@ -4519,6 +4527,38 @@ Si no tienes la opción de ejecutar tu propio nodo, hay una opción de conectars
 <context>
     <name>main</name>
     <message>
+        <source>App traffic stays blocked. Press Reconnect again or Disconnect.</source>
+        <translation>El tráfico de la app sigue bloqueado. Pulsa Reconectar de nuevo o Desconectar.</translation>
+    </message>
+    <message>
+        <source>The shared NymVPN proxy is not listening on a supported local address.</source>
+        <translation>El proxy compartido de NymVPN no escucha en una dirección local compatible.</translation>
+    </message>
+    <message>
+        <source>Reconnecting this wallet to the shared NymVPN proxy…</source>
+        <translation>Reconectando esta wallet al proxy compartido de NymVPN…</translation>
+    </message>
+    <message>
+        <source>Wallet disconnected. The NymVPN app and any running local node keep their connection.</source>
+        <translation>Wallet desconectada. La app NymVPN y cualquier nodo local en ejecución mantienen su conexión.</translation>
+    </message>
+    <message>
+        <source>NymVPN kept an older internal proxy running, so traffic may still leave through a previous exit node and not the one shown. Manage the shared proxy in the NymVPN app; reconnecting this wallet does not restart that service.</source>
+        <translation>NymVPN mantiene un proxy interno anterior y el tráfico puede salir por un nodo previo. Gestiona el proxy compartido desde la app NymVPN; reconectar esta wallet no reinicia ese servicio.</translation>
+    </message>
+    <message>
+        <source>The NymVPN app is connected in anonymous mode, so this app goes out through that tunnel (its exit node), not through a separate SOCKS5 node. The route is managed by the NymVPN app; reconnecting this wallet does not change that tunnel.</source>
+        <translation>La app NymVPN está conectada en modo anónimo y esta wallet usa la salida de ese túnel. La ruta se gestiona desde NymVPN; reconectar esta wallet no cambia el túnel.</translation>
+    </message>
+    <message>
+        <source>Check that the address on the device is exactly this one:</source>
+        <translation>Comprueba que la dirección del dispositivo es exactamente esta:</translation>
+    </message>
+    <message>
+        <source>Check the details on the device screen and confirm them there.</source>
+        <translation>Revisa los datos en la pantalla del dispositivo y confírmalos allí.</translation>
+    </message>
+    <message>
         <source>Starting a new Nym route…</source>
         <translation>Abriendo una ruta nueva de Nym…</translation>
     </message>
@@ -4888,6 +4928,26 @@ Si no tienes la opción de ejecutar tu propio nodo, hay una opción de conectars
         <source>Could not get the IP through Nym</source>
         <translation>No se pudo obtener la IP a través de Nym</translation>
     </message>
+    <message>
+        <source>The bundled Nym client is missing. Rebuild the app with compilar-macos.sh.</source>
+        <translation>Falta el cliente Nym integrado. Vuelve a compilar la app con compilar-macos.sh.</translation>
+    </message>
+    <message>
+        <source>Independent Nym client · SOCKS5 %1</source>
+        <translation>Cliente Nym independiente · SOCKS5 %1</translation>
+    </message>
+    <message>
+        <source>Connecting the independent Nym client…</source>
+        <translation>Conectando el cliente Nym independiente…</translation>
+    </message>
+    <message>
+        <source>The independent Nym client stopped.</source>
+        <translation>El cliente Nym independiente se ha detenido.</translation>
+    </message>
+    <message>
+        <source>The wallet's Nym client is disconnected. NymVPN is unchanged; a local node using this proxy will wait until you reconnect.</source>
+        <translation>El cliente Nym de la wallet está desconectado. NymVPN no se ha modificado; un nodo local que use este proxy esperará hasta que vuelvas a conectar.</translation>
+    </message>
 </context>
 <context>
     <name>Swaps</name>
@@ -5074,6 +5134,38 @@ Si no tienes la opción de ejecutar tu propio nodo, hay una opción de conectars
 <context>
     <name>ConnectionCheck</name>
     <message>
+        <source>The NymVPN SOCKS5 proxy is not answering. Check NymVPN, then press Reconnect in the wallet.</source>
+        <translation>El proxy SOCKS5 de NymVPN no responde. Comprueba NymVPN y pulsa Reconectar en la wallet.</translation>
+    </message>
+    <message>
+        <source>No download data received</source>
+        <translation>No se recibieron datos de descarga</translation>
+    </message>
+    <message>
+        <source>%1 of %2 kB in %3 s</source>
+        <translation>%1 de %2 kB en %3 s</translation>
+    </message>
+    <message>
+        <source>Partial download: %1</source>
+        <translation>Descarga parcial: %1</translation>
+    </message>
+    <message>
+        <source>Receiving %1 kB/s</source>
+        <translation>Recibiendo %1 kB/s</translation>
+    </message>
+    <message>
+        <source>The test peers did not reply through Nym. This alone does not prove that port 18080 is blocked; check the local node connections below.</source>
+        <translation>Los pares de prueba no respondieron por Nym. Esto no demuestra por sí solo que el puerto 18080 esté bloqueado; comprueba las conexiones del nodo local.</translation>
+    </message>
+    <message>
+        <source>The local node is still syncing through the mixnet. Web download speed is not blockchain speed. Reconnecting the wallet does not change the shared Nym route.</source>
+        <translation>El nodo local sigue sincronizando por la mixnet. La velocidad web no es la velocidad de la blockchain. Reconectar la wallet no cambia la ruta compartida de Nym.</translation>
+    </message>
+    <message>
+        <source>Runs only when requested and shares bandwidth with synchronization. Measures a small web download, test peers and the local node; through Nym it can take a few minutes.</source>
+        <translation>Se ejecuta solo al pulsar el botón y comparte ancho de banda con la sincronización. Mide una descarga web pequeña, pares de prueba y el nodo local; por Nym puede tardar unos minutos.</translation>
+    </message>
+    <message>
         <source>No proxy: direct connection</source>
         <translation>Sin proxy: conexión directa</translation>
     </message>
@@ -5098,8 +5190,16 @@ Si no tienes la opción de ejecutar tu propio nodo, hay una opción de conectars
         <translation>%1 kB/s</translation>
     </message>
     <message>
-        <source>only %1 kB of 1000 arrived (%2)</source>
-        <translation>solo llegaron %1 kB de 1000 (%2)</translation>
+        <source>cut after %1 s with %2 of 200 kB</source>
+        <translation>cortada a los %1 s con %2 de 200 kB</translation>
+    </message>
+    <message>
+        <source>one day of blocks in %1 min</source>
+        <translation>un día de bloques en %1 min</translation>
+    </message>
+    <message>
+        <source>one day of blocks in %1 h</source>
+        <translation>un día de bloques en %1 h</translation>
     </message>
     <message>
         <source>%1 of %2 answer</source>
@@ -5217,9 +5317,33 @@ Si no tienes la opción de ejecutar tu propio nodo, hay una opción de conectars
         <source>Current IP</source>
         <translation>IP actual</translation>
     </message>
+    <message>
+        <source>The independent Nym client is not answering. Press Reconnect in the wallet.</source>
+        <translation>El cliente Nym independiente no responde. Pulsa Reconectar en la wallet.</translation>
+    </message>
+    <message>
+        <source>The local node is still syncing through the mixnet. Web download speed is not blockchain speed. Reconnect to try another exit.</source>
+        <translation>El nodo local sigue sincronizando por la mixnet. La velocidad de descarga web no es la de los bloques. Reconecta para probar otra salida.</translation>
+    </message>
+    <message>
+        <source>Through Nym mixnet</source>
+        <translation>Por la mixnet de Nym</translation>
+    </message>
 </context>
 <context>
     <name>NymVpnPanel</name>
+    <message>
+        <source>Reconnect</source>
+        <translation>Reconectar</translation>
+    </message>
+    <message>
+        <source>Saved encrypted in this wallet's cache</source>
+        <translation>Guardada cifrada en la caché de esta cartera</translation>
+    </message>
+    <message>
+        <source>Forget</source>
+        <translation>Olvidar</translation>
+    </message>
     <message>
         <source>Traffic and privacy</source>
         <translation>Tráfico y privacidad</translation>
@@ -5376,6 +5500,30 @@ Si no tienes la opción de ejecutar tu propio nodo, hay una opción de conectars
         <source>It needs NymVPN installed with its command line client (nym-vpnc) and an account with credit.</source>
         <translation>Necesita NymVPN instalado con su cliente de línea de comandos (nym-vpnc) y una cuenta con saldo.</translation>
     </message>
+    <message>
+        <source>When checked, the app waits for its independent Nym client before connecting. A local node must be started with this proxy. The option is saved and Nym connects at startup.</source>
+        <translation>Si está marcado, la app espera a su cliente Nym independiente antes de conectar. El nodo local debe iniciarse con este proxy. La opción se guarda y Nym conecta al abrir la app.</translation>
+    </message>
+    <message>
+        <source>The wallet uses its own Nym mixnet client. Connecting, reconnecting and disconnecting here do not control the official NymVPN app.</source>
+        <translation>La wallet utiliza su propio cliente de la mixnet de Nym. Conectar, reconectar y desconectar aquí no controla la app oficial NymVPN.</translation>
+    </message>
+    <message>
+        <source>Reconnect closes this session and selects a random exit different from the previous node. Different nodes can share a public IP. If no alternative is found, traffic stays blocked.</source>
+        <translation>Reconectar cierra esta sesión y selecciona una salida aleatoria distinta del nodo anterior. Diferentes nodos pueden compartir IP pública. Si no se encuentra otra salida, el tráfico sigue bloqueado.</translation>
+    </message>
+    <message>
+        <source>The bundled SDK currently connects without a NymVPN account. No recovery phrase is required. Network access policies can change.</source>
+        <translation>El SDK integrado actualmente conecta sin cuenta de NymVPN. No necesita frase de recuperación. Las condiciones de acceso a la red pueden cambiar.</translation>
+    </message>
+    <message>
+        <source>The bundled Nym client is missing. Rebuild the app with compilar-macos.sh.</source>
+        <translation>Falta el cliente Nym integrado. Vuelve a compilar la app con compilar-macos.sh.</translation>
+    </message>
+    <message>
+        <source>Forget previously saved NymVPN phrase</source>
+        <translation>Olvidar la frase de NymVPN guardada anteriormente</translation>
+    </message>
 </context>
 <context>
     <name>DaemonRunningDialog</name>
@@ -5526,6 +5674,10 @@ Si no tienes la opción de ejecutar tu propio nodo, hay una opción de conectars
 <context>
     <name>WalletPlus</name>
     <message>
+        <source>Customize</source>
+        <translation>Personalizar</translation>
+    </message>
+    <message>
         <source>Connected: this app goes through the Nym mixnet</source>
         <translation>Conectado: esta app sale por la mixnet de Nym</translation>
     </message>
@@ -5546,8 +5698,8 @@ Si no tienes la opción de ejecutar tu propio nodo, hay una opción de conectars
         <translation>Herramientas extra que XMR Wallet+ añade al monedero de Monero. Todas son opcionales: ábrelas desde el menú, bajo Wallet+, o desde aquí. Los enlaces se abren en tu navegador, que no pasa por Nym.</translation>
     </message>
     <message>
-        <source>Trading data</source>
-        <translation>Trading data</translation>
+        <source>Markets</source>
+        <translation>Mercados</translation>
     </message>
     <message>
         <source>XMR price in EUR, USD and BTC from 24 hours to all the history recorded, the value of this wallet over time, a converter and price alerts with a notification. Prices are saved in CSV files on this computer.</source>
@@ -5617,8 +5769,8 @@ Si no tienes la opción de ejecutar tu propio nodo, hay una opción de conectars
 <context>
     <name>TradingData</name>
     <message>
-        <source>Trading data</source>
-        <translation>Trading data</translation>
+        <source>Markets</source>
+        <translation>Mercados</translation>
     </message>
     <message>
         <source>Updating…</source>
@@ -5883,8 +6035,8 @@ Si no tienes la opción de ejecutar tu propio nodo, hay una opción de conectars
         <translation>cada pocos minutos mientras la conversión de precio está activada</translation>
     </message>
     <message>
-        <source>Trading data</source>
-        <translation>Datos de trading</translation>
+        <source>Markets</source>
+        <translation>Mercados</translation>
     </message>
     <message>
         <source>when the page opens and every 15 minutes, with price conversion on</source>
@@ -6221,8 +6373,8 @@ Si no tienes la opción de ejecutar tu propio nodo, hay una opción de conectars
         <translation>Consultas de precios apagadas</translation>
     </message>
     <message>
-        <source>Kraken, CoinPaprika, Frankfurter, CoinGecko and the swap rates stop. Trading data and Swaps hide from the menu.</source>
-        <translation>Se detienen Kraken, CoinPaprika, Frankfurter, CoinGecko y las cotizaciones de swaps. Datos de trading y Swaps se ocultan del menú.</translation>
+        <source>Kraken, CoinPaprika, Frankfurter, CoinGecko and the swap rates stop. Markets and Swaps hide from the menu.</source>
+        <translation>Se detienen Kraken, CoinPaprika, Frankfurter, CoinGecko y las cotizaciones de swaps. Mercados y Swaps se ocultan del menú.</translation>
     </message>
     <message>
         <source>Update checks off</source>
@@ -6668,6 +6820,228 @@ Si no tienes la opción de ejecutar tu propio nodo, hay una opción de conectars
     <message>
         <source>Save to %1</source>
         <translation>Guardar en %1</translation>
+    </message>
+</context>
+<context>
+    <name>TrezorDevice</name>
+    <message>
+        <source>%1 min</source>
+        <translation>%1 min</translation>
+    </message>
+    <message>
+        <source>1 hour</source>
+        <translation>1 hora</translation>
+    </message>
+    <message>
+        <source>Auto-lock</source>
+        <translation>Bloqueo automático</translation>
+    </message>
+    <message>
+        <source>Auto-lock changed.</source>
+        <translation>Bloqueo automático cambiado.</translation>
+    </message>
+    <message>
+        <source>Blue</source>
+        <translation>Azul</translation>
+    </message>
+    <message>
+        <source>Brightness</source>
+        <translation>Brillo</translation>
+    </message>
+    <message>
+        <source>Brightness set on the Trezor.</source>
+        <translation>Brillo ajustado en el Trezor.</translation>
+    </message>
+    <message>
+        <source>Cancelled on the Trezor. Nothing was changed.</source>
+        <translation>Cancelado en el Trezor. No se ha cambiado nada.</translation>
+    </message>
+    <message>
+        <source>Change</source>
+        <translation>Cambiar</translation>
+    </message>
+    <message>
+        <source>Choose an image for the Trezor</source>
+        <translation>Elige una imagen para el Trezor</translation>
+    </message>
+    <message>
+        <source>Circuit</source>
+        <translation>Circuito</translation>
+    </message>
+    <message>
+        <source>Confirm the change on the Trezor.</source>
+        <translation>Confirma el cambio en el Trezor.</translation>
+    </message>
+    <message>
+        <source>Device name</source>
+        <translation>Nombre del dispositivo</translation>
+    </message>
+    <message>
+        <source>Fire</source>
+        <translation>Fuego</translation>
+    </message>
+    <message>
+        <source>Haptic feedback</source>
+        <translation>Respuesta háptica</translation>
+    </message>
+    <message>
+        <source>Haptic feedback changed.</source>
+        <translation>Respuesta háptica cambiada.</translation>
+    </message>
+    <message>
+        <source>Homescreen</source>
+        <translation>Fondo de pantalla</translation>
+    </message>
+    <message>
+        <source>Homescreen sent to the Trezor.</source>
+        <translation>Fondo de pantalla enviado al Trezor.</translation>
+    </message>
+    <message>
+        <source>Images</source>
+        <translation>Imágenes</translation>
+    </message>
+    <message>
+        <source>Minimal</source>
+        <translation>Minimalista</translation>
+    </message>
+    <message>
+        <source>Name saved on the Trezor.</source>
+        <translation>Nombre guardado en el Trezor.</translation>
+    </message>
+    <message>
+        <source>Off</source>
+        <translation>Desactivada</translation>
+    </message>
+    <message>
+        <source>On</source>
+        <translation>Activada</translation>
+    </message>
+    <message>
+        <source>Open a wallet that uses a Trezor to customize the device.</source>
+        <translation>Abre un monedero que use un Trezor para personalizar el dispositivo.</translation>
+    </message>
+    <message>
+        <source>Original</source>
+        <translation>Original</translation>
+    </message>
+    <message>
+        <source>Personalize your Trezor as in Trezor Suite. Each change has to be confirmed on the device. Close Trezor Suite while you use this page.</source>
+        <translation>Personaliza tu Trezor como en Trezor Suite. Cada cambio hay que confirmarlo en el dispositivo. Cierra Trezor Suite mientras uses esta página.</translation>
+    </message>
+    <message>
+        <source>Pick an image</source>
+        <translation>Elige una imagen</translation>
+    </message>
+    <message>
+        <source>Purple glitch</source>
+        <translation>Glitch morado</translation>
+    </message>
+    <message>
+        <source>Read again</source>
+        <translation>Leer de nuevo</translation>
+    </message>
+    <message>
+        <source>Reading the device…</source>
+        <translation>Leyendo el dispositivo…</translation>
+    </message>
+    <message>
+        <source>Restore the Trezor's own homescreen</source>
+        <translation>Restaurar el fondo original del Trezor</translation>
+    </message>
+    <message>
+        <source>Save name</source>
+        <translation>Guardar nombre</translation>
+    </message>
+    <message>
+        <source>Saved on the Trezor.</source>
+        <translation>Guardado en el Trezor.</translation>
+    </message>
+    <message>
+        <source>Send to Trezor</source>
+        <translation>Enviar al Trezor</translation>
+    </message>
+    <message>
+        <source>Sending the image… confirm it on the Trezor.</source>
+        <translation>Enviando la imagen… confírmala en el Trezor.</translation>
+    </message>
+    <message>
+        <source>Shown on the Trezor screen and in the title bar. Up to 16 characters.</source>
+        <translation>Se muestra en la pantalla del Trezor y en la barra de título. Hasta 16 caracteres.</translation>
+    </message>
+    <message>
+        <source>Space</source>
+        <translation>Espacio</translation>
+    </message>
+    <message>
+        <source>The Trezor did not accept the change. Check that it is connected and unlocked.</source>
+        <translation>El Trezor no aceptó el cambio. Comprueba que está conectado y desbloqueado.</translation>
+    </message>
+    <message>
+        <source>The Trezor firmware does not support this option. Update it with Trezor Suite.</source>
+        <translation>El firmware del Trezor no admite esta opción. Actualízalo con Trezor Suite.</translation>
+    </message>
+    <message>
+        <source>The Trezor locks itself after this time without use and asks for the PIN again.</source>
+        <translation>El Trezor se bloquea tras este tiempo sin uso y vuelve a pedir el PIN.</translation>
+    </message>
+    <message>
+        <source>The Trezor rejected the image format.</source>
+        <translation>El Trezor rechazó el formato de la imagen.</translation>
+    </message>
+    <message>
+        <source>The Trezor shows a brightness control on its screen; adjust it there and confirm.</source>
+        <translation>El Trezor muestra un control de brillo en su pantalla; ajústalo allí y confirma.</translation>
+    </message>
+    <message>
+        <source>The Trezor vibrates slightly when you touch its screen.</source>
+        <translation>El Trezor vibra ligeramente al tocar su pantalla.</translation>
+    </message>
+    <message>
+        <source>The image could not be prepared for the Trezor (%1).</source>
+        <translation>No se pudo preparar la imagen para el Trezor (%1).</translation>
+    </message>
+    <message>
+        <source>This wallet does not use a Trezor.</source>
+        <translation>Este monedero no usa un Trezor.</translation>
+    </message>
+    <message>
+        <source>Upload</source>
+        <translation>Subir</translation>
+    </message>
+    <message>
+        <source>Upload your own image or pick one from the XMR Wallet+ gallery. It is cropped to %1×%2 pixels and sent as a JPEG of %3 KB at most.</source>
+        <translation>Sube tu propia imagen o elige una de la galería de XMR Wallet+. Se recorta a %1×%2 píxeles y se envía como JPEG de %3 KB como máximo.</translation>
+    </message>
+    <message>
+        <source>screen %1×%2</source>
+        <translation>pantalla %1×%2</translation>
+    </message>
+</context>
+<context>
+    <name>NymClient</name>
+    <message>
+        <source>The independent Nym client did not connect in time. Try reconnecting.</source>
+        <translation>El cliente Nym independiente no ha conectado a tiempo. Prueba a reconectar.</translation>
+    </message>
+    <message>
+        <source>Could not start the bundled Nym client: %1</source>
+        <translation>No se ha podido iniciar el cliente Nym integrado: %1</translation>
+    </message>
+    <message>
+        <source>The independent Nym client stopped. %1</source>
+        <translation>El cliente Nym independiente se ha detenido. %1</translation>
+    </message>
+    <message>
+        <source>The bundled Nym client is missing. Rebuild the app with compilar-macos.sh.</source>
+        <translation>Falta el cliente Nym integrado. Vuelve a compilar la app con compilar-macos.sh.</translation>
+    </message>
+    <message>
+        <source>The wallet's Nym port (17890) is already in use. Close the other wallet instance and retry.</source>
+        <translation>El puerto Nym de la wallet (17890) ya está en uso. Cierra la otra instancia de la wallet y vuelve a intentarlo.</translation>
+    </message>
+    <message>
+        <source>Invalid response from the Nym client.</source>
+        <translation>Respuesta no válida del cliente Nym.</translation>
     </message>
 </context>
 </TS>

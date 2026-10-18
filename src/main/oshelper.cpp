@@ -27,6 +27,7 @@
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "oshelper.h"
+#include "qt/ConnectionProbe.h"
 
 #include <algorithm>
 #include <unordered_set>
@@ -292,10 +293,12 @@ bool OSHelper::writeTextFile(const QString &path, const QString &text) const
     return QFile::rename(tmp, path);
 }
 
-// System notification (price alerts). macOS only, through osascript; elsewhere it is a no-op.
+// System notification (price alerts). macOS only: native (app icon), osascript as fallback; elsewhere it is a no-op.
 void OSHelper::notify(const QString &title, const QString &message) const
 {
 #ifdef Q_OS_MACOS
+    if (MacOSHelper::notify(title, message))
+        return;
     auto quote = [](QString s) { return "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"") + "\""; };
     QProcess::startDetached("/usr/bin/osascript",
         {"-e", "display notification " + quote(message) + " with title " + quote(title) + " sound name \"Glass\""});
@@ -318,85 +321,6 @@ bool OSHelper::openFolder(const QString &dirPath) const
     return QDesktopServices::openUrl(url);
 }
 
-QString OSHelper::nymVpncPath() const
-{
-    QString path = QStandardPaths::findExecutable("nym-vpnc");
-    if (path.isEmpty())
-    {
-        // the macOS installers put it here; apps started from Finder don't get the shell PATH
-        path = QStandardPaths::findExecutable("nym-vpnc", {
-            "/usr/local/bin",
-            "/opt/homebrew/bin",
-            "/Applications/NymVPN.app/Contents/MacOS",
-            "/Applications/NymVPN.app/Contents/Resources"});
-    }
-    return path;
-}
-
-// Runs nym-vpnc with the given arguments and calls callback(exitCode, output) when it ends.
-// exitCode is -1 when it could not be started or took longer than 60 s.
-void OSHelper::runNymVpnc(const QStringList &args, const QJSValue &callback)
-{
-    const QString program = nymVpncPath();
-    if (program.isEmpty())
-    {
-        QJSValue cb(callback);
-        if (cb.isCallable())
-            cb.call(QJSValueList({-1, QString("nym-vpnc not found")}));
-        return;
-    }
-    runProcess(program, args, callback, 60000);
-}
-
-void OSHelper::restartNymVpnDaemon(bool askPassword, const QJSValue &callback)
-{
-#ifdef Q_OS_MACOS
-    // nym-vpnd leaks its internal SOCKS5 server on socks5 disable, so a new route can't bind and
-    // traffic keeps leaving through the first exit; restarting the daemon (needs root) frees it.
-    // Without askPassword it only works if sudoers allows this exact command with NOPASSWD.
-    const QString command = "/bin/launchctl kickstart -k system/net.nymtech.vpn.daemon";
-    if (!askPassword)
-    {
-        runProcess("/usr/bin/sudo", QStringList({"-n", "/bin/launchctl", "kickstart", "-k", "system/net.nymtech.vpn.daemon"}), callback, 30000);
-        return;
-    }
-    // with the same password, also allow this one command without a password from now on
-    // (sudoers rule, checked with visudo before it is installed)
-    QString shell = command;
-    const QString user = qEnvironmentVariable("USER");
-    if (QRegularExpression("^[A-Za-z_][A-Za-z0-9_.-]*$").match(user).hasMatch())
-    {
-        const QString rule = user + " ALL=(root) NOPASSWD: " + command;
-        shell = "f=$(/usr/bin/mktemp /tmp/xmrwp.XXXXXX) && echo '" + rule + "' > $f"
-                " && /usr/sbin/visudo -cf $f >/dev/null && /usr/sbin/chown root:wheel $f && /bin/chmod 440 $f"
-                " && /bin/mkdir -p /etc/sudoers.d && /bin/mv $f /etc/sudoers.d/xmr-wallet-plus-nym; /bin/rm -f $f; "
-                + command;
-    }
-    const QString script = "do shell script \"" + shell + "\" with administrator privileges";
-    runProcess("/usr/bin/osascript", QStringList({"-e", script}), callback, 180000);
-#else
-    Q_UNUSED(askPassword);
-    QJSValue cb(callback);
-    if (cb.isCallable())
-        cb.call(QJSValueList({-1, QString("only supported on macOS")}));
-#endif
-}
-
-void OSHelper::stopNymVpnDetached() const
-{
-#ifdef Q_OS_MACOS
-    // runs on after the app quits: drop the SOCKS5 proxy and restart the daemon (only if allowed
-    // without a password) so the old internal SOCKS5 server and its exit don't stay alive
-    const QString program = nymVpncPath();
-    if (program.isEmpty())
-        return;
-    QString quoted = program;
-    quoted.replace("'", "'\\''");
-    const QString shell = "'" + quoted + "' socks5 disable; /usr/bin/sudo -n /bin/launchctl kickstart -k system/net.nymtech.vpn.daemon";
-    QProcess::startDetached("/bin/sh", QStringList({"-c", shell}));
-#endif
-}
-
 void OSHelper::armShutdownWatchdog(int seconds) const
 {
     // closing waits for requests in flight (wallet refresh, prices, Nym lookups), which through
@@ -409,47 +333,7 @@ void OSHelper::armShutdownWatchdog(int seconds) const
     }).detach();
 }
 
-void OSHelper::runProcess(const QString &program, const QStringList &args, const QJSValue &callback, int timeoutMs)
-{
-    QProcess *process = new QProcess(this);
-    process->setProcessChannelMode(QProcess::MergedChannels);
-    auto finish = [process, callback](int exitCode, const QString &extra) {
-        if (process->property("done").toBool())
-            return;
-        process->setProperty("done", true);
-        const QString output = QString::fromUtf8(process->readAll()).trimmed() + extra;
-        QJSValue cb(callback);
-        if (cb.isCallable())
-            cb.call(QJSValueList({exitCode, output}));
-        process->deleteLater();
-    };
-    connect(process, &QProcess::finished, this, [process, finish](int exitCode, QProcess::ExitStatus status) {
-        finish(status == QProcess::NormalExit ? exitCode : -1, QString());
-    });
-    connect(process, &QProcess::errorOccurred, this, [process, finish](QProcess::ProcessError error) {
-        if (error == QProcess::FailedToStart)
-            finish(-1, process->errorString());
-    });
-    QTimer::singleShot(timeoutMs, process, [process, finish]() {
-        if (process->state() != QProcess::NotRunning)
-        {
-            process->kill();
-            finish(-1, "timeout");
-        }
-    });
-    process->start(program, args);
-}
 
-QString OSHelper::nymVpnLogTail() const
-{
-    QFile file("/var/log/nym-vpnd/nym-vpnd.log");
-    if (!file.open(QIODevice::ReadOnly))
-        return QString();
-    const qint64 maxBytes = 512 * 1024;
-    if (file.size() > maxBytes)
-        file.seek(file.size() - maxBytes);
-    return QString::fromUtf8(file.readAll());
-}
 
 QString OSHelper::temporaryPath() const
 {
@@ -469,112 +353,8 @@ std::pair<QString, quint16> splitHostPort(const QString &address, quint16 fallba
     return {address.left(colon), ok ? port : fallbackPort};
 }
 
-struct HttpResult
-{
-    bool ok = false;
-    qint64 totalMs = 0;     // connect + TLS + request + whole answer
-    qint64 firstByteMs = 0; // until the first byte of the answer
-    qint64 bodyBytes = 0;
-    QByteArray body;
-    QString error;
-};
-
-// blocking HTTP(S) request on the calling thread; proxy may be NoProxy
-HttpResult httpRequest(const QNetworkProxy &proxy, bool tls, const QString &host, quint16 port,
-                       const QByteArray &method, const QByteArray &path, const QByteArray &payload,
-                       int timeoutMs, bool keepBody)
-{
-    HttpResult r;
-    QElapsedTimer timer;
-    timer.start();
-    QSslSocket socket;
-    socket.setProxy(proxy);
-    if (tls)
-        socket.connectToHostEncrypted(host, port);
-    else
-        socket.connectToHost(host, port);
-    const auto left = [&]() { return std::max<qint64>(1, timeoutMs - timer.elapsed()); };
-    if (!(tls ? socket.waitForEncrypted(left()) : socket.waitForConnected(left())))
-    {
-        r.error = socket.errorString();
-        r.totalMs = timer.elapsed();
-        return r;
-    }
-    QByteArray request = method + " " + path + " HTTP/1.1\r\nHost: " + host.toUtf8()
-                         + "\r\nUser-Agent: XMR-Wallet-Plus\r\nAccept: */*\r\nConnection: close\r\n";
-    if (!payload.isEmpty())
-        request += "Content-Type: application/json\r\nContent-Length: " + QByteArray::number(payload.size()) + "\r\n";
-    request += "\r\n" + payload;
-    socket.write(request);
-    QByteArray head;
-    bool inBody = false;
-    qint64 contentLength = -1;
-    while (timer.elapsed() < timeoutMs)
-    {
-        if (socket.bytesAvailable() == 0 && !socket.waitForReadyRead(std::min<qint64>(left(), 1000)))
-        {
-            if (socket.state() != QAbstractSocket::ConnectedState)
-                break;
-            continue;
-        }
-        const QByteArray chunk = socket.readAll();
-        if (chunk.isEmpty())
-            continue;
-        if (r.firstByteMs == 0)
-            r.firstByteMs = timer.elapsed();
-        if (!inBody)
-        {
-            head += chunk;
-            const int end = head.indexOf("\r\n\r\n");
-            if (end < 0)
-                continue;
-            inBody = true;
-            const QByteArray rest = head.mid(end + 4);
-            head.truncate(end);
-            const QRegularExpressionMatch m = QRegularExpression("content-length:\\s*(\\d+)",
-                QRegularExpression::CaseInsensitiveOption).match(QString::fromLatin1(head));
-            if (m.hasMatch())
-                contentLength = m.captured(1).toLongLong();
-            r.bodyBytes += rest.size();
-            if (keepBody)
-                r.body += rest;
-        }
-        else
-        {
-            r.bodyBytes += chunk.size();
-            if (keepBody)
-                r.body += chunk;
-        }
-        if (contentLength >= 0 && r.bodyBytes >= contentLength)
-            break;
-    }
-    r.totalMs = timer.elapsed();
-    // chunked answers (no Content-Length): join the chunks
-    if (keepBody && QString::fromLatin1(head).contains(QRegularExpression("transfer-encoding:\\s*chunked", QRegularExpression::CaseInsensitiveOption)))
-    {
-        QByteArray joined;
-        int pos = 0;
-        while (pos < r.body.size())
-        {
-            const int lineEnd = r.body.indexOf("\r\n", pos);
-            if (lineEnd < 0)
-                break;
-            bool ok = false;
-            const int size = r.body.mid(pos, lineEnd - pos).split(';').first().trimmed().toInt(&ok, 16);
-            if (!ok || size == 0)
-                break;
-            joined += r.body.mid(lineEnd + 2, size);
-            pos = lineEnd + 2 + size + 2;
-        }
-        r.body = joined;
-    }
-    const QString status = QString::fromLatin1(head.left(head.indexOf("\r\n")));
-    r.ok = inBody && status.contains(QRegularExpression(" 2\\d\\d")) && (contentLength < 0 || r.bodyBytes >= contentLength);
-    if (!r.ok)
-        r.error = !inBody ? (socket.error() != QAbstractSocket::UnknownSocketError ? socket.errorString() : QString("timeout"))
-                          : (status.isEmpty() ? QString("incomplete answer") : status);
-    return r;
-}
+using connection_probe::HttpResult;
+using connection_probe::httpRequest;
 
 // Monero P2P ping (the same COMMAND_PING monerod sends to check a peer) through the proxy
 QJsonObject moneroPing(const QNetworkProxy &proxy, const QString &host, quint16 port, int timeoutMs)
@@ -625,12 +405,23 @@ QJsonObject moneroPing(const QNetworkProxy &proxy, const QString &host, quint16 
 
 } // namespace
 
+void OSHelper::cancelConnectionTest()
+{
+    if (m_connectionTestCancellation) m_connectionTestCancellation->store(true);
+}
+
 void OSHelper::nymVpnTest(const QString &socksAddress, const QString &daemonAddress, const QJSValue &callback)
 {
-    QThread *thread = QThread::create([this, socksAddress, daemonAddress, callback]() {
-        const auto report = [this, callback](const QJsonObject &o) {
+    cancelConnectionTest();
+    auto cancellation = std::make_shared<std::atomic<bool>>(false);
+    m_connectionTestCancellation = cancellation;
+    QThread *thread = QThread::create([this, socksAddress, daemonAddress, callback, cancellation]() {
+        const auto cancelled = [cancellation] { return cancellation->load(); };
+        const auto report = [this, callback, cancellation](const QJsonObject &o) {
+            if (cancellation->load()) return;
             const QString json = QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
-            QMetaObject::invokeMethod(this, [callback, json]() {
+            QMetaObject::invokeMethod(this, [callback, json, cancellation]() {
+                if (cancellation->load()) return;
                 QJSValue cb(callback);
                 if (cb.isCallable())
                     cb.call(QJSValueList({json}));
@@ -659,11 +450,12 @@ void OSHelper::nymVpnTest(const QString &socksAddress, const QString &daemonAddr
             }
         }
 
+        if (cancelled()) return;
         // 2. public IP seen from outside (through the proxy)
         if (QSslSocket::supportsSsl())
         {
             QJsonObject ip{{"key", "ip"}, {"ok", false}};
-            const HttpResult who = httpRequest(proxy, true, "ipwho.is", 443, "GET", "/", QByteArray(), 30000, true);
+            const HttpResult who = httpRequest(proxy, true, "ipwho.is", 443, "GET", "/", QByteArray(), 30000, true, cancelled);
             const QJsonObject j = QJsonDocument::fromJson(who.body).object();
             if (who.ok && !j["ip"].toString().isEmpty())
             {
@@ -673,7 +465,7 @@ void OSHelper::nymVpnTest(const QString &socksAddress, const QString &daemonAddr
             }
             else
             {
-                const HttpResult info = httpRequest(proxy, true, "ipinfo.io", 443, "GET", "/json", QByteArray(), 30000, true);
+                const HttpResult info = httpRequest(proxy, true, "ipinfo.io", 443, "GET", "/json", QByteArray(), 30000, true, cancelled);
                 const QJsonObject k = QJsonDocument::fromJson(info.body).object();
                 if (info.ok && !k["ip"].toString().isEmpty())
                 {
@@ -689,6 +481,7 @@ void OSHelper::nymVpnTest(const QString &socksAddress, const QString &daemonAddr
         else
             report({{"key", "ip"}, {"ok", false}, {"error", QString("TLS not available")}});
 
+        if (cancelled()) return;
         // 3. web latency: three small HTTPS requests through the mixnet (connect + TLS + answer each)
         if (!QSslSocket::supportsSsl())
         {
@@ -702,7 +495,8 @@ void OSHelper::nymVpnTest(const QString &socksAddress, const QString &daemonAddr
             QString error;
             for (int i = 0; i < 3; ++i)
             {
-                const HttpResult r = httpRequest(proxy, true, "speed.cloudflare.com", 443, "GET", "/__down?bytes=0", QByteArray(), 30000, false);
+                if (cancelled()) return;
+                const HttpResult r = httpRequest(proxy, true, "speed.cloudflare.com", 443, "GET", "/__down?bytes=0", QByteArray(), 30000, false, cancelled);
                 if (r.ok)
                     times.append(r.totalMs);
                 else
@@ -714,33 +508,31 @@ void OSHelper::nymVpnTest(const QString &socksAddress, const QString &daemonAddr
             report({{"key", "latency"}, {"ok", !times.isEmpty()}, {"times", times}, {"failed", failed}, {"error", error}});
         }
 
-        // 4. download speed: 1 MB through the mixnet
+        if (cancelled()) return;
+        // 4. Bounded sample, measured end-to-end (including connection setup).
         if (QSslSocket::supportsSsl())
         {
-            const HttpResult r = httpRequest(proxy, true, "speed.cloudflare.com", 443, "GET", "/__down?bytes=1000000", QByteArray(), 60000, false);
-            const qint64 transferMs = std::max<qint64>(1, r.totalMs - r.firstByteMs);
-            report({{"key", "speed"}, {"ok", r.ok}, {"bytes", r.bodyBytes}, {"ms", r.totalMs},
-                    {"kBps", r.bodyBytes > 0 ? double(r.bodyBytes) / 1024.0 * 1000.0 / double(transferMs) : 0.0},
-                    {"error", r.error}});
+            const qint64 requestedBytes = 64000;
+            const HttpResult r = httpRequest(proxy, true, "speed.cloudflare.com", 443, "GET", "/__down?bytes=64000", QByteArray(), 90000, false, cancelled);
+            const bool validResponse = r.status >= 200 && r.status < 300;
+            const qint64 bytes = validResponse ? r.bodyBytes : 0;
+            const bool complete = r.ok && bytes == requestedBytes;
+            report({{"key", "speed"}, {"ok", complete}, {"bytes", bytes}, {"requestedBytes", requestedBytes},
+                    {"partial", !complete && bytes > 0}, {"httpStatus", r.status}, {"ms", r.totalMs},
+                    {"kBps", double(bytes) / 1000.0 * 1000.0 / double(std::max<qint64>(1, r.totalMs))},
+                    {"error", r.error.isEmpty() && !complete ? QString("unexpected download size") : r.error}});
         }
 
-        // 5. Monero P2P through the mixnet: ping some seed nodes on port 18080 in parallel
+        if (cancelled()) return;
+        // 5. Monero P2P through the mixnet: ping two seed nodes on port 18080 sequentially
         {
-            const QStringList seeds({"176.9.0.187", "88.198.163.90", "51.79.173.165", "192.99.8.110"});
-            QList<QThread *> workers;
-            QList<QJsonObject> results(seeds.size());
-            for (int i = 0; i < seeds.size(); ++i)
-            {
-                QThread *w = QThread::create([&results, i, &seeds, proxy]() {
-                    results[i] = moneroPing(proxy, seeds[i], 18080, 45000);
-                });
-                workers.append(w);
-                w->start();
-            }
-            for (QThread *w : workers)
-            {
-                w->wait();
-                delete w;
+            // Official Monero seed peers. The former two test endpoints no longer
+            // answered COMMAND_PING even without a proxy (October 2026).
+            const QStringList seeds({"192.99.8.110", "37.187.74.171"});
+            QList<QJsonObject> results;
+            for (const QString &seed : seeds) {
+                if (cancelled()) return;
+                results.append(moneroPing(proxy, seed, 18080, 45000));
             }
             QJsonArray peers;
             int ok = 0;
@@ -753,12 +545,13 @@ void OSHelper::nymVpnTest(const QString &socksAddress, const QString &daemonAddr
             report({{"key", "p2p"}, {"ok", ok > 0}, {"reached", ok}, {"total", int(seeds.size())}, {"peers", peers}});
         }
 
+        if (cancelled()) return;
         // 6. the local node (directly, no proxy): height, target and peers
         {
             const auto daemon = splitHostPort(daemonAddress, 18081);
             const QString host = daemon.first == "localhost" ? QString("127.0.0.1") : daemon.first;
             const HttpResult info = httpRequest(QNetworkProxy(QNetworkProxy::NoProxy), false, host, daemon.second,
-                                                "POST", "/get_info", "{}", 5000, true);
+                                                "POST", "/get_info", "{}", 5000, true, cancelled);
             QJsonObject o{{"key", "node"}, {"ok", info.ok}};
             if (!info.ok)
                 o["error"] = info.error;
@@ -768,16 +561,19 @@ void OSHelper::nymVpnTest(const QString &socksAddress, const QString &daemonAddr
                 for (const char *k : {"height", "target_height", "outgoing_connections_count", "incoming_connections_count", "synchronized", "busy_syncing"})
                     o[k] = j[k];
                 const HttpResult conns = httpRequest(QNetworkProxy(QNetworkProxy::NoProxy), false, host, daemon.second, "POST", "/json_rpc",
-                                                     "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_connections\"}", 5000, true);
+                                                     "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_connections\"}", 5000, true, cancelled);
                 if (conns.ok)
                 {
                     QJsonObject states;
+                    double downloadKBps = 0;
                     for (const QJsonValue &c : QJsonDocument::fromJson(conns.body).object()["result"].toObject()["connections"].toArray())
                     {
+                        downloadKBps += c.toObject()["current_download"].toDouble();
                         const QString state = c.toObject()["state"].toString();
                         states[state] = states[state].toInt() + 1;
                     }
                     o["states"] = states;
+                    o["downloadKBps"] = downloadKBps;
                 }
             }
             report(o);
@@ -987,6 +783,17 @@ QVariantList OSHelper::removableWallets() const
         }
     }
     return list;
+}
+
+QStringList OSHelper::resourceImages(const QString &folder) const
+{
+    QStringList urls;
+    const QDir dir(QStringLiteral(":/") + folder);
+    const QStringList files = dir.entryList({"*.jpg", "*.jpeg", "*.png", "*.JPG", "*.JPEG", "*.PNG"},
+                                            QDir::Files, QDir::Name | QDir::IgnoreCase);
+    for (const QString &file : files)
+        urls << QStringLiteral("qrc:/") + folder + QStringLiteral("/") + file;
+    return urls;
 }
 
 bool OSHelper::isWritableDirectory(const QString &path) const

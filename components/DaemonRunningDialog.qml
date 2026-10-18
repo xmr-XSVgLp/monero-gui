@@ -146,7 +146,7 @@ Item {
                 MoneroComponents.TextPlain {
                     Layout.preferredWidth: textCol.Layout.preferredWidth
                     text: qsTr("Kept running, it stays in sync and the wallet opens faster next time.")
-                          + (persistentSettings.nymVpnEnabled ? " " + qsTr("NymVPN stays connected too, so the node keeps syncing through Nym.") : "")
+                          + (persistentSettings.nymVpnEnabled ? " " + qsTr("El proxy Nym de la wallet se cerrará; el nodo esperará hasta que vuelvas a abrirla y conectes Nym.") : "")
                           + translationManager.emptyString
                     font.pixelSize: 12
                     wrapMode: Text.WordWrap
