@@ -1489,6 +1489,14 @@ Minar también te da una posibilidad pequeña de ganar algo de Monero. Tu ordena
         <source>Please wait...</source>
         <translation>Por favor, espere...</translation>
     </message>
+    <message>
+        <source>Cancelling...</source>
+        <translation>Cancelando...</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Cancelar</translation>
+    </message>
 </context>
 <context>
     <name>ProgressBar</name>
@@ -3031,6 +3039,14 @@ Puedes cambiar la contraseña en las opciones del monedero.</translation>
     <message>
         <source>Light</source>
         <translation>Claro</translation>
+    </message>
+    <message>
+        <source>Neon</source>
+        <translation>Neón</translation>
+    </message>
+    <message>
+        <source>Matte</source>
+        <translation>Mate</translation>
     </message>
     <message>
         <source>NODE</source>

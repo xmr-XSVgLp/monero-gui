@@ -225,7 +225,9 @@ Item {
                     MoneroComponents.CheckBox {
                         id: nymRequiredBox
                         accent: nymPanel.requiredColor
-                        checked: persistentSettings.nymVpnRequired
+                        // while Nym is connected it is shown on and locked (the setting itself is not changed)
+                        checked: persistentSettings.nymVpnRequired || nymPanel.active
+                        enabled: !nymPanel.active
                         toggleOnClick: false
                         onClicked: persistentSettings.nymVpnRequired = !persistentSettings.nymVpnRequired
                         text: ""
@@ -237,6 +239,7 @@ Item {
                         // the "?" icon is drawn outside the text: keep room for it and keep it above the next items
                         Layout.rightMargin: 20
                         z: 2
+                        opacity: nymRequiredBox.enabled ? 1 : 0.7
                         text: qsTr("Nym required") + translationManager.emptyString
                         tooltipIconVisible: true
                         tooltip: qsTr("When checked, the app waits for its independent Nym client before connecting. A local node must be started with this proxy. The option is saved and Nym connects at startup.") + translationManager.emptyString

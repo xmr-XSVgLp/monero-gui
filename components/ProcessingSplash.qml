@@ -145,7 +145,9 @@ Rectangle {
     Text {
         x: 30
         y: 16
-        text: "XMR//WALLET+  ·  SYS.PROC"
+        text: "XMR//WALLET+  ·  " + (root.walletLabel !== "" ? root.walletLabel : "SYS.PROC")
+        width: Math.min(implicitWidth, root.width / 2 - 50)
+        elide: Text.ElideRight
         color: root.neon
         opacity: 0.8
         font.family: MoneroComponents.Style.fontMonoMedium.name
@@ -166,7 +168,9 @@ Rectangle {
             opacity: root.tick % 10 < 5 ? 1 : 0.25
         }
         Text {
-            text: "PID " + (4096 + root.tick % 997)
+            text: root.deviceMode && root.deviceLabel !== "" ? "TREZOR " + root.deviceLabel : "PID " + (4096 + root.tick % 997)
+            width: Math.min(implicitWidth, root.width / 2 - 80)
+            elide: Text.ElideRight
             color: root.magenta
             opacity: 0.85
             font.family: MoneroComponents.Style.fontMonoMedium.name
@@ -202,6 +206,10 @@ Rectangle {
     property alias messageText: messageTitle.text
     property bool deviceMode: false     // waiting for a confirmation on the Trezor
     property string subText: ""
+    property string walletLabel: ""     // wallet being opened / used
+    property string deviceLabel: ""     // name of its Trezor
+    property bool cancelling: false     // Cancel pressed, waiting for the operation to stop
+    signal cancelRequested()
     property string addressText: ""     // address being shown on the Trezor, in groups of 4 to compare
     readonly property int contentHeight: rootLayout.implicitHeight
 
@@ -418,6 +426,38 @@ Rectangle {
                 font.family: MoneroComponents.Style.fontMonoMedium.name
                 font.pixelSize: 18
                 lineHeight: 1.3
+            }
+        }
+
+        // gives up the wait if the Trezor does not respond
+        Rectangle {
+            visible: root.deviceMode
+            Layout.alignment: Qt.AlignHCenter
+            Layout.topMargin: -4
+            Layout.preferredWidth: cancelText.implicitWidth + 48
+            Layout.preferredHeight: 34
+            color: cancelArea.containsMouse && !root.cancelling ? Qt.rgba(1, 0.17, 0.84, 0.15) : "transparent"
+            border.width: 1
+            border.color: root.cancelling ? "#555555" : (cancelArea.containsMouse ? root.magenta : root.neon)
+            opacity: root.cancelling ? 0.6 : 1
+
+            Text {
+                id: cancelText
+                anchors.centerIn: parent
+                text: (root.cancelling ? qsTr("Cancelling...") : qsTr("Cancel")) + translationManager.emptyString
+                color: "#FFFFFF"
+                font.family: MoneroComponents.Style.fontMonoMedium.name
+                font.pixelSize: 12
+                font.letterSpacing: 3
+                font.capitalization: Font.AllUppercase
+            }
+            MouseArea {
+                id: cancelArea
+                anchors.fill: parent
+                hoverEnabled: true
+                enabled: !root.cancelling
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.cancelRequested()
             }
         }
     }

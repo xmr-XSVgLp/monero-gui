@@ -298,7 +298,12 @@ Wallet *WalletManager::openWallet(const QString &path, const QString &password, 
     const QString parkedKey = closingKey(path);
     if (m_parked.contains(parkedKey)) {
         const QString keysFile = path.endsWith(".keys") ? path : path + ".keys";
-        if (m_pimpl->verifyWalletPassword(keysFile.toStdString(), password.toStdString(), false, kdfRounds)) {
+        // Trezor and view-only wallets keep no spend key in the file: check the password with the
+        // view key only (checking the spend key always failed, so a Trezor wallet was opened again
+        // and asked for its passphrase)
+        const Wallet *parked = m_parked.value(parkedKey);
+        const bool noSpendKey = parked->isHwBacked() || parked->viewOnly();
+        if (m_pimpl->verifyWalletPassword(keysFile.toStdString(), password.toStdString(), noSpendKey, kdfRounds)) {
             if (m_currentWallet) {
                 qDebug() << "Closing open m_currentWallet" << m_currentWallet;
                 delete m_currentWallet;
@@ -665,6 +670,11 @@ void WalletManager::setLogLevel(int logLevel)
 void WalletManager::setLogCategories(const QString &categories)
 {
     Monero::WalletManagerFactory::setLogCategories(categories.toStdString());
+}
+
+void WalletManager::cancelDeviceConfirmation()
+{
+    Monero::WalletManagerFactory::cancelDeviceConfirmation();
 }
 
 QString WalletManager::urlToLocalPath(const QUrl &url) const

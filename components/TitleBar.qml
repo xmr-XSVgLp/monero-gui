@@ -364,6 +364,11 @@ Rectangle {
                     persistentSettings.blackTheme = dark;
                 }
 
+                function setPastel(pastel) {
+                    MoneroComponents.Style.pastel = pastel;
+                    persistentSettings.themePastel = pastel;
+                }
+
                 background: MoneroComponents.NeonFrame {
                     cut: 8
                     accent: MoneroComponents.Style.orange
@@ -424,6 +429,51 @@ Rectangle {
                                     hoverEnabled: true
                                     cursorShape: Qt.PointingHandCursor
                                     onClicked: themePopup.setTheme(MoneroComponents.Style.themePalette, modelData.dark)
+                                }
+                            }
+                        }
+                    }
+                    // neon / matte (soft colours)
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.bottomMargin: 6
+                        spacing: 6
+                        Repeater {
+                            model: [{ pastel: false, label: qsTr("Neon") + translationManager.emptyString, icon: "\uf0e7" },
+                                    { pastel: true, label: qsTr("Matte") + translationManager.emptyString, icon: "\uf043" }]
+                            Rectangle {
+                                readonly property bool current: MoneroComponents.Style.pastel === modelData.pastel
+                                Layout.fillWidth: true
+                                height: 28
+                                radius: 3
+                                color: current ? MoneroComponents.Style.c("#2E00FF41")
+                                       : toneArea.containsMouse ? Qt.rgba(0.5, 0.5, 0.5, 0.12) : "transparent"
+                                border.width: 1
+                                border.color: current ? MoneroComponents.Style.orange : Qt.rgba(0.5, 0.5, 0.5, 0.35)
+                                Row {
+                                    anchors.centerIn: parent
+                                    spacing: 6
+                                    Text {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: modelData.icon
+                                        font.family: FontAwesome.fontFamily
+                                        font.pixelSize: 12
+                                        color: MoneroComponents.Style.defaultFontColor
+                                    }
+                                    Text {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: modelData.label
+                                        font.family: MoneroComponents.Style.fontRegular.name
+                                        font.pixelSize: 12
+                                        color: MoneroComponents.Style.defaultFontColor
+                                    }
+                                }
+                                MouseArea {
+                                    id: toneArea
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: themePopup.setPastel(modelData.pastel)
                                 }
                             }
                         }

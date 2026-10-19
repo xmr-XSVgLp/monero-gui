@@ -26,18 +26,46 @@ QtObject {
         return x.length < 2 ? "0" + x : x;
     }
 
-    // a Matrix colour ("#rrggbb" or "#aarrggbb") in the current palette
+    // pastel instead of neon: softer colours over any palette. Accents lose saturation and glare,
+    // the dark theme's blacks lift to a dark grey and the light theme's whites dim to a soft grey.
+    property bool pastel: false
+
+    // [saturation, lightness] of a colour in pastel
+    function _pastel(s, l) {
+        if (blackTheme) {
+            if (l < 0.2)
+                return [s * 0.1, 0.085 + l * 0.55];                 // backgrounds: black -> neutral dark grey
+            if (l > 0.9)
+                return [s * 0.5, 0.88];                             // white text without glare
+            return [s * 0.55, Math.min(0.82, 0.28 + l * 0.75)];   // accents: soft, not neon
+        }
+        if (l > 0.7)
+            return [s * 0.12, 0.7 + (l - 0.7) * 0.6];               // whites / pale backgrounds -> neutral grey
+        return [s * 0.6, l * 0.92];                                 // text and accents a bit darker
+    }
+
+    // a Matrix colour ("#rrggbb" or "#aarrggbb") in the current palette and neon / pastel
     function c(hex) {
         var p = palettes[themePalette];
-        if (!p || p.hue < 0)
+        var shift = !!p && p.hue >= 0;
+        if (!shift && !pastel)
             return hex;
         var col = Qt.lighter(hex, 1.0);
         var s = col.hslSaturation, h = col.hslHue, l = col.hslLightness;
-        if (s < 0.04 || h < 0.18 || h > 0.48)
+        var isGreen = s >= 0.04 && h >= 0.18 && h <= 0.48;
+        if (!pastel && !isGreen)
             return hex;
-        if (s > 0.3 && l > 0.25 && l < 0.9)   // accents only, not the tinted greys
-            l = Math.min(0.9, l * p.k);
-        var o = Qt.hsla(p.hue, s, l, col.a);
+        if (shift && isGreen) {
+            h = p.hue;
+            if (s > 0.3 && l > 0.25 && l < 0.9)   // accents only, not the tinted greys
+                l = Math.min(0.9, l * p.k);
+        }
+        if (pastel) {
+            var v = _pastel(s, l);
+            s = v[0];
+            l = v[1];
+        }
+        var o = Qt.hsla(Math.max(0, h), s, l, col.a);   // greys report hue -1
         return "#" + (col.a < 1 ? _hex2(col.a) : "") + _hex2(o.r) + _hex2(o.g) + _hex2(o.b);
     }
     property QtObject fontMedium: FontLoader { id: _fontMedium; source: "qrc:/fonts/Roboto-Medium.ttf"; }

@@ -194,6 +194,8 @@ public:
 
     Q_INVOKABLE void setLogLevel(int logLevel);
     Q_INVOKABLE void setLogCategories(const QString &categories);
+    // gives up the wait for a confirmation on the Trezor (the operation fails as cancelled)
+    Q_INVOKABLE void cancelDeviceConfirmation();
 
     Q_INVOKABLE quint64 add(quint64 x, quint64 y) const { return x + y; }
     Q_INVOKABLE quint64 sub(quint64 x, quint64 y) const { return x - y; }

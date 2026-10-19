@@ -91,6 +91,19 @@ ApplicationWindow {
     property alias toolTip: toolTip
     property string walletName
     property string walletDeviceLabel: ""   // Trezor name shown in the title bar
+    // remember the Trezor name of each wallet, so the "proceed to the device" screen can show it while opening
+    onWalletDeviceLabelChanged: {
+        if (walletDeviceLabel === "" || !persistentSettings.wallet_path) return;
+        var m = {};
+        try { m = JSON.parse(persistentSettings.trezorLabels || "{}"); } catch (e) {}
+        if (m[persistentSettings.wallet_path] === walletDeviceLabel) return;
+        m[persistentSettings.wallet_path] = walletDeviceLabel;
+        persistentSettings.trezorLabels = JSON.stringify(m);
+    }
+    function knownTrezorLabel(path) {
+        if (walletDeviceLabel !== "" && currentWallet && path === persistentSettings.wallet_path) return walletDeviceLabel;
+        try { return JSON.parse(persistentSettings.trezorLabels || "{}")[path] || ""; } catch (e) { return ""; }
+    }
     property string deviceShowAddress: ""   // address sent to the Trezor screen, shown in the splash to compare
 
     // true when the path lives on a USB stick / SD card (oshelper.removableVolumes)
@@ -1144,6 +1157,7 @@ ApplicationWindow {
                 ? qsTr("Check that the address on the device is exactly this one:") + translationManager.emptyString
                 : qsTr("Check the details on the device screen and confirm them there.") + translationManager.emptyString;
             splash.deviceMode = true;
+            splash.cancelling = false;
             appWindow.showProcessingSplash(qsTr("Please proceed to the device..."));
         }
     }
@@ -1151,6 +1165,7 @@ ApplicationWindow {
     function onDeviceButtonPressed(){
         devicePrompt.hide();
         splash.deviceMode = false;
+        splash.cancelling = false;
         deviceShowAddress = "";
         if (txConfirmationPopup.visible) {
             txConfirmationPopup.bottomTextAnimation.running = false;
@@ -1914,9 +1929,19 @@ ApplicationWindow {
         splash.show();
     }
 
+    // Cancel on the Trezor splash: the core gives up the wait and tells the device; if the
+    // operation does not end on its own (Trezor unplugged or frozen) the splash closes anyway
+    function cancelDeviceConfirmation() {
+        splash.cancelling = true;
+        walletManager.cancelDeviceConfirmation();
+        deviceCancelFallback.restart();
+    }
+
     function hideProcessingSplash() {
         devicePrompt.hide();
+        deviceCancelFallback.stop();
         splash.deviceMode = false;
+        splash.cancelling = false;
         deviceShowAddress = "";
         console.log("Hiding processing splash")
         splash.close();
@@ -2520,6 +2545,8 @@ ApplicationWindow {
         property int lockOnUserInActivityInterval: 10  // minutes
         property bool blackTheme: MoneroComponents.Style.blackTheme
         property string themePalette: "matrix"   // colour palette (Style.palettes), chosen from the title bar
+        property bool themePastel: false         // pastel (soft) colours instead of neon
+        property string trezorLabels: "{}"       // JSON wallet path -> Trezor name, for the device prompt before the wallet opens
         property bool checkForUpdates: true
         property bool autosave: true
         property int autosaveMinutes: 10
@@ -2591,6 +2618,7 @@ ApplicationWindow {
         Component.onCompleted: {
             MoneroComponents.Style.blackTheme = persistentSettings.blackTheme
             MoneroComponents.Style.themePalette = persistentSettings.themePalette
+            MoneroComponents.Style.pastel = persistentSettings.themePastel
 
             if (!appWindow.fiatPriceAPIs.hasOwnProperty(fiatPriceProvider)) {
                 console.warn("unsupported fiat price provider \"" + fiatPriceProvider + "\", resetting");
@@ -2892,6 +2920,16 @@ ApplicationWindow {
         x: (appWindow.width - width) / 2
         y: (appWindow.height - height) / 2
         messageText: qsTr("Please wait...") + translationManager.emptyString
+        // wallet being opened or used, and its Trezor (shown while waiting on the device)
+        walletLabel: persistentSettings.wallet_path ? appWindow.usefulName(String(persistentSettings.wallet_path).replace(/.*[\/\\]/, "").replace(/\.keys$/, "")) : ""
+        deviceLabel: deviceMode ? appWindow.knownTrezorLabel(persistentSettings.wallet_path) : ""
+        onCancelRequested: appWindow.cancelDeviceConfirmation()
+    }
+
+    Timer {
+        id: deviceCancelFallback
+        interval: 8000
+        onTriggered: if (splash.visible && splash.cancelling) hideProcessingSplash()
     }
 
     Item {
