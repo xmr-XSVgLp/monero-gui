@@ -80,8 +80,13 @@ ApplicationWindow {
     property int restoreHeight:0
     property bool daemonSynced: false
     property bool walletSynced: false
+    property real daemonHeight: 0
+    property real daemonTarget: 0
     property int maxWindowHeight: (isAndroid || isIOS)? screenAvailableHeight : (screenAvailableHeight < 900)? 720 : 800;
-    property bool daemonRunning: !persistentSettings.useRemoteNode && !disconnected
+    // the wallet reports "disconnected" while it (re)connects, e.g. right after switching wallets;
+    // localDaemonAlive (checked with daemonManager) keeps the node shown as running meanwhile
+    property bool localDaemonAlive: false
+    property bool daemonRunning: !persistentSettings.useRemoteNode && (!disconnected || localDaemonAlive)
     property int daemonStartStopInProgress: 0
     property alias toolTip: toolTip
     property string walletName
@@ -351,7 +356,13 @@ ApplicationWindow {
             if (client.state === "error") {
                 nymVpnFail(client.message);
             } else if (client.state === "connected") {
+                var justConnected = nymVpnState !== "connected";
                 nymVpnState = "connected";
+                // new route (connect or reconnect): test it right away
+                if (justConnected) {
+                    if (connTesting) cancelConnectionTest();
+                    Qt.callLater(runConnectionTest);
+                }
                 nymVpnRestarting = false;
                 nymVpnMessage = qsTr("Independent Nym client · SOCKS5 %1").arg(client.address) + translationManager.emptyString
                     + (client.message !== "" ? " · " + client.message : "");
@@ -398,6 +409,112 @@ ApplicationWindow {
         // a remote node picks up the new proxy only when the wallet reconnects
         if (currentWallet && persistentSettings.useRemoteNode)
             connectRemoteNode();
+    }
+
+    // ---- macOS menu bar item (Settings > Interface) ----
+    property string menuBarLast: ""
+
+    function menuBarPriceText(cur) {
+        var chip = titleBar.priceChip;
+        var q = chip.quotes[cur];
+        if (!q || !(q.price > 0)) return "";
+        return chip.fmtPrice(cur, q.price);
+    }
+
+    function updateMenuBar() {
+        var s = persistentSettings;
+        var on = Qt.platform.os === "osx" && s.menuBarEnabled;
+        if (!on) {
+            if (menuBarLast !== "") {
+                oshelper.setMenuBarItem(false, "", [], "");
+                menuBarLast = "";
+            }
+            return;
+        }
+        var chip = titleBar.priceChip;
+        var title = [];
+        var lines = [];
+
+        var unit = s.menuBarPriceUnit;
+        var q = chip.quotes[unit];
+        if (s.menuBarPrice && q && q.price > 0) {
+            var t = chip.fmtPrice(unit, q.price);
+            if (s.menuBarChange && !isNaN(q.change))
+                t += " " + (q.change >= 0 ? "▲" : "▼") + Math.abs(q.change).toFixed(1) + "%";
+            title.push(t);
+        }
+        var prices = ["BTC", "EUR", "USD"].filter(function(k) { return chip.quotes[k] && chip.quotes[k].price > 0; });
+        if (prices.length > 0) {
+            lines.push(qsTr("1 XMR · last 24 h") + translationManager.emptyString);
+            prices.forEach(function(k) {
+                var c = chip.quotes[k].change;
+                lines.push("   " + chip.fmtPrice(k, chip.quotes[k].price) + (isNaN(c) ? "" : "   " + chip.fmtChange(c)));
+            });
+            lines.push("");
+        }
+
+        if (currentWallet) {
+            var hidden = hideBalanceForced || s.hideBalance;
+            var bal = hidden ? "•••" : walletManager.displayAmount(currentWallet.balance());
+            if (s.menuBarBalance && !hidden)
+                title.push(Number(bal).toFixed(4) + " XMR");
+            lines.push(qsTr("Wallet") + ": " + walletName);
+            lines.push(qsTr("Balance") + ": " + bal + " XMR");
+            lines.push("");
+        }
+
+        var sync;
+        if (daemonTarget > 1) {
+            sync = daemonSynced
+                ? qsTr("Node synchronized · block %1").arg(daemonHeight.toFixed(0))
+                : qsTr("Node synchronizing · %1 / %2").arg(daemonHeight.toFixed(0)).arg(daemonTarget.toFixed(0));
+            if (s.menuBarSync && !daemonSynced)
+                title.push((daemonHeight / daemonTarget * 100).toFixed(1) + "%");
+        } else {
+            sync = qsTr("Node: no data");
+        }
+        lines.push(sync);
+        var nym = nymVpnProxyUp() ? qsTr("NYM: connected")
+                : s.nymVpnEnabled ? qsTr("NYM: connecting…") : qsTr("NYM: off");
+        lines.push(nym);
+        if (s.menuBarNym && s.nymVpnEnabled)
+            title.push(nymVpnProxyUp() ? "NYM ●" : "NYM ○");
+
+        var titleText = title.join("  ·  ");
+        var open = qsTr("Open XMR Wallet+") + translationManager.emptyString;
+        var key = titleText + "\n" + lines.join("\n");
+        if (key === menuBarLast) return;
+        menuBarLast = key;
+        oshelper.setMenuBarItem(true, titleText, lines, open);
+    }
+
+    Timer {
+        id: menuBarTimer
+        interval: 15000
+        repeat: true
+        triggeredOnStart: true
+        running: persistentSettings.menuBarEnabled
+        onTriggered: appWindow.updateMenuBar()
+        onRunningChanged: if (!running) appWindow.updateMenuBar()
+    }
+
+    // desktop widget on the wallpaper (Settings > Interface)
+    Loader {
+        active: Qt.platform.os === "osx" && persistentSettings.desktopWidgetEnabled
+        sourceComponent: Component {
+            MoneroComponents.DesktopWidget {
+                visible: true
+            }
+        }
+    }
+
+    Connections {
+        target: oshelper
+        function onMenuBarOpenRequested() {
+            appWindow.show();
+            appWindow.raise();
+            appWindow.requestActivate();
+        }
     }
 
     function nymVpnProxyUp() {
@@ -588,16 +705,90 @@ ApplicationWindow {
             persistentSettings.kdfRounds);
     }
 
+    // ---- quick wallet switch: wallets unlocked in this session, password kept only in memory ----
+    property var unlockedWallets: []   // [{ path, name, nettype, password }]
+
+    function rememberUnlockedWallet(path, password, nettype) {
+        if (!persistentSettings.quickWalletSwitch || !path) return;
+        var list = unlockedWallets.filter(function(w) { return w.path !== path; });
+        list.push({ path: path, name: usefulName(path), nettype: nettype, password: password,
+                    hw: !!(currentWallet && currentWallet.isHwBacked()) });
+        unlockedWallets = list;
+    }
+
+    function isUnlockedWallet(path) {
+        return persistentSettings.quickWalletSwitch && unlockedWallets.some(function(w) { return w.path === path; });
+    }
+
+    function forgetUnlockedWallet(path) {
+        unlockedWallets = unlockedWallets.filter(function(w) { return w.path !== path; });
+        walletManager.closeParkedWallet(path);
+    }
+
+    // keep only the open wallet (inactivity lock, option turned off)
+    function forgetOtherUnlockedWallets() {
+        var cur = persistentSettings.wallet_path;
+        unlockedWallets = persistentSettings.quickWalletSwitch
+            ? unlockedWallets.filter(function(w) { return w.path === cur; }) : [];
+        walletManager.closeParkedWallets(persistentSettings.quickWalletSwitch && !currentWallet ? cur : "");
+    }
+
+    function switchWallet(path) {
+        if (!currentWallet || path === persistentSettings.wallet_path) return;
+        var w = unlockedWallets.filter(function(x) { return x.path === path; })[0];
+        if (!w) return;
+        // the device can only serve one hardware wallet: free it before reopening another one
+        if (w.hw && !walletManager.parkedWallets().some(function(p) { return String(p.path).replace(/\.keys$/, "") === String(w.path).replace(/\.keys$/, ""); }))
+            walletManager.closeParkedHwWallets();
+        if (!walletManager.walletExists(w.path)) {
+            forgetUnlockedWallet(w.path);
+            appWindow.showStatusMessage(qsTr("Wallet not found: %1").arg(w.name), 5);
+            return;
+        }
+        closeWallet(function() {
+            clearMoneroCardLabelText();
+            leftPanel.minutesToUnlock = "";
+            middlePanel.transferView.clearFields();
+            middlePanel.receiveView.clearFields();
+            middlePanel.historyView.clearFields();
+            middlePanel.addressBookView.clearFields();
+            persistentSettings.wallet_path = w.path;
+            persistentSettings.nettype = w.nettype;
+            walletPassword = w.password;
+            initialize();
+        }, "park");
+    }
+
+    Timer {
+        id: localDaemonCheck
+        interval: 3000
+        repeat: true
+        triggeredOnStart: true
+        running: !persistentSettings.useRemoteNode && appWindow.disconnected && daemonStartStopInProgress === 0
+                 && typeof daemonManager !== "undefined"
+        onTriggered: daemonManager.runningAsync(persistentSettings.nettype, persistentSettings.blockchainDataDir, function(running) {
+            appWindow.localDaemonAlive = running && daemonStartStopInProgress === 0;
+        })
+        onRunningChanged: if (!running && !appWindow.disconnected) appWindow.localDaemonAlive = false
+    }
+
     function gracefulQuit() {
         if (isQuitting)
             return;
         isQuitting = true;
         closeWallet(function() {
-            gracefulShutdownComplete();
+            // wallets closed in the background by a quick switch must finish saving first
+            appWindow.showProcessingSplash(qsTr("Closing wallet..."));
+            walletManager.waitClosingWalletsAsync(function() {
+                hideProcessingSplash();
+                gracefulShutdownComplete();
+            });
         })
     }
 
-    function closeWallet(callback) {
+    // background: the wallet saves and closes on its own thread (quick switch, back to the wizard),
+    // so the UI does not wait for a refresh in progress
+    function closeWallet(callback, background) {
 
         // Disconnect all listeners
         if (typeof currentWallet === "undefined" || currentWallet === null) {
@@ -632,6 +823,20 @@ ApplicationWindow {
         appWindow.walletName = "";
         appWindow.walletDeviceLabel = "";
         currentWallet = undefined;
+
+        if (background === "park") {
+            // stays loaded and syncing; switching back resumes it at once
+            walletManager.parkWallet();
+            if (callback)
+                callback();
+            return;
+        }
+        if (background) {
+            walletManager.closeWalletInBackground();
+            if (callback)
+                callback();
+            return;
+        }
 
         appWindow.showProcessingSplash(qsTr("Closing wallet..."));
         if (callback) {
@@ -695,6 +900,20 @@ ApplicationWindow {
             currentWallet.setDaemonLogin(remoteNode.username, remoteNode.password);
         } else {
             currentDaemonAddress = localDaemonAddress;
+        }
+
+        // resumed from the background (quick switch): already initialised, connected and synced
+        if (walletManager.lastOpenResumed()) {
+            console.log("wallet resumed from the background, skipping init");
+            currentWallet.startRefresh();   // a hardware wallet may have paused while in the background
+            Qt.callLater(function() {
+                if (!currentWallet) return;
+                onWalletConnectionStatusChanged(currentWallet.connected(true));
+                currentWallet.history.refresh(currentWallet.currentSubaddressAccount);
+                onWalletRefresh();
+                onWalletUpdate();
+            });
+            return;
         }
 
         console.log("initializing with daemon address: ", currentDaemonAddress)
@@ -888,6 +1107,7 @@ ApplicationWindow {
 
         // wallet opened successfully, subscribing for wallet updates
         connectWallet(wallet)
+        rememberUnlockedWallet(persistentSettings.wallet_path, walletPassword, persistentSettings.nettype);
 
         // the start page (Account) was shown before the wallet existed: fill it now
         if (middlePanel.state === "Account")
@@ -1090,6 +1310,8 @@ ApplicationWindow {
             firstBlockSeen = dCurrentBlock;
         }
         daemonSynced = dCurrentBlock >= dTargetBlock && dTargetBlock != 1
+        daemonHeight = dCurrentBlock;
+        daemonTarget = dTargetBlock;
         walletSynced = bcHeight >= dTargetBlock
 
         // Update progress bars
@@ -1177,6 +1399,7 @@ ApplicationWindow {
 
     function stopDaemon(callback, splash){
         daemonStartStopInProgress = 2;
+        localDaemonAlive = false;
         if (splash) {
             appWindow.showProcessingSplash(qsTr("Waiting for daemon to stop..."));
         }
@@ -1619,7 +1842,7 @@ ApplicationWindow {
             middlePanel.advancedView.clearFields();
             // disable timers
             userInActivityTimer.running = false;
-        });
+        }, isUnlockedWallet(persistentSettings.wallet_path) ? "park" : true);
     }
 
     objectName: "appWindow"
@@ -2164,6 +2387,29 @@ ApplicationWindow {
         property bool fxBootScreen: true
         property bool fxPageGlitch: true
         property bool fxSounds: false
+
+        // macOS menu bar item
+        property bool menuBarEnabled: false
+        property bool menuBarPrice: true
+        property string menuBarPriceUnit: "BTC"
+        property bool menuBarChange: true
+        property bool menuBarBalance: false
+        property bool menuBarSync: true
+        property bool menuBarNym: false
+
+        // quick wallet switch (passwords of unlocked wallets kept in memory for the session)
+        property bool quickWalletSwitch: true
+
+        // macOS desktop widget
+        property bool desktopWidgetEnabled: false
+        property string desktopWidgetUnit: "EUR"
+        property bool desktopWidgetChart: true
+        property bool desktopWidgetBalance: false
+        property bool desktopWidgetNode: true
+        property bool desktopWidgetNym: true
+        property real desktopWidgetOpacity: 0.75
+        property int desktopWidgetX: -1
+        property int desktopWidgetY: -1
         property bool askPasswordBeforeSending: true
         property bool lockOnUserInActivity: true
         property int walletMode: 2
@@ -3061,6 +3307,7 @@ ApplicationWindow {
         if(inactivity < (persistentSettings.lockOnUserInActivityInterval * 60)) return;
 
         if (inputDialogVisible) inputDialog.close()
+        forgetOtherUnlockedWallets();
         remoteNodeDialog.close();
         informationPopup.close()
         if (txConfirmationPopup.visible) {

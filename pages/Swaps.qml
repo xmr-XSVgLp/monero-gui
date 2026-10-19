@@ -664,6 +664,8 @@ Rectangle {
         anchors.right: parent.right
         spacing: 20
 
+        MoneroComponents.MarketsNavbar { current: "Swaps" }
+
         RowLayout {
             Layout.fillWidth: true
             spacing: 12

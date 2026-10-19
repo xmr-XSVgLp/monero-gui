@@ -33,6 +33,7 @@
 #include "NymClient.h"
 #include <atomic>
 #include <memory>
+#include <QHash>
 #include <QList>
 #include <QObject>
 #include <QString>
@@ -62,6 +63,10 @@ public:
     Q_INVOKABLE QString readTextFile(const QString &path) const;
     Q_INVOKABLE bool writeTextFile(const QString &path, const QString &text) const;
     Q_INVOKABLE void notify(const QString &title, const QString &message) const;
+    // macOS menu bar item (no-op elsewhere): title next to the icon, `lines` in its menu ("" = separator)
+    Q_INVOKABLE void setMenuBarItem(bool visible, const QString &title, const QStringList &lines, const QString &openLabel);
+    // macOS: keep a QML Window on the wallpaper (desktop widget); no-op elsewhere
+    Q_INVOKABLE void pinToDesktop(QObject *window);
     QObject *nymClient() { return &m_nymClient; }
     // ends the process after `seconds` if the graceful shutdown has not finished by then
     Q_INVOKABLE void armShutdownWatchdog(int seconds) const;
@@ -97,10 +102,17 @@ public:
 
     static std::pair<quint8, QString> getNetworkTypeAndAddressFromFile(const QString &wallet);
 private:
+    // JS callbacks of the background requests. A QJSValue may only be copied or destroyed on the
+    // thread of its engine: worker threads carry the id, the value stays here (main thread only).
+    quint64 keepCallback(const QJSValue &callback);
+    QHash<quint64, QJSValue> m_callbacks;
+    quint64 m_callbackSeq = 0;
+    quint64 m_connectionTestCallback = 0;
     std::shared_ptr<std::atomic<bool>> m_connectionTestCancellation;
     NymClient m_nymClient;
 
 signals:
+    void menuBarOpenRequested();
 
 public slots:
 };

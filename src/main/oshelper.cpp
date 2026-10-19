@@ -293,6 +293,28 @@ bool OSHelper::writeTextFile(const QString &path, const QString &text) const
     return QFile::rename(tmp, path);
 }
 
+void OSHelper::setMenuBarItem(bool visible, const QString &title, const QStringList &lines, const QString &openLabel)
+{
+#ifdef Q_OS_MACOS
+    static const QImage icon = QImage(":/images/menubar-icon.png");
+    MacOSHelper::setStatusItem(visible, title, lines, openLabel, icon, [this] { emit menuBarOpenRequested(); });
+#else
+    Q_UNUSED(visible);
+    Q_UNUSED(title);
+    Q_UNUSED(lines);
+    Q_UNUSED(openLabel);
+#endif
+}
+
+void OSHelper::pinToDesktop(QObject *window)
+{
+#ifdef Q_OS_MACOS
+    MacOSHelper::pinToDesktop(qobject_cast<QWindow *>(window));
+#else
+    Q_UNUSED(window);
+#endif
+}
+
 // System notification (price alerts). macOS only: native (app icon), osascript as fallback; elsewhere it is a no-op.
 void OSHelper::notify(const QString &title, const QString &message) const
 {
@@ -405,6 +427,13 @@ QJsonObject moneroPing(const QNetworkProxy &proxy, const QString &host, quint16 
 
 } // namespace
 
+quint64 OSHelper::keepCallback(const QJSValue &callback)
+{
+    const quint64 id = ++m_callbackSeq;
+    m_callbacks.insert(id, callback);
+    return id;
+}
+
 void OSHelper::cancelConnectionTest()
 {
     if (m_connectionTestCancellation) m_connectionTestCancellation->store(true);
@@ -415,14 +444,23 @@ void OSHelper::nymVpnTest(const QString &socksAddress, const QString &daemonAddr
     cancelConnectionTest();
     auto cancellation = std::make_shared<std::atomic<bool>>(false);
     m_connectionTestCancellation = cancellation;
-    QThread *thread = QThread::create([this, socksAddress, daemonAddress, callback, cancellation]() {
+    // only one test runs at a time: the callback of the previous one is no longer needed
+    m_callbacks.remove(m_connectionTestCallback);
+    const quint64 callbackId = keepCallback(callback);
+    m_connectionTestCallback = callbackId;
+    // the worker thread never touches the QJSValue (copying it off the main thread corrupted the
+    // JS engine's storage and crashed the app): it posts the JSON and the id back to the main thread
+    QThread *thread = QThread::create([this, socksAddress, daemonAddress, callbackId, cancellation]() {
         const auto cancelled = [cancellation] { return cancellation->load(); };
-        const auto report = [this, callback, cancellation](const QJsonObject &o) {
+        const auto report = [this, callbackId, cancellation](const QJsonObject &o) {
             if (cancellation->load()) return;
             const QString json = QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
-            QMetaObject::invokeMethod(this, [callback, json, cancellation]() {
+            const bool last = o.value("key").toString() == "done";
+            QMetaObject::invokeMethod(this, [this, callbackId, json, last, cancellation]() {
                 if (cancellation->load()) return;
-                QJSValue cb(callback);
+                QJSValue cb = m_callbacks.value(callbackId);
+                if (last)
+                    m_callbacks.remove(callbackId);
                 if (cb.isCallable())
                     cb.call(QJSValueList({json}));
             }, Qt::QueuedConnection);
@@ -512,8 +550,8 @@ void OSHelper::nymVpnTest(const QString &socksAddress, const QString &daemonAddr
         // 4. Bounded sample, measured end-to-end (including connection setup).
         if (QSslSocket::supportsSsl())
         {
-            const qint64 requestedBytes = 64000;
-            const HttpResult r = httpRequest(proxy, true, "speed.cloudflare.com", 443, "GET", "/__down?bytes=64000", QByteArray(), 90000, false, cancelled);
+            const qint64 requestedBytes = 1000000;
+            const HttpResult r = httpRequest(proxy, true, "speed.cloudflare.com", 443, "GET", "/__down?bytes=1000000", QByteArray(), 240000, false, cancelled);
             const bool validResponse = r.status >= 200 && r.status < 300;
             const qint64 bytes = validResponse ? r.bodyBytes : 0;
             const bool complete = r.ok && bytes == requestedBytes;
@@ -587,7 +625,8 @@ void OSHelper::nymVpnTest(const QString &socksAddress, const QString &daemonAddr
 void OSHelper::nodeRpc(const QString &address, const QString &socksAddress, const QString &path,
                        const QString &body, int timeoutMs, const QJSValue &callback)
 {
-    QThread *thread = QThread::create([this, address, socksAddress, path, body, timeoutMs, callback]() {
+    const quint64 callbackId = keepCallback(callback);
+    QThread *thread = QThread::create([this, address, socksAddress, path, body, timeoutMs, callbackId]() {
         QString target = address.trimmed();
         bool tls = false;
         if (target.startsWith("https://"))
@@ -614,8 +653,8 @@ void OSHelper::nodeRpc(const QString &address, const QString &socksAddress, cons
         const qint64 ms = r.totalMs;
         const QString answer = QString::fromUtf8(r.body);
         const QString error = r.error;
-        QMetaObject::invokeMethod(this, [callback, ok, ms, answer, error]() {
-            QJSValue cb(callback);
+        QMetaObject::invokeMethod(this, [this, callbackId, ok, ms, answer, error]() {
+            QJSValue cb = m_callbacks.take(callbackId);
             if (cb.isCallable())
                 cb.call(QJSValueList({ok, double(ms), answer, error}));
         }, Qt::QueuedConnection);

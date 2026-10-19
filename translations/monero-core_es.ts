@@ -768,6 +768,50 @@ Es recomendable escribirla en la billetera física para mayor seguridad.</transl
 <context>
     <name>LeftPanel</name>
     <message>
+        <source>open</source>
+        <translation>abierto</translation>
+    </message>
+    <message>
+        <source>closed · reopens on switch</source>
+        <translation>cerrado · se reabre al cambiar</translation>
+    </message>
+    <message>
+        <source>in background · synced</source>
+        <translation>en segundo plano · sincronizado</translation>
+    </message>
+    <message>
+        <source>in background · syncing %1</source>
+        <translation>en segundo plano · sincronizando %1</translation>
+    </message>
+    <message>
+        <source>Unlocked wallets stay loaded and keep syncing in the background. Passwords stay only in memory and are forgotten when the wallet locks or the app quits.</source>
+        <translation>Los monederos desbloqueados siguen cargados y sincronizando en segundo plano. Las contraseñas solo están en memoria y se olvidan al bloquearse el monedero o cerrar la app.</translation>
+    </message>
+    <message>
+        <source>Switch wallet</source>
+        <translation>Cambiar de monedero</translation>
+    </message>
+    <message>
+        <source>UNLOCKED WALLETS</source>
+        <translation>MONEDEROS DESBLOQUEADOS</translation>
+    </message>
+    <message>
+        <source>Open another wallet…</source>
+        <translation>Abrir otro monedero…</translation>
+    </message>
+    <message>
+        <source>Passwords stay only in memory and are forgotten when the wallet locks or the app quits.</source>
+        <translation>Las contraseñas solo se guardan en memoria y se olvidan al bloquearse el monedero o cerrar la app.</translation>
+    </message>
+    <message>
+        <source>Local node synchronized</source>
+        <translation>Nodo local sincronizado</translation>
+    </message>
+    <message>
+        <source>Local node synchronizing</source>
+        <translation>Nodo local sincronizando</translation>
+    </message>
+    <message>
         <location filename="../LeftPanel.qml" line="384"/>
         <source>Send</source>
         <translation>Enviar</translation>
@@ -1918,6 +1962,70 @@ El archivo de caché anterior del monedero será renombrado y puede ser posterio
 <context>
     <name>SettingsLayout</name>
     <message>
+        <source>Keep unlocked wallets syncing in the background and switch between them without the password (only in memory, forgotten on lock or quit)</source>
+        <translation>Mantener los monederos desbloqueados sincronizando en segundo plano y cambiar entre ellos sin contraseña (solo en memoria, se olvidan al bloquear o cerrar)</translation>
+    </message>
+    <message>
+        <source>Switch between unlocked wallets without the password (kept only in memory, forgotten on lock or quit)</source>
+        <translation>Cambiar entre monederos desbloqueados sin contraseña (solo en memoria, se olvidan al bloquear o cerrar)</translation>
+    </message>
+    <message>
+        <source>Desktop widget</source>
+        <translation>Widget de escritorio</translation>
+    </message>
+    <message>
+        <source>Show a panel on the wallpaper (drag to move, double click opens the wallet)</source>
+        <translation>Mostrar un panel en el fondo de pantalla (arrástralo para moverlo, doble clic abre el monedero)</translation>
+    </message>
+    <message>
+        <source>Price in:</source>
+        <translation>Precio en:</translation>
+    </message>
+    <message>
+        <source>24 h chart</source>
+        <translation>Gráfico de 24 h</translation>
+    </message>
+    <message>
+        <source>Node status</source>
+        <translation>Estado del nodo</translation>
+    </message>
+    <message>
+        <source>Background opacity:</source>
+        <translation>Opacidad del fondo:</translation>
+    </message>
+    <message>
+        <source>Menu bar</source>
+        <translation>Barra de menús</translation>
+    </message>
+    <message>
+        <source>Show icon in the macOS menu bar</source>
+        <translation>Mostrar icono en la barra de menús de macOS</translation>
+    </message>
+    <message>
+        <source>Next to the icon show:</source>
+        <translation>Mostrar junto al icono:</translation>
+    </message>
+    <message>
+        <source>XMR price in</source>
+        <translation>Precio de XMR en</translation>
+    </message>
+    <message>
+        <source>24 h change (▲/▼)</source>
+        <translation>Cambio 24 h (▲/▼)</translation>
+    </message>
+    <message>
+        <source>Wallet balance (hidden if the balance is hidden)</source>
+        <translation>Saldo del monedero (oculto si el saldo está oculto)</translation>
+    </message>
+    <message>
+        <source>Node sync % while synchronizing</source>
+        <translation>% de sincronización del nodo mientras sincroniza</translation>
+    </message>
+    <message>
+        <source>NYM status</source>
+        <translation>Estado de NYM</translation>
+    </message>
+    <message>
         <location filename="../pages/settings/SettingsLayout.qml" line="58"/>
         <source>Custom decorations</source>
         <translation>Decoraciones personalizadas</translation>
@@ -2099,6 +2207,14 @@ El archivo de caché anterior del monedero será renombrado y puede ser posterio
 <context>
     <name>SettingsNode</name>
     <message>
+        <source>Node</source>
+        <translation>Nodo</translation>
+    </message>
+    <message>
+        <source>External connections</source>
+        <translation>Conexiones externas</translation>
+    </message>
+    <message>
         <source>NymVPN</source>
         <translation>NymVPN</translation>
     </message>
@@ -2210,6 +2326,14 @@ El archivo de caché anterior del monedero será renombrado y puede ser posterio
         <location filename="../pages/settings/SettingsNode.qml" line="271"/>
         <source>Stop daemon</source>
         <translation>Detener demonio</translation>
+    </message>
+    <message>
+        <source>Starting…</source>
+        <translation>Iniciando…</translation>
+    </message>
+    <message>
+        <source>Stopping…</source>
+        <translation>Deteniendo…</translation>
     </message>
     <message>
         <location filename="../pages/settings/SettingsNode.qml" line="290"/>
@@ -2892,6 +3016,38 @@ Puedes cambiar la contraseña en las opciones del monedero.</translation>
 </context>
 <context>
     <name>TitleBar</name>
+    <message>
+        <source>Switch wallet</source>
+        <translation>Cambiar de monedero</translation>
+    </message>
+    <message>
+        <source>UNLOCKED WALLETS</source>
+        <translation>MONEDEROS DESBLOQUEADOS</translation>
+    </message>
+    <message>
+        <source>Open another wallet…</source>
+        <translation>Abrir otro monedero…</translation>
+    </message>
+    <message>
+        <source>open</source>
+        <translation>abierto</translation>
+    </message>
+    <message>
+        <source>closed · reopens on switch</source>
+        <translation>cerrado · se reabre al cambiar</translation>
+    </message>
+    <message>
+        <source>in background · synced</source>
+        <translation>en segundo plano · sincronizado</translation>
+    </message>
+    <message>
+        <source>in background · syncing %1</source>
+        <translation>en segundo plano · sincronizando %1</translation>
+    </message>
+    <message>
+        <source>Unlocked wallets stay loaded and keep syncing in the background. Passwords stay only in memory and are forgotten when the wallet locks or the app quits.</source>
+        <translation>Los monederos desbloqueados siguen cargados y sincronizando en segundo plano. Las contraseñas solo están en memoria y se olvidan al bloquearse el monedero o cerrar la app.</translation>
+    </message>
     <message>
         <location filename="../components/TitleBar.qml" line="118"/>
         <source>Lock this wallet</source>
@@ -4527,6 +4683,50 @@ Si no tienes la opción de ejecutar tu propio nodo, hay una opción de conectars
 <context>
     <name>main</name>
     <message>
+        <source>Wallet not found: %1</source>
+        <translation>No se encuentra el monedero: %1</translation>
+    </message>
+    <message>
+        <source>1 XMR · last 24 h</source>
+        <translation>1 XMR · últimas 24 h</translation>
+    </message>
+    <message>
+        <source>Wallet</source>
+        <translation>Monedero</translation>
+    </message>
+    <message>
+        <source>Balance</source>
+        <translation>Saldo</translation>
+    </message>
+    <message>
+        <source>Node synchronized · block %1</source>
+        <translation>Nodo sincronizado · bloque %1</translation>
+    </message>
+    <message>
+        <source>Node synchronizing · %1 / %2</source>
+        <translation>Nodo sincronizando · %1 / %2</translation>
+    </message>
+    <message>
+        <source>Node: no data</source>
+        <translation>Nodo: sin datos</translation>
+    </message>
+    <message>
+        <source>NYM: connected</source>
+        <translation>NYM: conectado</translation>
+    </message>
+    <message>
+        <source>NYM: connecting…</source>
+        <translation>NYM: conectando…</translation>
+    </message>
+    <message>
+        <source>NYM: off</source>
+        <translation>NYM: apagado</translation>
+    </message>
+    <message>
+        <source>Open XMR Wallet+</source>
+        <translation>Abrir XMR Wallet+</translation>
+    </message>
+    <message>
         <source>App traffic stays blocked. Press Reconnect again or Disconnect.</source>
         <translation>El tráfico de la app sigue bloqueado. Pulsa Reconectar de nuevo o Desconectar.</translation>
     </message>
@@ -5674,6 +5874,34 @@ Si no tienes la opción de ejecutar tu propio nodo, hay una opción de conectars
 <context>
     <name>WalletPlus</name>
     <message>
+        <source>Extra tools that XMR Wallet+ adds to the Monero wallet. All of them are optional: click a card to open it. Links open in your browser, which does not go through Nym.</source>
+        <translation>Herramientas extra que XMR Wallet+ añade a la cartera de Monero. Todas son opcionales: pulsa una tarjeta para abrirla. Los enlaces se abren en tu navegador, que no pasa por Nym.</translation>
+    </message>
+    <message>
+        <source>In Markets, Swaps tab</source>
+        <translation>En Mercados, pestaña Swaps</translation>
+    </message>
+    <message>
+        <source>Security</source>
+        <translation>Seguridad</translation>
+    </message>
+    <message>
+        <source>Where every connection of the app goes, a manager that scores and rotates nodes, extreme privacy mode (nothing leaves without Nym or a proxy) and a security center: file permissions, password strength and wallet backups.</source>
+        <translation>Adónde va cada conexión de la app, un gestor que puntúa y rota nodos, el modo de privacidad extrema (nada sale sin Nym o un proxy) y un centro de seguridad: permisos de archivos, fortaleza de la contraseña y copias de la cartera.</translation>
+    </message>
+    <message>
+        <source>Extreme privacy is on</source>
+        <translation>Privacidad extrema activada</translation>
+    </message>
+    <message>
+        <source>Sends this app through the Nym mixnet with its own Nym client, including the local node, so nodes and price services do not see your IP. It only needs the 24 words of a NymVPN account. With &quot;Nym required&quot; nothing connects while Nym is down.</source>
+        <translation>Envía esta app por la mixnet de Nym con su propio cliente Nym, incluido el nodo local, para que ni los nodos ni los servicios de precios vean tu IP. Solo necesita las 24 palabras de una cuenta NymVPN. Con &quot;Nym obligatorio&quot; no se conecta nada mientras Nym esté caído.</translation>
+    </message>
+    <message>
+        <source>Trezor Safe 7 over USB and Bluetooth with the encrypted Trezor Host Protocol, and the Safe 5. Customize the device from here: name, wallpaper with your own gallery, brightness, haptic feedback and auto-lock.</source>
+        <translation>Trezor Safe 7 por USB y Bluetooth con el Trezor Host Protocol cifrado, y el Safe 5. Personaliza el dispositivo desde aquí: nombre, fondo de pantalla con tu propia galería, brillo, respuesta háptica y bloqueo automático.</translation>
+    </message>
+    <message>
         <source>Customize</source>
         <translation>Personalizar</translation>
     </message>
@@ -5768,6 +5996,10 @@ Si no tienes la opción de ejecutar tu propio nodo, hay una opción de conectars
 </context>
 <context>
     <name>TradingData</name>
+    <message>
+        <source>VALUE</source>
+        <translation>VALOR</translation>
+    </message>
     <message>
         <source>Markets</source>
         <translation>Mercados</translation>
@@ -7042,6 +7274,130 @@ Si no tienes la opción de ejecutar tu propio nodo, hay una opción de conectars
     <message>
         <source>Invalid response from the Nym client.</source>
         <translation>Respuesta no válida del cliente Nym.</translation>
+    </message>
+</context>
+<context>
+    <name>DaemonSyncInfo</name>
+    <message>
+        <source>Last block</source>
+        <translation>Último bloque</translation>
+    </message>
+    <message>
+        <source>Blocks left</source>
+        <translation>Bloques restantes</translation>
+    </message>
+    <message>
+        <source>Last block time</source>
+        <translation>Hora del último bloque</translation>
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation>Progreso</translation>
+    </message>
+    <message>
+        <source>Progress per hour</source>
+        <translation>Progreso por hora</translation>
+    </message>
+    <message>
+        <source>Estimated time left</source>
+        <translation>Tiempo restante estimado</translation>
+    </message>
+    <message>
+        <source>Synchronized</source>
+        <translation>Sincronizado</translation>
+    </message>
+    <message>
+        <source>calculating…</source>
+        <translation>calculando…</translation>
+    </message>
+    <message>
+        <source>less than a minute</source>
+        <translation>menos de un minuto</translation>
+    </message>
+    <message>
+        <source>%1 minutes</source>
+        <translation>%1 minutos</translation>
+    </message>
+    <message>
+        <source>%1 hours</source>
+        <translation>%1 horas</translation>
+    </message>
+    <message>
+        <source>%1 days</source>
+        <translation>%1 días</translation>
+    </message>
+    <message>
+        <source>%1 weeks</source>
+        <translation>%1 semanas</translation>
+    </message>
+</context>
+<context>
+    <name>MarketsNavbar</name>
+    <message>
+        <source>Markets</source>
+        <translation>Mercados</translation>
+    </message>
+    <message>
+        <source>Swaps</source>
+        <translation>Swaps</translation>
+    </message>
+</context>
+<context>
+    <name>PriceChip</name>
+    <message>
+        <source>From the Markets data.</source>
+        <translation>Datos de Mercados.</translation>
+    </message>
+    <message>
+        <source>1 XMR · last 24 h</source>
+        <translation>1 XMR · últimas 24 h</translation>
+    </message>
+    <message>
+        <source>No prices yet: turn on External connections in Settings &gt; Node / Network.</source>
+        <translation>Aún no hay precios: activa Conexiones externas en Ajustes &gt; Nodo / Red.</translation>
+    </message>
+    <message>
+        <source>From the Markets data. Other currencies: USD price × exchange rate.</source>
+        <translation>Datos de Mercados. Otras monedas: precio en USD × tipo de cambio.</translation>
+    </message>
+</context>
+<context>
+    <name>DesktopWidget</name>
+    <message>
+        <source>Synchronized · %1</source>
+        <translation>Sincronizado · %1</translation>
+    </message>
+    <message>
+        <source>Synchronizing · %1%</source>
+        <translation>Sincronizando · %1%</translation>
+    </message>
+    <message>
+        <source>No data</source>
+        <translation>Sin datos</translation>
+    </message>
+    <message>
+        <source>Connected</source>
+        <translation>Conectado</translation>
+    </message>
+    <message>
+        <source>Connecting…</source>
+        <translation>Conectando…</translation>
+    </message>
+    <message>
+        <source>Off</source>
+        <translation>Apagado</translation>
+    </message>
+    <message>
+        <source>1 XMR · 24 h</source>
+        <translation>1 XMR · 24 h</translation>
+    </message>
+    <message>
+        <source>Balance</source>
+        <translation>Saldo</translation>
+    </message>
+    <message>
+        <source>Node</source>
+        <translation>Nodo</translation>
     </message>
 </context>
 </TS>

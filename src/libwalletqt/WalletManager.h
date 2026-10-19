@@ -36,6 +36,8 @@
 #include <QMutex>
 #include <QPointer>
 #include <QWaitCondition>
+#include <QMap>
+#include <QVariantList>
 #include "qt/FutureScheduler.h"
 #include "NetworkType.h"
 #include "PassphraseHelper.h"
@@ -123,6 +125,24 @@ public:
      * \brief closeWalletAsync - asynchronous version of "closeWallet"
      */
     Q_INVOKABLE void closeWalletAsync(const QJSValue& callback);
+
+    // XMR Wallet+ quick switch: hand the open wallet to a background thread (it saves its cache and
+    // waits for a pending refresh there) and return at once. Opening the same wallet again,
+    // waitClosingWalletsAsync() (quit) and the destructor wait until it is done
+    Q_INVOKABLE void closeWalletInBackground();
+    Q_INVOKABLE void waitClosingWalletsAsync(const QJSValue& callback);
+
+    // keep the open wallet loaded and syncing in the background. openWallet() on that path resumes
+    // it after checking the password, without reloading or rescanning. Only one hardware wallet is
+    // kept (they share the device); if the device asks for a passphrase or pairing while it is in
+    // the background, the request is declined and its sync pauses until it is resumed
+    Q_INVOKABLE void parkWallet();
+    Q_INVOKABLE void closeParkedHwWallets();
+    Q_INVOKABLE void closeParkedWallet(const QString &path);
+    Q_INVOKABLE void closeParkedWallets(const QString &keepPath = QString());
+    Q_INVOKABLE bool lastOpenResumed() const { return m_lastOpenResumed; }
+    // [{ path, height }] of the parked wallets
+    Q_INVOKABLE QVariantList parkedWallets() const;
 
     //! checks is given filename is a wallet;
     Q_INVOKABLE bool walletExists(const QString &path) const;
@@ -228,6 +248,14 @@ private:
     Monero::WalletManager * m_pimpl;
     mutable QMutex m_mutex;
     QPointer<Wallet> m_currentWallet;
+    void waitForClosingWallets(const QString &path);   // empty path: every wallet
+    QMutex m_closingMutex;
+    QWaitCondition m_closingCond;
+    QStringList m_closingPaths;
+    void closeInBackground(Wallet *wallet);
+    QMap<QString, Wallet *> m_parked;      // key: closingKey(path)
+    QMap<Wallet *, QList<QMetaObject::Connection>> m_parkedHooks;
+    bool m_lastOpenResumed = false;
     PassphraseReceiver * m_passphraseReceiver;
     QMutex m_mutex_passphraseReceiver;
     QString m_proxyAddress;

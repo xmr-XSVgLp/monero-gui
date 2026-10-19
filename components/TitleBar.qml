@@ -30,6 +30,7 @@ import QtQuick
 import QtQuick.Effects
 import QtQuick.Window
 import QtQuick.Layouts
+import QtQuick.Controls as QQC
 
 import FontAwesome
 
@@ -44,6 +45,7 @@ Rectangle {
     property bool showMaximizeButton: true
     property bool showCloseButton: true
     property string walletName: ""
+    property alias priceChip: priceChip
     property string deviceLabel: ""        // Trezor name, shown after the wallet name
     property bool hardwareWallet: false    // Trezor icon instead of the safe
     property bool removableWallet: false   // opened from a USB / SD drive: purple USB stick instead of the safe
@@ -355,6 +357,17 @@ Rectangle {
             visible: root.state == "essentials"
         }
 
+        // XMR price in mBTC with the 24 h trend (hover: every currency), only with prices on
+        MoneroComponents.PriceChip {
+            id: priceChip
+            visible: walletName.length > 0 && typeof appWindow !== "undefined" && persistentSettings.fiatPriceEnabled
+            Layout.alignment: Qt.AlignVCenter
+            Layout.preferredWidth: priceChip.implicitWidth
+            Layout.preferredHeight: priceChip.implicitHeight
+            Layout.minimumWidth: priceChip.implicitWidth
+            Layout.leftMargin: 10
+        }
+
         // monero logo
         Item {
             visible: walletName.length === 0
@@ -397,7 +410,7 @@ Rectangle {
                 readonly property color accent: root.removableWallet ? (MoneroComponents.Style.blackTheme ? "#A66BFF" : "#6B2FD6")
                                                                      : MoneroComponents.Style.orange
                 readonly property color ink: MoneroComponents.Style.blackTheme ? "#FFFFFF" : "#0B1F0F"
-                readonly property int nameMax: Math.max(40, parent.width - 120)
+                readonly property int nameMax: Math.max(40, parent.width - 170)
 
                 MoneroComponents.SafeIcon {
                     visible: !root.hardwareWallet && !root.removableWallet
@@ -458,6 +471,219 @@ Rectangle {
                     color: walletTitle.accent
                     font.family: MoneroComponents.Style.fontMonoBold.name
                     font.pixelSize: 19
+                }
+
+                // quick wallet switch (main.qml unlockedWallets)
+                Rectangle {
+                    id: walletSwitchButton
+                    visible: persistentSettings.quickWalletSwitch && typeof appWindow.currentWallet !== "undefined" && appWindow.currentWallet !== null
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: switchRow.implicitWidth + 14
+                    height: 22
+                    radius: 3
+                    color: switchArea.containsMouse || walletSwitchPopup.visible ? "#2600FF41" : "#99000000"
+                    border.width: 1
+                    border.color: switchArea.containsMouse || walletSwitchPopup.visible ? "#00FF41" : "#5500FF41"
+
+                    Row {
+                        id: switchRow
+                        anchors.centerIn: parent
+                        spacing: 5
+                        Text {
+                            text: "⇄"
+                            color: "#00FF41"
+                            font.pixelSize: 13
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                        Text {
+                            visible: appWindow.unlockedWallets.length > 1
+                            text: appWindow.unlockedWallets.length
+                            color: "#FFFFFF"
+                            font.family: MoneroComponents.Style.fontMonoRegular.name
+                            font.pixelSize: 11
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
+
+                    MouseArea {
+                        id: switchArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onEntered: if (!walletSwitchPopup.visible) switchTip.tooltipPopup.open()
+                        onExited: switchTip.tooltipPopup.close()
+                        onClicked: {
+                            switchTip.tooltipPopup.close();
+                            walletSwitchPopup.visible ? walletSwitchPopup.close() : walletSwitchPopup.open();
+                        }
+                    }
+
+                    MoneroComponents.Tooltip {
+                        id: switchTip
+                        text: qsTr("Switch wallet") + translationManager.emptyString
+                    }
+
+                    QQC.Popup {
+                        id: walletSwitchPopup
+                        x: (parent.width - width) / 2
+                        y: parent.height + 12
+                        width: 250
+                        padding: 10
+                        closePolicy: QQC.Popup.CloseOnEscape | QQC.Popup.CloseOnPressOutsideParent
+
+                        // wallets kept loaded in the background: path (without .keys) -> synced height
+                        property var parked: ({})
+                        function key(p) { return String(p).replace(/\.keys$/, ""); }
+                        function refreshParked() {
+                            var m = {};
+                            walletManager.parkedWallets().forEach(function(w) { m[key(w.path)] = w.height; });
+                            parked = m;
+                        }
+                        function stateText(path, current) {
+                            if (current) return qsTr("open") + translationManager.emptyString;
+                            var h = parked[key(path)];
+                            if (h === undefined) return qsTr("closed · reopens on switch") + translationManager.emptyString;
+                            if (appWindow.daemonTarget > 1 && h >= appWindow.daemonTarget - 1)
+                                return qsTr("in background · synced") + translationManager.emptyString;
+                            return qsTr("in background · syncing %1").arg(h) + translationManager.emptyString;
+                        }
+                        onOpened: refreshParked()
+                        Timer {
+                            interval: 2000
+                            repeat: true
+                            running: walletSwitchPopup.visible
+                            onTriggered: walletSwitchPopup.refreshParked()
+                        }
+                        background: MoneroComponents.NeonFrame {
+                            cut: 8
+                            accent: "#00FF41"
+                            lineOpacity: 0.9
+                            glow: 0.3
+                            fillColor: MoneroComponents.Style.blackTheme ? "#0C130E" : "#EEF1EE"
+                            fillOpacity: 0.97
+                            ticks: false
+                        }
+                        contentItem: ColumnLayout {
+                            spacing: 4
+                            Text {
+                                text: qsTr("UNLOCKED WALLETS") + translationManager.emptyString
+                                color: "#00FF41"
+                                font.family: MoneroComponents.Style.fontMonoMedium.name
+                                font.pixelSize: 11
+                                font.letterSpacing: 1
+                                Layout.bottomMargin: 4
+                            }
+                            Repeater {
+                                model: appWindow.unlockedWallets
+                                Rectangle {
+                                    readonly property bool current: modelData.path === persistentSettings.wallet_path
+                                    Layout.fillWidth: true
+                                    height: 40
+                                    radius: 3
+                                    color: rowArea.containsMouse && !current ? "#2600FF41" : "transparent"
+                                    border.width: current ? 1 : 0
+                                    border.color: "#5500FF41"
+                                    MouseArea {
+                                        id: rowArea
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: current ? Qt.ArrowCursor : Qt.PointingHandCursor
+                                        onClicked: {
+                                            if (current) return;
+                                            walletSwitchPopup.close();
+                                            appWindow.switchWallet(modelData.path);
+                                        }
+                                    }
+                                    RowLayout {
+                                        anchors.fill: parent
+                                        anchors.leftMargin: 8
+                                        anchors.rightMargin: 4
+                                        spacing: 6
+                                        Text {
+                                            text: current ? "●" : "○"
+                                            color: "#00FF41"
+                                            font.pixelSize: 10
+                                        }
+                                        Column {
+                                            Layout.fillWidth: true
+                                            spacing: 1
+                                            Text {
+                                                width: parent.width
+                                                text: modelData.name
+                                                elide: Text.ElideRight
+                                                color: MoneroComponents.Style.defaultFontColor
+                                                font.family: MoneroComponents.Style.fontRegular.name
+                                                font.pixelSize: 13
+                                            }
+                                            Text {
+                                                width: parent.width
+                                                text: walletSwitchPopup.stateText(modelData.path, current)
+                                                elide: Text.ElideRight
+                                                color: MoneroComponents.Style.dimmedFontColor
+                                                font.family: MoneroComponents.Style.fontMonoRegular.name
+                                                font.pixelSize: 10
+                                            }
+                                        }
+                                        Text {
+                                            visible: !current
+                                            text: "✕"
+                                            color: forgetArea.containsMouse ? "#FF5A5A" : MoneroComponents.Style.dimmedFontColor
+                                            font.pixelSize: 11
+                                            Layout.preferredWidth: 20
+                                            horizontalAlignment: Text.AlignHCenter
+                                            MouseArea {
+                                                id: forgetArea
+                                                anchors.fill: parent
+                                                anchors.margins: -4
+                                                hoverEnabled: true
+                                                cursorShape: Qt.PointingHandCursor
+                                                onClicked: appWindow.forgetUnlockedWallet(modelData.path)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            Rectangle {
+                                Layout.fillWidth: true
+                                Layout.topMargin: 4
+                                height: 1
+                                color: "#3300FF41"
+                            }
+                            Rectangle {
+                                Layout.fillWidth: true
+                                height: 30
+                                radius: 3
+                                color: openArea.containsMouse ? "#2600FF41" : "transparent"
+                                Text {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    anchors.left: parent.left
+                                    anchors.leftMargin: 8
+                                    text: "+  " + qsTr("Open another wallet…") + translationManager.emptyString
+                                    color: MoneroComponents.Style.defaultFontColor
+                                    font.family: MoneroComponents.Style.fontRegular.name
+                                    font.pixelSize: 13
+                                }
+                                MouseArea {
+                                    id: openArea
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        walletSwitchPopup.close();
+                                        appWindow.showWizard();
+                                    }
+                                }
+                            }
+                            Text {
+                                Layout.fillWidth: true
+                                Layout.topMargin: 2
+                                wrapMode: Text.WordWrap
+                                text: qsTr("Unlocked wallets stay loaded and keep syncing in the background. Passwords stay only in memory and are forgotten when the wallet locks or the app quits.") + translationManager.emptyString
+                                color: MoneroComponents.Style.dimmedFontColor
+                                font.pixelSize: 10
+                            }
+                        }
+                    }
                 }
 
                 // Trezor name, in brackets like the wallet name

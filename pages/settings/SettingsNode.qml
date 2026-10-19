@@ -41,6 +41,66 @@ Rectangle{
     Layout.fillWidth: true
     property alias nodeHeight: root.height
 
+    // local / remote node toggle: icon + name, selected = lit frame and green tint; the description in a tooltip
+    component NodeTypeButton: Item {
+        id: typeButton
+        property string kind: "local"
+        property string label: ""
+        property string tip: ""
+        property bool selected: false
+        readonly property bool hovered: typeArea.containsMouse
+        readonly property color accent: MoneroComponents.Style.blackTheme ? "#3DDC84" : "#2E7D4A"
+        signal clicked()
+        Layout.alignment: Qt.AlignVCenter
+        implicitWidth: typeRow.implicitWidth + 30
+        implicitHeight: 52
+
+        MoneroComponents.NeonFrame {
+            anchors.fill: parent
+            cut: 9
+            accent: typeButton.selected ? typeButton.accent : (MoneroComponents.Style.blackTheme ? "#E8ECE9" : "#2B3A30")
+            lineOpacity: typeButton.selected ? 0.9 : (typeButton.hovered ? 0.6 : 0.3)
+            fillColor: typeButton.accent
+            fillOpacity: typeButton.selected ? 0.14 : (typeButton.hovered ? 0.05 : 0.0)
+            glow: typeButton.selected ? 0.25 : 0.0
+            ticks: false
+        }
+        Row {
+            id: typeRow
+            anchors.centerIn: parent
+            spacing: 10
+            MoneroComponents.NodeTypeIcon {
+                anchors.verticalCenter: parent.verticalCenter
+                width: 32; height: 32
+                kind: typeButton.kind
+                accent: typeButton.accent
+                lit: typeButton.selected || typeButton.hovered
+            }
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: typeButton.label
+                color: typeButton.selected || typeButton.hovered ? MoneroComponents.Style.defaultFontColor : MoneroComponents.Style.dimmedFontColor
+                font.family: MoneroComponents.Style.fontMedium.name
+                font.pixelSize: 15
+            }
+        }
+        MoneroComponents.Tooltip {
+            id: typeTip
+            anchors.fill: parent
+            text: typeButton.tip
+        }
+        MouseArea {
+            id: typeArea
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: typeButton.selected ? Qt.ArrowCursor : Qt.PointingHandCursor
+            onEntered: typeTip.tooltipPopup.open()
+            onExited: typeTip.tooltipPopup.close()
+            onClicked: { typeTip.tooltipPopup.close(); typeButton.clicked(); }
+        }
+    }
+
+
     /* main layout */
     ColumnLayout {
         id: root
@@ -64,57 +124,92 @@ Rectangle{
 
             MoneroComponents.SectionTitle {
                 Layout.fillWidth: true
-                text: qsTr("Connection") + translationManager.emptyString
+                text: qsTr("Node") + translationManager.emptyString
             }
 
-            // local / remote node choice
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: 12
+            // one card: start/stop on the left, local / remote choice on the right (details in tooltips)
+            MoneroComponents.SettingsCard {
+                padding: 18
 
-                MoneroComponents.SettingsChoiceCard {
-                    id: localNodeChoice
-                    visible: !isAndroid
+                ColumnLayout {
                     Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    Layout.preferredWidth: 1
-                    iconText: FontAwesome.home
-                    title: qsTr("Local node") + translationManager.emptyString
-                    description: qsTr("The blockchain is downloaded to your computer. Provides higher security and requires more local storage.") + translationManager.emptyString
-                    selected: !persistentSettings.useRemoteNode
-                    onClicked: {
-                        if (persistentSettings.useRemoteNode) {
-                            persistentSettings.useRemoteNode = false;
-                            appWindow.disconnectRemoteNode();
+                    spacing: 18
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 12
+
+                        // red while it can stop the daemon, yellow and locked while starting or stopping
+                        MoneroComponents.StandardButton {
+                            readonly property int busy: appWindow.daemonStartStopInProgress
+                            readonly property color busyColor: MoneroComponents.Style.blackTheme ? "#FFD60A" : "#B8860B"
+                            visible: !persistentSettings.useRemoteNode
+                            Layout.alignment: Qt.AlignVCenter
+                            small: true
+                            enabled: busy === 0
+                            disabledOpacity: 1
+                            accent: busy !== 0 ? busyColor : appWindow.daemonRunning ? (MoneroComponents.Style.blackTheme ? "#FF4D4D" : "#C62828") : MoneroComponents.Style.orange
+                            textColor: busy !== 0 ? busyColor : appWindow.daemonRunning ? (MoneroComponents.Style.blackTheme ? "#FFD6D6" : "#C62828") : MoneroComponents.Style.textAccent
+                            text: (busy === 1 ? qsTr("Starting…") : busy === 2 ? qsTr("Stopping…") : appWindow.daemonRunning ? qsTr("Stop daemon") : qsTr("Start daemon")) + translationManager.emptyString
+                            onClicked: {
+                                if (busy !== 0)
+                                    return;
+                                if (appWindow.daemonRunning) {
+                                    appWindow.stopDaemon(function() {});
+                                } else {
+                                    persistentSettings.daemonFlags = daemonFlags.text;
+                                    appWindow.startDaemon(persistentSettings.daemonFlags);
+                                }
+                            }
+                        }
+
+                        Item { Layout.fillWidth: true }
+
+                        NodeTypeButton {
+                            id: localNodeChoice
+                            visible: !isAndroid
+                            kind: "local"
+                            label: qsTr("Local node") + translationManager.emptyString
+                            tip: qsTr("The blockchain is downloaded to your computer. Provides higher security and requires more local storage.") + translationManager.emptyString
+                            selected: !persistentSettings.useRemoteNode
+                            onClicked: {
+                                if (persistentSettings.useRemoteNode) {
+                                    persistentSettings.useRemoteNode = false;
+                                    appWindow.disconnectRemoteNode();
+                                }
+                            }
+                        }
+
+                        NodeTypeButton {
+                            id: remoteNodeChoice
+                            kind: "remote"
+                            label: qsTr("Remote node") + translationManager.emptyString
+                            tip: qsTr("Uses a third-party server to connect to the Monero network. Less secure, but easier on your computer.") + translationManager.emptyString
+                            selected: persistentSettings.useRemoteNode
+                            onClicked: {
+                                if (!persistentSettings.useRemoteNode) {
+                                    appWindow.connectRemoteNode();
+                                }
+                            }
                         }
                     }
-                }
 
-                MoneroComponents.SettingsChoiceCard {
-                    id: remoteNodeChoice
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    Layout.preferredWidth: 1
-                    iconText: FontAwesome.cloud
-                    title: qsTr("Remote node") + translationManager.emptyString
-                    description: qsTr("Uses a third-party server to connect to the Monero network. Less secure, but easier on your computer.") + translationManager.emptyString
-                    selected: persistentSettings.useRemoteNode
-                    onClicked: {
-                        if (!persistentSettings.useRemoteNode) {
-                            appWindow.connectRemoteNode();
-                        }
+                    Rectangle {
+                        visible: !persistentSettings.useRemoteNode
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 1
+                        color: MoneroComponents.Style.blackTheme ? "#E8ECE9" : "#2B3A30"
+                        opacity: 0.15
+                    }
+
+                    MoneroComponents.ConnectionCheck {
+                        visible: !persistentSettings.useRemoteNode
+                        Layout.fillWidth: true
                     }
                 }
             }
 
             // ---- remote node ----
-            MoneroComponents.SectionTitle {
-                Layout.fillWidth: true
-                Layout.topMargin: 14
-                visible: persistentSettings.useRemoteNode
-                text: qsTr("Remote node") + translationManager.emptyString
-            }
-
             MoneroComponents.WarningBox {
                 text: qsTr("To find a remote node, type 'Monero remote node' into your favorite search engine. Please ensure the node is run by a trusted third-party.") + translationManager.emptyString
                 visible: persistentSettings.useRemoteNode
@@ -124,53 +219,6 @@ Rectangle{
                 Layout.fillWidth: true
                 Layout.topMargin: 4
                 visible: persistentSettings.useRemoteNode
-            }
-
-            // ---- local node ----
-            MoneroComponents.SectionTitle {
-                Layout.fillWidth: true
-                Layout.topMargin: 14
-                visible: !persistentSettings.useRemoteNode
-                text: qsTr("Local node") + translationManager.emptyString
-            }
-
-            MoneroComponents.SettingsCard {
-                visible: !persistentSettings.useRemoteNode
-                padding: 18
-
-                ColumnLayout {
-                    id: localNodeLayout
-                    Layout.fillWidth: true
-                    spacing: 18
-
-                    // red while it can stop the daemon
-                    MoneroComponents.StandardButton {
-                        Layout.alignment: Qt.AlignHCenter
-                        small: true
-                        accent: appWindow.daemonRunning ? (MoneroComponents.Style.blackTheme ? "#FF4D4D" : "#C62828") : MoneroComponents.Style.orange
-                        textColor: appWindow.daemonRunning ? (MoneroComponents.Style.blackTheme ? "#FFD6D6" : "#C62828") : MoneroComponents.Style.textAccent
-                        text: (appWindow.daemonRunning ? qsTr("Stop daemon") : qsTr("Start daemon")) + translationManager.emptyString
-                        onClicked: {
-                            if (appWindow.daemonRunning) {
-                                appWindow.stopDaemon();
-                            } else {
-                                persistentSettings.daemonFlags = daemonFlags.text;
-                                appWindow.startDaemon(persistentSettings.daemonFlags);
-                            }
-                        }
-                    }
-
-                    Rectangle {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 1
-                        color: MoneroComponents.Style.blackTheme ? "#E8ECE9" : "#2B3A30"
-                        opacity: 0.15
-                    }
-
-                    MoneroComponents.ConnectionCheck {
-                        Layout.fillWidth: true
-                    }
-                }
             }
 
             // blockchain location, startup flags, bootstrap node: folded so they don't take the whole page
@@ -268,7 +316,7 @@ Rectangle{
             id: priceCard
             z: 2   // the open dropdowns must draw over the Network card below
             Layout.topMargin: 14
-            title: qsTr("Price conversion") + translationManager.emptyString
+            title: qsTr("External connections") + translationManager.emptyString
             summary: persistentSettings.fiatPriceEnabled
                      ? Utils.capitalize(persistentSettings.fiatPriceProvider) + " · " + persistentSettings.fiatPriceCurrency.replace(/^xmr/, "").toUpperCase() + " · " + qsTr("Swaps") + translationManager.emptyString
                      : qsTr("Off") + translationManager.emptyString

@@ -30,6 +30,7 @@
 
 #include <QtCore>
 #include <QtGui>
+#include <QWindow>
 #include "macoshelper.h"
 
 #import <Foundation/Foundation.h>
@@ -117,4 +118,95 @@ bool MacOSHelper::notify(const QString &title, const QString &message)
     [note release];
     return true;
 #pragma clang diagnostic pop
+}
+
+// ---- menu bar item ----
+static NSStatusItem *g_statusItem = nil;
+static std::function<void()> g_statusOpen;
+
+@interface WalletStatusTarget : NSObject
+- (void)openApp:(id)sender;
+@end
+
+@implementation WalletStatusTarget
+- (void)openApp:(id)sender
+{
+    Q_UNUSED(sender);
+    [NSApp activateIgnoringOtherApps:YES];
+    if (g_statusOpen)
+        g_statusOpen();
+}
+@end
+
+void MacOSHelper::setStatusItem(bool visible, const QString &title, const QStringList &lines,
+                                const QString &openLabel, const QImage &icon, std::function<void()> onOpen)
+{
+    static WalletStatusTarget *target = [[WalletStatusTarget alloc] init];
+    if (!visible)
+    {
+        if (g_statusItem)
+        {
+            [[NSStatusBar systemStatusBar] removeStatusItem:g_statusItem];
+            [g_statusItem release];
+            g_statusItem = nil;
+        }
+        return;
+    }
+    g_statusOpen = std::move(onOpen);
+    if (!g_statusItem)
+    {
+        g_statusItem = [[[NSStatusBar systemStatusBar] statusItemWithLength:NSVariableStatusItemLength] retain];
+        if (!icon.isNull())
+        {
+            CGImageRef cg = icon.toCGImage();
+            NSImage *image = [[NSImage alloc] initWithCGImage:cg size:NSMakeSize(18, 18)];
+            CGImageRelease(cg);
+            [image setTemplate:YES];   // black/white following the menu bar
+            g_statusItem.button.image = image;
+            [image release];
+        }
+        g_statusItem.button.imagePosition = NSImageLeft;
+        g_statusItem.button.font = [NSFont monospacedDigitSystemFontOfSize:12 weight:NSFontWeightRegular];
+    }
+    g_statusItem.button.title = title.isEmpty() ? @"" : [@" " stringByAppendingString:title.toNSString()];
+
+    NSMenu *menu = [[NSMenu alloc] init];
+    [menu setAutoenablesItems:NO];
+    for (const QString &line : lines)
+    {
+        if (line.isEmpty())
+        {
+            [menu addItem:[NSMenuItem separatorItem]];
+            continue;
+        }
+        NSMenuItem *item = [[NSMenuItem alloc] initWithTitle:line.toNSString() action:nil keyEquivalent:@""];
+        [item setEnabled:YES];
+        [menu addItem:item];
+        [item release];
+    }
+    if (!lines.isEmpty())
+        [menu addItem:[NSMenuItem separatorItem]];
+    NSMenuItem *open = [[NSMenuItem alloc] initWithTitle:openLabel.toNSString() action:@selector(openApp:) keyEquivalent:@""];
+    open.target = target;
+    [open setEnabled:YES];
+    [menu addItem:open];
+    [open release];
+    g_statusItem.menu = menu;
+    [menu release];
+}
+
+void MacOSHelper::pinToDesktop(QWindow *window)
+{
+    if (!window)
+        return;
+    NSView *view = reinterpret_cast<NSView *>(window->winId());
+    NSWindow *w = [view window];
+    if (!w)
+        return;
+    [w setLevel:CGWindowLevelForKey(kCGDesktopIconWindowLevelKey) + 1];
+    [w setCollectionBehavior:NSWindowCollectionBehaviorCanJoinAllSpaces
+                             | NSWindowCollectionBehaviorStationary
+                             | NSWindowCollectionBehaviorIgnoresCycle];
+    [w setHidesOnDeactivate:NO];
+    [w setHasShadow:NO];
 }

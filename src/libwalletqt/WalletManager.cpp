@@ -42,6 +42,7 @@
 #include <QMutex>
 #include <QMutexLocker>
 #include <QString>
+#include <thread>
 
 #include "qt/updater.h"
 #include "qt/ScopeGuard.h"
@@ -113,9 +114,181 @@ Wallet *WalletManager::createWallet(const QString &path, const QString &password
     return m_currentWallet;
 }
 
+static QString closingKey(QString path)
+{
+    if (path.endsWith(".keys"))
+        path.chop(5);
+    return QFileInfo(path).absoluteFilePath();
+}
+
+void WalletManager::closeWalletInBackground()
+{
+    Wallet *wallet = nullptr;
+    {
+        QMutexLocker locker(&m_mutex);
+        wallet = m_currentWallet.data();
+        m_currentWallet = nullptr;
+    }
+    closeInBackground(wallet);
+}
+
+void WalletManager::parkWallet()
+{
+    Wallet *wallet = nullptr;
+    {
+        QMutexLocker locker(&m_mutex);
+        wallet = m_currentWallet.data();
+        m_currentWallet = nullptr;
+    }
+    if (!wallet)
+        return;
+    if (wallet->isHwBacked()) {
+        // one device: never two hardware wallets talking to it from the background
+        closeParkedHwWallets();
+        // nobody answers device prompts in the background: decline them and pause the sync
+        QList<QMetaObject::Connection> hooks;
+        hooks << connect(wallet, &Wallet::walletPassphraseNeeded, wallet, [wallet](bool) {
+            qDebug() << "Parked hardware wallet needs a passphrase: pausing its sync";
+            wallet->pauseRefresh();
+            wallet->onPassphraseEntered(QString(), false, true);
+        });
+        hooks << connect(wallet, &Wallet::walletPairingCodeNeeded, wallet, [wallet]() {
+            qDebug() << "Parked hardware wallet needs pairing: pausing its sync";
+            wallet->pauseRefresh();
+            wallet->onPairingCodeEntered(QString(), true);
+        });
+        QMutexLocker locker(&m_mutex);
+        m_parkedHooks.insert(wallet, hooks);
+    }
+    QMutexLocker locker(&m_mutex);
+    m_parked.insert(closingKey(wallet->path()), wallet);
+    qDebug() << "Wallet parked, keeps syncing:" << wallet->path();
+}
+
+void WalletManager::closeParkedHwWallets()
+{
+    QList<Wallet *> wallets;
+    {
+        QMutexLocker locker(&m_mutex);
+        for (auto it = m_parked.begin(); it != m_parked.end();) {
+            if (it.value()->isHwBacked()) {
+                wallets.append(it.value());
+                it = m_parked.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    }
+    for (Wallet *wallet : wallets)
+        closeInBackground(wallet);
+}
+
+void WalletManager::closeParkedWallet(const QString &path)
+{
+    Wallet *wallet = nullptr;
+    {
+        QMutexLocker locker(&m_mutex);
+        wallet = m_parked.take(closingKey(path));
+    }
+    closeInBackground(wallet);
+}
+
+void WalletManager::closeParkedWallets(const QString &keepPath)
+{
+    QList<Wallet *> wallets;
+    {
+        QMutexLocker locker(&m_mutex);
+        const QString keep = keepPath.isEmpty() ? QString() : closingKey(keepPath);
+        for (auto it = m_parked.begin(); it != m_parked.end();) {
+            if (it.key() == keep) {
+                ++it;
+                continue;
+            }
+            wallets.append(it.value());
+            it = m_parked.erase(it);
+        }
+    }
+    for (Wallet *wallet : wallets)
+        closeInBackground(wallet);
+}
+
+QVariantList WalletManager::parkedWallets() const
+{
+    QVariantList result;
+    QMutexLocker locker(&m_mutex);
+    for (auto it = m_parked.cbegin(); it != m_parked.cend(); ++it) {
+        QVariantMap row;
+        row["path"] = it.value()->path();
+        row["height"] = it.value()->blockChainHeight();
+        result.append(row);
+    }
+    return result;
+}
+
+void WalletManager::closeInBackground(Wallet *wallet)
+{
+    if (!wallet)
+        return;
+    {
+        QMutexLocker locker(&m_mutex);
+        for (const auto &hook : m_parkedHooks.take(wallet))
+            disconnect(hook);
+    }
+    const QString key = closingKey(wallet->path());
+    {
+        QMutexLocker locker(&m_closingMutex);
+        m_closingPaths.append(key);
+    }
+    std::thread([this, wallet, key] {
+        delete wallet;
+        QMutexLocker locker(&m_closingMutex);
+        m_closingPaths.removeOne(key);
+        m_closingCond.wakeAll();
+    }).detach();
+}
+
+void WalletManager::waitForClosingWallets(const QString &path)
+{
+    const QString key = path.isEmpty() ? QString() : closingKey(path);
+    QMutexLocker locker(&m_closingMutex);
+    while (key.isEmpty() ? !m_closingPaths.isEmpty() : m_closingPaths.contains(key))
+        m_closingCond.wait(&m_closingMutex);
+}
+
+void WalletManager::waitClosingWalletsAsync(const QJSValue& callback)
+{
+    closeParkedWallets();
+    m_scheduler.run([this] {
+        waitForClosingWallets(QString());
+        return QJSValueList({true});
+    }, callback);
+}
+
 Wallet *WalletManager::openWallet(const QString &path, const QString &password, NetworkType::Type nettype, quint64 kdfRounds)
 {
+    // the same wallet may still be saving after a quick switch
+    waitForClosingWallets(path);
     QMutexLocker locker(&m_mutex);
+    m_lastOpenResumed = false;
+
+    // parked (still loaded and syncing): resume it if the password is right
+    const QString parkedKey = closingKey(path);
+    if (m_parked.contains(parkedKey)) {
+        const QString keysFile = path.endsWith(".keys") ? path : path + ".keys";
+        if (m_pimpl->verifyWalletPassword(keysFile.toStdString(), password.toStdString(), false, kdfRounds)) {
+            if (m_currentWallet) {
+                qDebug() << "Closing open m_currentWallet" << m_currentWallet;
+                delete m_currentWallet;
+            }
+            m_currentWallet = m_parked.take(parkedKey);
+            for (const auto &hook : m_parkedHooks.take(m_currentWallet.data()))
+                disconnect(hook);
+            m_lastOpenResumed = true;
+            qDebug() << "Resumed parked wallet" << path;
+            return m_currentWallet;
+        }
+        qDebug() << "Parked wallet: wrong password, opening normally (will fail)";
+    }
     WalletPassphraseListenerImpl tmpListener(this);
     m_mutex_passphraseReceiver.lock();
     m_passphraseReceiver = &tmpListener;
@@ -586,6 +759,8 @@ WalletManager::WalletManager(QObject *parent)
 
 WalletManager::~WalletManager()
 {
+    closeParkedWallets();
+    waitForClosingWallets(QString());
     m_scheduler.shutdownWaitForFinished();
 }
 

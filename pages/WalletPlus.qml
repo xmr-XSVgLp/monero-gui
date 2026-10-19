@@ -50,6 +50,9 @@ Rectangle {
         property string body: ""
         property string status: ""
         property color statusColor: MoneroComponents.Style.dimmedFontColor
+        // what a click anywhere on the card does (buttons and links inside keep their own action)
+        property var action: null
+        readonly property bool hot: cardArea.containsMouse && action !== null
         Layout.fillWidth: true
         Layout.fillHeight: true
         Layout.preferredWidth: 300
@@ -58,11 +61,29 @@ Rectangle {
         MoneroComponents.NeonFrame {
             anchors.fill: parent
             cut: 12
-            accent: pageWalletPlus.neutral
-            lineOpacity: 0.35
+            accent: card.hot ? pageWalletPlus.blue : pageWalletPlus.neutral
+            lineOpacity: card.hot ? 0.9 : 0.35
             fillColor: MoneroComponents.Style.blackTheme ? "#0C130E" : "#DADFDB"
             fillOpacity: 0.92
-            glow: 0.0
+            glow: card.hot ? 0.35 : 0.0
+        }
+        MouseArea {
+            id: cardArea
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: card.action !== null ? Qt.PointingHandCursor : Qt.ArrowCursor
+            onClicked: if (card.action !== null) card.action()
+        }
+        MoneroComponents.TextPlain {
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.margins: 16
+            visible: card.action !== null
+            text: "→"
+            font.pixelSize: 18
+            color: pageWalletPlus.blue
+            opacity: card.hot ? 1 : 0.45
+            themeTransition: false
         }
         Rectangle {
             anchors.left: parent.left
@@ -85,6 +106,7 @@ Rectangle {
 
             MoneroComponents.TextPlain {
                 Layout.fillWidth: true
+                Layout.rightMargin: 24
                 text: card.title
                 font.family: MoneroComponents.Style.fontMonoMedium.name
                 font.pixelSize: 15
@@ -163,7 +185,7 @@ Rectangle {
                 font.pixelSize: 14
                 color: MoneroComponents.Style.dimmedFontColor
                 themeTransition: false
-                text: qsTr("Extra tools that XMR Wallet+ adds to the Monero wallet. All of them are optional: open them from the menu under Wallet+ or from here. Links open in your browser, which does not go through Nym.") + translationManager.emptyString
+                text: qsTr("Extra tools that XMR Wallet+ adds to the Monero wallet. All of them are optional: click a card to open it. Links open in your browser, which does not go through Nym.") + translationManager.emptyString
             }
         }
 
@@ -178,36 +200,27 @@ Rectangle {
                 body: qsTr("XMR price in EUR, USD and BTC from 24 hours to all the history recorded, the value of this wallet over time, a converter and price alerts with a notification. Prices are saved in CSV files on this computer.") + translationManager.emptyString
                 status: pageWalletPlus.pricesOn ? "" : (qsTr("Needs price conversion, which is off: nothing connects to the price services.") + translationManager.emptyString)
                 statusColor: pageWalletPlus.warn
-                MoneroComponents.StandardButton {
-                    small: true
-                    visible: pageWalletPlus.pricesOn
-                    text: qsTr("Open") + translationManager.emptyString
-                    onClicked: pageWalletPlus.openPage("Trading")
-                }
-                MoneroComponents.StandardButton {
-                    small: true
-                    primary: false
-                    visible: !pageWalletPlus.pricesOn
-                    text: qsTr("Settings") + translationManager.emptyString
-                    onClicked: pageWalletPlus.openNodeSettings()
-                }
+                action: function() { pageWalletPlus.pricesOn ? pageWalletPlus.openPage("Trading") : pageWalletPlus.openNodeSettings() }
                 Link { url: "https://www.coingecko.com/es/monedas/monero" }
             }
 
             Card {
                 title: qsTr("Swaps") + translationManager.emptyString
                 body: qsTr("Compares how much you get when changing XMR for BTC, ETH, SOL, USDT and other coins on Wagyu, NonKYC and ChangeNOW, shows the best route between exchanges and compares with earlier prices. It only shows quotes: the swap itself is done on each exchange.") + translationManager.emptyString
-                status: pageWalletPlus.pricesOn ? "" : (qsTr("Needs price conversion, which is off: nothing connects to the price services.") + translationManager.emptyString)
-                statusColor: pageWalletPlus.warn
-                MoneroComponents.StandardButton {
-                    small: true
-                    visible: pageWalletPlus.pricesOn
-                    text: qsTr("Open") + translationManager.emptyString
-                    onClicked: pageWalletPlus.openPage("Swaps")
-                }
+                status: pageWalletPlus.pricesOn ? (qsTr("In Markets, Swaps tab") + translationManager.emptyString) : (qsTr("Needs price conversion, which is off: nothing connects to the price services.") + translationManager.emptyString)
+                statusColor: pageWalletPlus.pricesOn ? MoneroComponents.Style.dimmedFontColor : pageWalletPlus.warn
+                action: function() { pageWalletPlus.pricesOn ? pageWalletPlus.openPage("Swaps") : pageWalletPlus.openNodeSettings() }
                 Link { url: "https://wagyu.xyz" }
                 Link { url: "https://nonkyc.io" }
                 Link { url: "https://changenow.io" }
+            }
+
+            Card {
+                title: qsTr("Security") + translationManager.emptyString
+                body: qsTr("Where every connection of the app goes, a manager that scores and rotates nodes, extreme privacy mode (nothing leaves without Nym or a proxy) and a security center: file permissions, password strength and wallet backups.") + translationManager.emptyString
+                status: persistentSettings.extremePrivacy ? (qsTr("Extreme privacy is on") + translationManager.emptyString) : ""
+                statusColor: pageWalletPlus.good
+                action: function() { pageWalletPlus.openPage("Security") }
             }
 
             Card {
@@ -215,49 +228,25 @@ Rectangle {
                 body: (pageWalletPlus.hardware
                        ? qsTr("Private notes saved next to the wallet and encrypted with AES-256-GCM. They open with the wallet password and a confirmation on the Trezor, so the file is useless without that Trezor.")
                        : qsTr("Private notes saved next to the wallet and encrypted with AES-256-GCM. They open with the wallet password and the key comes from the wallet keys.")) + translationManager.emptyString
-                MoneroComponents.StandardButton {
-                    small: true
-                    text: qsTr("Open") + translationManager.emptyString
-                    onClicked: pageWalletPlus.openPage("Notes")
-                }
+                action: function() { pageWalletPlus.openPage("Notes") }
             }
 
             Card {
                 title: "NYM VPN"
-                body: qsTr("Sends only this app through the Nym mixnet, including the local node, so nodes and price services do not see your IP. With \"Nym required\" nothing connects while Nym is down. You need the NymVPN app and an account.") + translationManager.emptyString
+                body: qsTr("Sends this app through the Nym mixnet with its own Nym client, including the local node, so nodes and price services do not see your IP. It only needs the 24 words of a NymVPN account. With \"Nym required\" nothing connects while Nym is down.") + translationManager.emptyString
                 status: pageWalletPlus.nymText()
                 statusColor: (appWindow.nymVpnState === "connected" || appWindow.nymVpnState === "ready") ? pageWalletPlus.good : MoneroComponents.Style.dimmedFontColor
-                MoneroComponents.StandardButton {
-                    small: true
-                    primary: false
-                    text: qsTr("Node / Network") + translationManager.emptyString
-                    onClicked: pageWalletPlus.openNodeSettings()
-                }
+                action: function() { pageWalletPlus.openNodeSettings() }
                 Link { url: "https://nymvpn.com" }
             }
 
             Card {
-                title: "Trezor Safe 7"
-                body: qsTr("Support for the Trezor Safe 7 over USB and Bluetooth, with the new encrypted Trezor Host Protocol and pairing with the code shown on the device. The Trezor name appears in the title bar. Close Trezor Suite before opening the wallet.") + translationManager.emptyString
+                title: "Trezor"
+                body: qsTr("Trezor Safe 7 over USB and Bluetooth with the encrypted Trezor Host Protocol, and the Safe 5. Customize the device from here: name, wallpaper with your own gallery, brightness, haptic feedback and auto-lock.") + translationManager.emptyString
                 status: pageWalletPlus.hardware ? (qsTr("This wallet uses a hardware wallet") + translationManager.emptyString) : ""
                 statusColor: pageWalletPlus.good
-                MoneroComponents.StandardButton {
-                    small: true
-                    text: qsTr("Customize") + translationManager.emptyString
-                    onClicked: pageWalletPlus.openPage("Trezor")
-                }
+                action: function() { pageWalletPlus.openPage("Trezor") }
                 Link { url: "https://trezor.io/trezor-safe-7" }
-            }
-
-            Card {
-                title: qsTr("Privacy") + translationManager.emptyString
-                body: qsTr("The marks in the title bar show at a glance whether Nym is on, whether the node is local or remote and whether a Trezor is in use. Turning price conversion off stops every request to price services and exchanges.") + translationManager.emptyString
-                MoneroComponents.StandardButton {
-                    small: true
-                    primary: false
-                    text: qsTr("Node / Network") + translationManager.emptyString
-                    onClicked: pageWalletPlus.openNodeSettings()
-                }
             }
         }
 

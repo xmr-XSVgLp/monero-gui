@@ -30,6 +30,11 @@
 #define MACOSHELPER_H
 
 #include <QPixmap>
+#include <QImage>
+#include <QStringList>
+#include <functional>
+
+class QWindow;
 
 class MacOSHelper
 {
@@ -41,6 +46,12 @@ public:
     static QString bundlePath();
     static void disableWindowTabbing();
     static bool notify(const QString &title, const QString &message);
+    // menu bar (status bar) item: icon + title; its menu lists `lines` ("" = separator) and an
+    // item that brings the app to the front. visible = false removes it
+    static void setStatusItem(bool visible, const QString &title, const QStringList &lines,
+                              const QString &openLabel, const QImage &icon, std::function<void()> onOpen);
+    // put a window on the wallpaper: above the desktop icons, below every other window, on all Spaces
+    static void pinToDesktop(QWindow *window);
 };
 
 #endif //MACOSHELPER_H

@@ -56,6 +56,7 @@ Item {
     signal clicked()
 
     property color accent: MoneroComponents.Style.orange
+    property real disabledOpacity: 0.4
     readonly property color ink: MoneroComponents.Style.blackTheme ? "#000000" : "#FFFFFF"
     readonly property bool hovered: button.enabled && (buttonArea.containsMouse || button.focus)
     readonly property bool lit: hovered || buttonArea.pressed
@@ -75,7 +76,7 @@ Item {
     Item {
         id: body
         anchors.fill: parent
-        opacity: button.enabled ? 1 : 0.4
+        opacity: button.enabled ? 1 : button.disabledOpacity
         scale: buttonArea.pressed ? 0.96 : 1
         Behavior on scale { NumberAnimation { duration: 80 } }
 

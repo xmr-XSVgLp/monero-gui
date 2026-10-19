@@ -390,11 +390,11 @@ Rectangle {
     // balance at time t = balance now - every movement after t; value = balance(t) x price(t)
     property var balanceEvents: []    // [[t seconds, delta XMR], ...] oldest first
     property real balanceNow: 0
-    property var valuePoints: []      // [[t, value], ...] matching `points`
+    property var valuePoints: []      // [[t, value, balance], ...] matching `points`
     readonly property bool walletOpen: typeof appWindow !== "undefined" && !!appWindow.currentWallet
     readonly property bool balanceHidden: persistentSettings.hideBalance
                                           || (typeof appWindow !== "undefined" && appWindow.hideBalanceForced === true)
-    readonly property bool showValue: persistentSettings.tradingShowBalance && walletOpen && !balanceHidden
+    readonly property bool showValue: walletOpen && !balanceHidden
     readonly property real valueLast: valuePoints.length > 0 ? valuePoints[valuePoints.length - 1][1] : 0
     readonly property real valueFirst: valuePoints.length > 0 ? valuePoints[0][1] : 0
     readonly property real valueChangePct: valueFirst > 0 ? (valueLast / valueFirst - 1) * 100 : 0
@@ -440,7 +440,7 @@ Rectangle {
                 b -= balanceEvents[j][1];
                 j--;
             }
-            out.push([points[i][0], Math.max(0, b) * points[i][1]]);
+            out.push([points[i][0], Math.max(0, b) * points[i][1], Math.max(0, b)]);
         }
         out.reverse();
         valuePoints = out;
@@ -677,6 +677,8 @@ Rectangle {
         anchors.right: parent.right
         spacing: 20
 
+        MoneroComponents.MarketsNavbar { current: "Trading" }
+
         RowLayout {
             Layout.fillWidth: true
             spacing: 12
@@ -908,9 +910,10 @@ Rectangle {
                                 if (i !== pageTrading.hoverIndex) {
                                     pageTrading.hoverIndex = i;
                                     chart.requestPaint();
+                                    valueChart.requestPaint();
                                 }
                             }
-                            onExited: { pageTrading.hoverIndex = -1; chart.requestPaint(); }
+                            onExited: { pageTrading.hoverIndex = -1; chart.requestPaint(); valueChart.requestPaint(); }
                         }
                     }
 
@@ -937,22 +940,15 @@ Rectangle {
             subtitle: pageTrading.balanceHidden ? qsTr("Balance hidden") + translationManager.emptyString
                       : qsTr("Balance of this account × price of each moment, %1").arg("XMR/" + pageTrading.pairInfo.key) + translationManager.emptyString
 
-            // on its own line above the figures (next to them it went out of the card)
-            MoneroComponents.CheckBox {
-                visible: !pageTrading.balanceHidden
-                checked: persistentSettings.tradingShowBalance
-                toggleOnClick: false
-                text: qsTr("Show the value of this wallet over time") + translationManager.emptyString
-                onClicked: persistentSettings.tradingShowBalance = !persistentSettings.tradingShowBalance
-            }
-
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 36
                 visible: pageTrading.showValue
                 Stat {
-                    label: qsTr("NOW") + translationManager.emptyString
-                    value: pageTrading.valueLast > 0 ? pageTrading.fmt(pageTrading.valueLast) : "–"
+                    readonly property bool hovering: pageTrading.hoverIndex >= 0 && pageTrading.hoverIndex < pageTrading.valuePoints.length
+                    label: (hovering ? qsTr("VALUE") : qsTr("NOW")) + translationManager.emptyString
+                    value: hovering ? pageTrading.fmt(pageTrading.valuePoints[pageTrading.hoverIndex][1])
+                                    : pageTrading.valueLast > 0 ? pageTrading.fmt(pageTrading.valueLast) : "–"
                     valueColor: MoneroComponents.Style.textAccent
                 }
                 Stat {
@@ -962,56 +958,140 @@ Rectangle {
                 }
                 Stat {
                     label: qsTr("BALANCE") + translationManager.emptyString
-                    value: pageTrading.balanceNow.toFixed(4) + " XMR"
+                    // the balance at the hovered moment, like the value
+                    value: (pageTrading.hoverIndex >= 0 && pageTrading.hoverIndex < pageTrading.valuePoints.length
+                            ? pageTrading.valuePoints[pageTrading.hoverIndex][2] : pageTrading.balanceNow).toFixed(4) + " XMR"
                 }
                 Item { Layout.fillWidth: true }
+                Stat {
+                    visible: pageTrading.hoverIndex >= 0 && pageTrading.hoverIndex < pageTrading.valuePoints.length
+                    label: qsTr("DATE") + translationManager.emptyString
+                    value: visible ? pageTrading.fmtDate(pageTrading.valuePoints[pageTrading.hoverIndex][0]) : ""
+                }
             }
 
+            // same look as the price chart: grid with labels, dates below, crosshair on hover
+            // (the hover is shared with the price chart: both point at the same moment)
             Canvas {
                 id: valueChart
                 Layout.fillWidth: true
-                Layout.preferredHeight: pageTrading.showValue ? 170 : 0
+                Layout.preferredHeight: pageTrading.showValue ? 220 : 0
                 visible: pageTrading.showValue
+                readonly property int padL: 8
                 readonly property int padR: 84
+                readonly property int padT: 10
+                readonly property int padB: 26
                 property color lineColor: pageTrading.valueChangePct >= 0 ? pageTrading.upColor : pageTrading.downColor
                 property color neutralColor: pageTrading.neutral
+                property color gridColor: MoneroComponents.Style.blackTheme ? "#33FFFFFF" : "#22000000"
                 property color labelColor: MoneroComponents.Style.dimmedFontColor
                 onLineColorChanged: requestPaint()
+                onLabelColorChanged: requestPaint()
                 onWidthChanged: requestPaint()
                 onHeightChanged: requestPaint()
+
+                function range() {
+                    var pts = pageTrading.valuePoints;
+                    var lo = Infinity, hi = 0;
+                    for (var i = 0; i < pts.length; i++) { lo = Math.min(lo, pts[i][1]); hi = Math.max(hi, pts[i][1]); }
+                    var span = hi - lo || hi * 0.01 || 1;
+                    return { lo: lo - span * 0.08, hi: hi + span * 0.08 };
+                }
+                function xAt(i) {
+                    var n = pageTrading.valuePoints.length;
+                    return padL + (n > 1 ? i / (n - 1) : 0) * (width - padL - padR);
+                }
+                function yAt(v, r) {
+                    return padT + (1 - (v - r.lo) / (r.hi - r.lo)) * (height - padT - padB);
+                }
+
                 onPaint: {
                     var ctx = getContext("2d");
                     ctx.reset();
                     var pts = pageTrading.valuePoints;
                     if (pts.length < 2) return;
-                    var w = width - padR, h = height - 6;
-                    var lo = Infinity, hi = 0;
-                    for (var i = 0; i < pts.length; i++) { lo = Math.min(lo, pts[i][1]); hi = Math.max(hi, pts[i][1]); }
-                    var span = hi - lo || hi * 0.01 || 1;
-                    lo -= span * 0.08; hi += span * 0.08;
-                    function x(i) { return i / (pts.length - 1) * w; }
-                    function y(v) { return 3 + (1 - (v - lo) / (hi - lo)) * h; }
-                    ctx.font = "11px monospace";
-                    ctx.fillStyle = labelColor;
+                    var w = width, h = height;
+                    var r = range();
                     var info = pageTrading.pairInfo;
-                    ctx.fillText(info.prefix + " " + (hi - span * 0.08).toFixed(info.digits), w + 8, 12);
-                    ctx.fillText(info.prefix + " " + Math.max(0, lo + span * 0.08).toFixed(info.digits), w + 8, height - 4);
-                    var grad = ctx.createLinearGradient(0, 0, 0, height);
+                    ctx.font = "11px monospace";
+
+                    // grid + value labels
+                    ctx.lineWidth = 1;
+                    for (var g = 0; g <= 4; g++) {
+                        var gy = Math.round(padT + g * (h - padT - padB) / 4) + 0.5;
+                        ctx.strokeStyle = gridColor;
+                        ctx.setLineDash([2, 4]);
+                        ctx.beginPath(); ctx.moveTo(padL, gy); ctx.lineTo(w - padR, gy); ctx.stroke();
+                        var v = r.hi - (gy - padT) / (h - padT - padB) * (r.hi - r.lo);
+                        ctx.fillStyle = labelColor;
+                        ctx.fillText(Math.max(0, v).toFixed(info.digits), w - padR + 8, gy + 4);
+                    }
+                    ctx.setLineDash([]);
+
+                    // date labels
+                    ctx.fillStyle = labelColor;
+                    for (var d = 0; d <= 4; d++) {
+                        var di = Math.round(d * (pts.length - 1) / 4);
+                        var tx = xAt(di);
+                        var lbl = pageTrading.fmtDate(pts[di][0]);
+                        var tw = ctx.measureText(lbl).width;
+                        ctx.fillText(lbl, Math.max(padL, Math.min(tx - tw / 2, w - padR - tw)), h - 8);
+                    }
+
+                    // area + line
+                    var grad = ctx.createLinearGradient(0, padT, 0, h - padB);
                     grad.addColorStop(0, Qt.rgba(neutralColor.r, neutralColor.g, neutralColor.b, 0.10));
                     grad.addColorStop(1, Qt.rgba(neutralColor.r, neutralColor.g, neutralColor.b, 0.0));
                     ctx.beginPath();
-                    ctx.moveTo(0, height);
-                    for (i = 0; i < pts.length; i++) ctx.lineTo(x(i), y(pts[i][1]));
-                    ctx.lineTo(w, height);
+                    ctx.moveTo(xAt(0), h - padB);
+                    for (var i = 0; i < pts.length; i++) ctx.lineTo(xAt(i), yAt(pts[i][1], r));
+                    ctx.lineTo(xAt(pts.length - 1), h - padB);
                     ctx.closePath();
                     ctx.fillStyle = grad;
                     ctx.fill();
                     ctx.beginPath();
-                    for (i = 0; i < pts.length; i++) i === 0 ? ctx.moveTo(x(i), y(pts[i][1])) : ctx.lineTo(x(i), y(pts[i][1]));
+                    for (i = 0; i < pts.length; i++) i === 0 ? ctx.moveTo(xAt(i), yAt(pts[i][1], r)) : ctx.lineTo(xAt(i), yAt(pts[i][1], r));
                     ctx.lineJoin = "round";
                     ctx.strokeStyle = lineColor;
                     ctx.lineWidth = 2;
                     ctx.stroke();
+
+                    // last value marker
+                    ctx.fillStyle = lineColor;
+                    ctx.beginPath(); ctx.arc(xAt(pts.length - 1), yAt(pts[pts.length - 1][1], r), 3.5, 0, Math.PI * 2); ctx.fill();
+
+                    // crosshair
+                    var hi2 = pageTrading.hoverIndex;
+                    if (hi2 >= 0 && hi2 < pts.length) {
+                        var cx = Math.round(xAt(hi2)) + 0.5, cy = yAt(pts[hi2][1], r);
+                        ctx.strokeStyle = Qt.rgba(neutralColor.r, neutralColor.g, neutralColor.b, 0.5);
+                        ctx.lineWidth = 1;
+                        ctx.setLineDash([3, 3]);
+                        ctx.beginPath(); ctx.moveTo(cx, padT); ctx.lineTo(cx, h - padB); ctx.stroke();
+                        ctx.beginPath(); ctx.moveTo(padL, cy); ctx.lineTo(w - padR, cy); ctx.stroke();
+                        ctx.setLineDash([]);
+                        ctx.fillStyle = MoneroComponents.Style.blackTheme ? "#0C130E" : "#FFFFFF";
+                        ctx.strokeStyle = lineColor;
+                        ctx.lineWidth = 2;
+                        ctx.beginPath(); ctx.arc(cx, cy, 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+                    }
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    onPositionChanged: (mouse) => {
+                        var n = pageTrading.valuePoints.length;
+                        if (n < 2) return;
+                        var f = (mouse.x - valueChart.padL) / (valueChart.width - valueChart.padL - valueChart.padR);
+                        var i = Math.round(Math.max(0, Math.min(1, f)) * (n - 1));
+                        if (i !== pageTrading.hoverIndex) {
+                            pageTrading.hoverIndex = i;
+                            valueChart.requestPaint();
+                            chart.requestPaint();
+                        }
+                    }
+                    onExited: { pageTrading.hoverIndex = -1; valueChart.requestPaint(); chart.requestPaint(); }
                 }
             }
         }

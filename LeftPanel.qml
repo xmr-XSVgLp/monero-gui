@@ -28,6 +28,8 @@
 
 import QtQuick
 import QtQuick.Effects
+import QtQuick.Layouts
+import QtQuick.Controls as QQC
 import moneroComponents.Wallet 1.0
 import moneroComponents.NetworkType 1.0
 import moneroComponents.Clipboard 1.0
@@ -77,12 +79,12 @@ Rectangle {
         else if(pos === "Settings") menuColumn.previousButton = settingsButton
         else if(pos === "Advanced") menuColumn.previousButton = advancedButton
         else if(pos === "Account") menuColumn.previousButton = accountButton
-        else if(pos === "Swaps") menuColumn.previousButton = swapsButton
+        else if(pos === "Swaps") menuColumn.previousButton = tradingButton
         else if(pos === "Trading") menuColumn.previousButton = tradingButton
         else if(pos === "Notes") menuColumn.previousButton = notesButton
         else if(pos === "WalletPlus") menuColumn.previousButton = walletPlusButton
         else if(pos === "Security") menuColumn.previousButton = securityButton
-        else if(pos === "Trezor") menuColumn.previousButton = trezorButton
+        else if(pos === "Trezor") menuColumn.previousButton = walletPlusButton
         menuColumn.previousButton.checked = true
     }
 
@@ -176,6 +178,7 @@ Rectangle {
                     color: "#ff9323"
                     themeTransition: false
                 }
+
             }
 
             Item {
@@ -597,29 +600,6 @@ Rectangle {
             }
 
             MoneroComponents.MenuButtonDivider {
-                visible: swapsButton.visible && swapsButton.present
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.leftMargin: 20
-            }
-
-            // ------------- Swaps (subsection of Wallet+) ---------------
-            MoneroComponents.MenuButton {
-                id: swapsButton
-                anchors.left: parent.left
-                anchors.right: parent.right
-                blueAccent: true
-                text: qsTr("Swaps") + translationManager.emptyString
-                visible: persistentSettings.fiatPriceEnabled
-                under: walletPlusButton
-                onClicked: {
-                    menuColumn.previousButton.checked = false
-                    menuColumn.previousButton = swapsButton
-                    panel.swapsClicked()
-                }
-            }
-
-            MoneroComponents.MenuButtonDivider {
                 visible: notesButton.present
                 anchors.left: parent.left
                 anchors.right: parent.right
@@ -662,28 +642,6 @@ Rectangle {
                     panel.securityClicked()
                 }
             }
-
-            MoneroComponents.MenuButtonDivider {
-                visible: trezorButton.present
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.leftMargin: 20
-            }
-
-            // ------------- Trezor (subsection of Wallet+, device customization) ---------------
-            MoneroComponents.MenuButton {
-                id: trezorButton
-                anchors.left: parent.left
-                anchors.right: parent.right
-                blueAccent: true
-                text: "Trezor"
-                under: walletPlusButton
-                onClicked: {
-                    menuColumn.previousButton.checked = false
-                    menuColumn.previousButton = trezorButton
-                    panel.trezorClicked()
-                }
-            }
         } // Column
 
         } // Flickable
@@ -717,6 +675,52 @@ Rectangle {
             syncType: qsTr("Daemon") + translationManager.emptyString
             visible: !appWindow.disconnected
             height: 62
+
+            // hover: sync figures of the local node, blue border when synced, yellow while syncing
+            MouseArea {
+                id: daemonSyncHover
+                anchors.fill: parent
+                hoverEnabled: true
+                acceptedButtons: Qt.NoButton
+                enabled: !persistentSettings.useRemoteNode
+                onEntered: daemonSyncPopup.open()
+                onExited: daemonSyncPopup.close()
+            }
+
+            QQC.Popup {
+                id: daemonSyncPopup
+                x: parent.width + 8
+                y: parent.height - height
+                padding: 14
+                closePolicy: QQC.Popup.CloseOnEscape
+                readonly property color border: daemonSyncInfo.synced ? "#3B9EFF" : "#FFD60A"
+                background: MoneroComponents.NeonFrame {
+                    cut: 8
+                    accent: daemonSyncPopup.border
+                    lineOpacity: 0.9
+                    glow: 0.3
+                    fillColor: MoneroComponents.Style.blackTheme ? "#0C130E" : "#EEF1EE"
+                    fillOpacity: 0.97
+                    ticks: false
+                }
+                contentItem: ColumnLayout {
+                    spacing: 8
+                    Text {
+                        text: (daemonSyncInfo.synced ? qsTr("Local node synchronized") : qsTr("Local node synchronizing")) + translationManager.emptyString
+                        color: daemonSyncPopup.border
+                        font.family: MoneroComponents.Style.fontMonoMedium.name
+                        font.pixelSize: 12
+                        font.letterSpacing: 1
+                    }
+                    MoneroComponents.DaemonSyncInfo {
+                        id: daemonSyncInfo
+                        showBlockNumber: true
+                        // keep reading while the bar is shown, so the popup opens with fresh figures and a rate
+                        active: daemonProgressBar.visible && !persistentSettings.useRemoteNode
+                        pollHidden: true
+                    }
+                }
+            }
         }
         
         MoneroComponents.NetworkStatusItem {

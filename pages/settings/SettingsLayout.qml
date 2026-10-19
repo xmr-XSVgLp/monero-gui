@@ -133,6 +133,172 @@ Rectangle {
             }
         }
 
+        // ---- macOS menu bar ----
+        MoneroComponents.SectionTitle {
+            visible: Qt.platform.os === "osx"
+            Layout.fillWidth: true
+            Layout.topMargin: 12
+            text: qsTr("Menu bar") + translationManager.emptyString
+        }
+
+        MoneroComponents.SettingsCard {
+            visible: Qt.platform.os === "osx"
+
+            MoneroComponents.CheckBox {
+                checked: persistentSettings.menuBarEnabled
+                onClicked: persistentSettings.menuBarEnabled = !persistentSettings.menuBarEnabled
+                text: qsTr("Show icon in the macOS menu bar") + translationManager.emptyString
+            }
+
+            ColumnLayout {
+                visible: persistentSettings.menuBarEnabled
+                Layout.leftMargin: 32
+                spacing: 6
+
+                MoneroComponents.TextPlain {
+                    text: qsTr("Next to the icon show:") + translationManager.emptyString
+                    font.pixelSize: 14
+                    color: MoneroComponents.Style.dimmedFontColor
+                    themeTransition: false
+                }
+
+                MoneroComponents.CheckBox {
+                    checked: persistentSettings.menuBarPrice
+                    onClicked: { persistentSettings.menuBarPrice = !persistentSettings.menuBarPrice; Qt.callLater(appWindow.updateMenuBar); }
+                    text: qsTr("XMR price in") + translationManager.emptyString
+                }
+
+                // unit buttons on their own row (the checkbox text has no implicit width in a RowLayout)
+                RowLayout {
+                    Layout.leftMargin: 32
+                    spacing: 10
+                    Repeater {
+                        model: ["BTC", "EUR", "USD"]
+                        MoneroComponents.StandardButton {
+                            small: true
+                            primary: persistentSettings.menuBarPriceUnit === modelData
+                            enabled: persistentSettings.menuBarPrice
+                            text: modelData === "BTC" ? "mBTC" : modelData
+                            onClicked: { persistentSettings.menuBarPriceUnit = modelData; Qt.callLater(appWindow.updateMenuBar); }
+                        }
+                    }
+                }
+
+                MoneroComponents.CheckBox {
+                    enabled: persistentSettings.menuBarPrice
+                    checked: persistentSettings.menuBarChange
+                    onClicked: { persistentSettings.menuBarChange = !persistentSettings.menuBarChange; Qt.callLater(appWindow.updateMenuBar); }
+                    text: qsTr("24 h change (▲/▼)") + translationManager.emptyString
+                }
+
+                MoneroComponents.CheckBox {
+                    checked: persistentSettings.menuBarBalance
+                    onClicked: { persistentSettings.menuBarBalance = !persistentSettings.menuBarBalance; Qt.callLater(appWindow.updateMenuBar); }
+                    text: qsTr("Wallet balance (hidden if the balance is hidden)") + translationManager.emptyString
+                }
+
+                MoneroComponents.CheckBox {
+                    checked: persistentSettings.menuBarSync
+                    onClicked: { persistentSettings.menuBarSync = !persistentSettings.menuBarSync; Qt.callLater(appWindow.updateMenuBar); }
+                    text: qsTr("Node sync % while synchronizing") + translationManager.emptyString
+                }
+
+                MoneroComponents.CheckBox {
+                    checked: persistentSettings.menuBarNym
+                    onClicked: { persistentSettings.menuBarNym = !persistentSettings.menuBarNym; Qt.callLater(appWindow.updateMenuBar); }
+                    text: qsTr("NYM status") + translationManager.emptyString
+                }
+            }
+        }
+
+        // ---- macOS desktop widget ----
+        MoneroComponents.SectionTitle {
+            visible: Qt.platform.os === "osx"
+            Layout.fillWidth: true
+            Layout.topMargin: 12
+            text: qsTr("Desktop widget") + translationManager.emptyString
+        }
+
+        MoneroComponents.SettingsCard {
+            visible: Qt.platform.os === "osx"
+
+            MoneroComponents.CheckBox {
+                checked: persistentSettings.desktopWidgetEnabled
+                onClicked: persistentSettings.desktopWidgetEnabled = !persistentSettings.desktopWidgetEnabled
+                text: qsTr("Show a panel on the wallpaper (drag to move, double click opens the wallet)") + translationManager.emptyString
+            }
+
+            ColumnLayout {
+                visible: persistentSettings.desktopWidgetEnabled
+                Layout.leftMargin: 32
+                spacing: 6
+
+                MoneroComponents.TextPlain {
+                    text: qsTr("Price in:") + translationManager.emptyString
+                    font.pixelSize: 14
+                    color: MoneroComponents.Style.dimmedFontColor
+                    themeTransition: false
+                }
+
+                RowLayout {
+                    spacing: 10
+                    Repeater {
+                        model: ["BTC", "EUR", "USD"]
+                        MoneroComponents.StandardButton {
+                            small: true
+                            primary: persistentSettings.desktopWidgetUnit === modelData
+                            text: modelData === "BTC" ? "mBTC" : modelData
+                            onClicked: persistentSettings.desktopWidgetUnit = modelData
+                        }
+                    }
+                }
+
+                MoneroComponents.CheckBox {
+                    checked: persistentSettings.desktopWidgetChart
+                    onClicked: persistentSettings.desktopWidgetChart = !persistentSettings.desktopWidgetChart
+                    text: qsTr("24 h chart") + translationManager.emptyString
+                }
+
+                MoneroComponents.CheckBox {
+                    checked: persistentSettings.desktopWidgetBalance
+                    onClicked: persistentSettings.desktopWidgetBalance = !persistentSettings.desktopWidgetBalance
+                    text: qsTr("Wallet balance (hidden if the balance is hidden)") + translationManager.emptyString
+                }
+
+                MoneroComponents.CheckBox {
+                    checked: persistentSettings.desktopWidgetNode
+                    onClicked: persistentSettings.desktopWidgetNode = !persistentSettings.desktopWidgetNode
+                    text: qsTr("Node status") + translationManager.emptyString
+                }
+
+                MoneroComponents.CheckBox {
+                    checked: persistentSettings.desktopWidgetNym
+                    onClicked: persistentSettings.desktopWidgetNym = !persistentSettings.desktopWidgetNym
+                    text: qsTr("NYM status") + translationManager.emptyString
+                }
+
+                MoneroComponents.TextPlain {
+                    text: qsTr("Background opacity:") + translationManager.emptyString
+                    font.pixelSize: 14
+                    color: MoneroComponents.Style.dimmedFontColor
+                    themeTransition: false
+                }
+
+                RowLayout {
+                    spacing: 10
+                    Repeater {
+                        model: [0.3, 0.5, 0.75, 0.95]
+                        MoneroComponents.StandardButton {
+                            small: true
+                            primary: Math.abs(persistentSettings.desktopWidgetOpacity - modelData) < 0.01
+                            text: Math.round(modelData * 100) + "%"
+                            onClicked: persistentSettings.desktopWidgetOpacity = modelData
+                        }
+                    }
+                }
+            }
+        }
+
         // ---- security ----
         MoneroComponents.SectionTitle {
             Layout.fillWidth: true
@@ -167,6 +333,17 @@ Rectangle {
                 checked: persistentSettings.lockOnUserInActivity
                 onClicked: persistentSettings.lockOnUserInActivity = !persistentSettings.lockOnUserInActivity
                 text: qsTr("Lock wallet on inactivity") + translationManager.emptyString
+            }
+
+            MoneroComponents.CheckBox {
+                checked: persistentSettings.quickWalletSwitch
+                onClicked: {
+                    persistentSettings.quickWalletSwitch = !persistentSettings.quickWalletSwitch;
+                    appWindow.forgetOtherUnlockedWallets();
+                    if (persistentSettings.quickWalletSwitch && appWindow.currentWallet)
+                        appWindow.rememberUnlockedWallet(persistentSettings.wallet_path, appWindow.walletPassword, persistentSettings.nettype);
+                }
+                text: qsTr("Keep unlocked wallets syncing in the background and switch between them without the password (only in memory, forgotten on lock or quit)") + translationManager.emptyString
             }
 
             MoneroComponents.Slider {
