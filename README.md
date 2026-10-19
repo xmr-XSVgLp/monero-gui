@@ -24,6 +24,7 @@ and other platforms are untested. The interface is available in English and Span
 | Trezor over **Bluetooth** | ❌ | ✅ (macOS) |
 | Trezor passphrase entered on the device | ✅ | ✅ (also on the Safe 7) |
 | **Trezor settings** from the wallet: name, homescreen gallery, brightness, haptics, auto-lock | ❌ | ✅ |
+| Cancel a Trezor confirmation from the app (e.g. if the device freezes) | ❌ | ✅ |
 | **Several wallets open at once**, syncing in the background, switch without the password | ❌ | ✅ |
 | **Seed accounts**: extra wallets (addresses starting with 4) from the same seed + passphrase 1, 2, 3… | ❌ | ✅ |
 | SOCKS5 proxy (Tor, I2P…) | ✅ | ✅ |
@@ -47,7 +48,7 @@ and other platforms are untested. The interface is available in English and Span
 | **Swaps** comparison: Wagyu, NonKYC and ChangeNOW, best routes, price history in CSV | ❌ | ✅ |
 | **macOS menu bar icon** with price, balance, node and Nym status | ❌ | ✅ |
 | **Desktop widget** on the wallpaper (price, 24 h chart, balance, node, Nym) | ❌ | ✅ (macOS) |
-| Themes | Dark / light | 8 colour palettes (Matrix, Cyberpunk, Tron, Amber, Monero, Ice, Ultraviolet, Acid), each dark or light, with optional effects |
+| Themes | Dark / light | 8 colour palettes (Matrix, Cyberpunk, Tron, Amber, Monero, Ice, Ultraviolet, Acid), each dark or light and neon or matte, with optional effects |
 | Languages | 40+ | English and Spanish (other languages show the new texts in English) |
 | Platforms | Windows, macOS, Linux | macOS tested; others build from the same code, untested |
 | Ready-to-run download | ✅ | ✅ macOS app in [Releases](https://github.com/xmr-XSVgLp/monero-gui/releases) |
@@ -61,7 +62,14 @@ and other platforms are untested. The interface is available in English and Span
   adds THP over USB and over Bluetooth (CoreBluetooth on macOS), first-time pairing with the 6-digit code shown
   on the device, and passphrase entry on the device.
 - The Trezor's name is shown in the title bar next to the wallet name. While the device waits for a
-  confirmation, the wallet shows an animated Safe 7 and, when relevant, the address to compare.
+  confirmation, the wallet shows an animated Safe 7 and, when relevant, the address to compare. The top of that
+  window names the wallet being opened or used and the Trezor (remembered per wallet, so the very first opening
+  shows only the wallet).
+- **Cancel** in that window gives up the wait if the Trezor does not respond: the app stops waiting, tells the
+  device to cancel, and the operation ends as if it had been cancelled on the Trezor. If nothing answers, the
+  window closes after 8 seconds anyway.
+- The built-in homescreens keep their text in the middle of the screen, clear of the Safe 5 / Safe 7 status and
+  menu bars.
 - **Wallet+ → Trezor** changes the device settings from the wallet: name, homescreen (with a built-in gallery
   and your own images), brightness, haptic feedback and auto-lock time. Each change is confirmed on the device.
 - Close Trezor Suite before opening the wallet: the Safe 7 is used directly, not through Trezor Bridge.
@@ -74,7 +82,7 @@ and other platforms are untested. The interface is available in English and Span
   every background wallet. ✕ closes one. The option is in *Settings → Interface → Security*.
 - A Trezor wallet can sync in the background too while the device stays connected and unlocked (one Trezor
   wallet at a time). If it asks for a passphrase or pairing in the background, its sync pauses until you switch
-  back to it.
+  back to it. Switching back resumes the same session, so the Trezor does not ask for the passphrase again.
 - Closing a wallet no longer blocks the window: it saves and closes on its own thread. Quitting the app waits
   until every wallet has been saved.
 
@@ -137,7 +145,7 @@ Four tabs:
 - The phrase is sent to the helper through stdin and saved in plain text, owner-only, in
   `~/Monero/xmr-wallet-plus/nym.conf` (not in the macOS Keychain). **Forget** stops the client and deletes the
   phrase and the device keys. **Reconnect** picks a different random exit. **Nym required** keeps everything
-  blocked while Nym is down.
+  blocked while Nym is down; while Nym is connected the checkbox shows ticked and locked.
 - With Nym on, monerod uses proxy-friendly sync settings (longer peer timeouts, smaller block batches), so the
   local node keeps syncing through the mixnet.
 - **Connection check**: current IP, proxy, latency, a 1 MB speed test, reachability of Monero seed nodes and node
@@ -185,6 +193,8 @@ Four tabs:
 - **Themes**: the moon button in the title bar opens a list with Dark / Light and 8 colour palettes (Matrix,
   Cyberpunk, Tron, Amber, Monero, Ice, Ultraviolet, Acid). Every accent of the neon design follows the palette;
   error reds, greys and white text stay the same. The choice is saved. Some PNG images still use the Matrix green.
+- **Neon / Matte**: below Dark / Light. Neon is the bright original; Matte softens every palette: neutral grey
+  backgrounds instead of pure black or white, less glaring text and muted accents.
 - Redesigned pages, cards, dialogs and icons, with white text on the dark themes and narrower window buttons.
 - Cyberpunk "please wait" screen (opening / closing wallet…): neon HUD frame, scanlines, counter-rotating rings
   around the logo, glitching title and a segmented progress bar.
