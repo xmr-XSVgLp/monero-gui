@@ -25,7 +25,7 @@ Window {
 
     readonly property color upColor: "#3DDC84"
     readonly property color downColor: "#FF5A5A"
-    readonly property color accent: "#00FF41"
+    readonly property color accent: MoneroComponents.Style.c("#00FF41")
     readonly property color dim: "#9DB3A2"
     readonly property string unit: persistentSettings.desktopWidgetUnit
 

@@ -120,6 +120,11 @@ void WalletKeysFilesModel::findWallets(const QString &moneroAccountsDir)
         {
             continue;
         }
+        // seed accounts of a wallet (<wallet folder>/wallets_passphrase): only that wallet lists them
+        if (keysFileinfo.absolutePath().split('/').contains("wallets_passphrase"))
+        {
+            continue;
+        }
 
         QString wallet(keysFileinfo.path() + QDir::separator() + keysFileinfo.completeBaseName());
         auto networkTypeAndAddress = OSHelper::getNetworkTypeAndAddressFromFile(wallet);

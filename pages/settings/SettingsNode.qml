@@ -194,6 +194,13 @@ Rectangle{
                         }
                     }
 
+                    // external IPs of the local node (same list as Security > Connections)
+                    MoneroComponents.NodePeers {
+                        visible: !persistentSettings.useRemoteNode && appWindow.daemonRunning
+                        Layout.fillWidth: true
+                        showTitle: true
+                    }
+
                     Rectangle {
                         visible: !persistentSettings.useRemoteNode
                         Layout.fillWidth: true

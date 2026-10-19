@@ -137,6 +137,12 @@ public:
     // kept (they share the device); if the device asks for a passphrase or pairing while it is in
     // the background, the request is declined and its sync pauses until it is resumed
     Q_INVOKABLE void parkWallet();
+
+    // XMR Wallet+ seed accounts: create (and close) a wallet file from the same seed plus a seed
+    // offset passphrase, without touching the open wallet. callback(ok, error, address)
+    Q_INVOKABLE void createSeedOffsetWalletAsync(const QString &path, const QString &password, const QString &seed,
+                                                 const QString &seedOffset, NetworkType::Type nettype,
+                                                 quint64 restoreHeight, quint64 kdfRounds, const QJSValue &callback);
     Q_INVOKABLE void closeParkedHwWallets();
     Q_INVOKABLE void closeParkedWallet(const QString &path);
     Q_INVOKABLE void closeParkedWallets(const QString &keepPath = QString());

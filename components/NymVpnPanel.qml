@@ -233,6 +233,10 @@ Item {
 
                     // own label: CheckBox's label colour is reset by the theme transition
                     MoneroComponents.TextPlain {
+                        id: nymRequiredLabel
+                        // the "?" icon is drawn outside the text: keep room for it and keep it above the next items
+                        Layout.rightMargin: 20
+                        z: 2
                         text: qsTr("Nym required") + translationManager.emptyString
                         tooltipIconVisible: true
                         tooltip: qsTr("When checked, the app waits for its independent Nym client before connecting. A local node must be started with this proxy. The option is saved and Nym connects at startup.") + translationManager.emptyString
@@ -243,7 +247,10 @@ Item {
 
                         MouseArea {
                             anchors.fill: parent
+                            hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
+                            onEntered: nymRequiredLabel.tooltipPopup.open()
+                            onExited: nymRequiredLabel.tooltipPopup.close()
                             onClicked: persistentSettings.nymVpnRequired = !persistentSettings.nymVpnRequired
                         }
                     }
@@ -318,7 +325,10 @@ Item {
                 clip: true
                 Layout.fillWidth: true
                 Layout.preferredHeight: 2 * seedMetrics.height + topPadding + bottomPadding
-                visible: !nymPanel.active
+                // only to enter the phrase: hidden while (re)connecting and once an account is saved
+                // (Connect still sends the saved phrase); shown again after an error to change it
+                visible: !nymPanel.active && nymPanel.state_ !== "working"
+                         && (!oshelper.nymClient.accountSaved || nymPanel.state_ === "error")
                 enabled: nymPanel.state_ !== "working"
                 placeholderText: qsTr("Las 24 palabras de tu cuenta NymVPN")
                 wrapMode: TextEdit.Wrap

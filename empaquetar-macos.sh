@@ -20,6 +20,21 @@ rm -rf "$DIST"
 mkdir -p "$DIST"
 ditto "$SRC" "$APP"
 
+# offline GeoIP base (country of the node's peers) inside the app, so no other Mac has to download it.
+# Refreshed here when missing or older than 45 days.
+echo "== GeoIP base"
+GEOIP="$HOME/Monero/xmr-wallet-plus/geoip/dbip-country-lite.csv"
+if [ ! -f "$GEOIP" ] || [ -n "$(find "$GEOIP" -mtime +45 2>/dev/null)" ]; then
+  bash "$(dirname "$0")/actualizar-geoip.sh" || echo "WARNING: could not download the GeoIP base"
+fi
+if [ -f "$GEOIP" ]; then
+  mkdir -p "$APP/Contents/Resources/geoip"
+  cp "$GEOIP" "$APP/Contents/Resources/geoip/"
+  echo "OK: GeoIP base inside the app"
+else
+  echo "WARNING: the app goes without the GeoIP base (countries show as -)"
+fi
+
 # Folders where the app's non-Qt libraries live (pinned boost/protobuf/openssl and the rest)
 LIBPATHS=()
 for f in boost@1.85 protobuf@21 openssl@3 abseil hidapi libusb zeromq libsodium unbound libpgm \

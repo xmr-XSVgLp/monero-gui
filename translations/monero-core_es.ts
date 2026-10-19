@@ -3017,6 +3017,58 @@ Puedes cambiar la contraseña en las opciones del monedero.</translation>
 <context>
     <name>TitleBar</name>
     <message>
+        <source>Theme</source>
+        <translation>Tema</translation>
+    </message>
+    <message>
+        <source>THEME</source>
+        <translation>TEMA</translation>
+    </message>
+    <message>
+        <source>Dark</source>
+        <translation>Oscuro</translation>
+    </message>
+    <message>
+        <source>Light</source>
+        <translation>Claro</translation>
+    </message>
+    <message>
+        <source>NODE</source>
+        <translation>NODO</translation>
+    </message>
+    <message>
+        <source>closed</source>
+        <translation>cerrado</translation>
+    </message>
+    <message>
+        <source>ACCOUNTS OF THIS SEED</source>
+        <translation>CUENTAS DE ESTA SEMILLA</translation>
+    </message>
+    <message>
+        <source>Account 0 · main</source>
+        <translation>Cuenta 0 · principal</translation>
+    </message>
+    <message>
+        <source>Account %1 · passphrase "%1"</source>
+        <translation>Cuenta %1 · passphrase "%1"</translation>
+    </message>
+    <message>
+        <source>New account (passphrase "%1")</source>
+        <translation>Nueva cuenta (passphrase "%1")</translation>
+    </message>
+    <message>
+        <source>View-only wallets have no seed: new accounts can't be created.</source>
+        <translation>Los monederos de solo lectura no tienen semilla: no se pueden crear cuentas.</translation>
+    </message>
+    <message>
+        <source>Open account 0 to create new accounts.</source>
+        <translation>Abre la cuenta 0 para crear cuentas nuevas.</translation>
+    </message>
+    <message>
+        <source>Each account is a separate wallet (address starting with 4) restored from this seed with the seed offset passphrase shown. To recover it elsewhere you need the seed and that passphrase. Accounts share this wallet's password and sync on their own.</source>
+        <translation>Cada cuenta es un monedero aparte (dirección que empieza por 4) restaurado desde esta semilla con la passphrase de desplazamiento indicada. Para recuperarla en otra app necesitas la semilla y esa passphrase. Las cuentas comparten la contraseña de este monedero y sincronizan por su cuenta.</translation>
+    </message>
+    <message>
         <source>Switch wallet</source>
         <translation>Cambiar de monedero</translation>
     </message>
@@ -4683,6 +4735,18 @@ Si no tienes la opción de ejecutar tu propio nodo, hay una opción de conectars
 <context>
     <name>main</name>
     <message>
+        <source>This wallet has no seed (created from keys)</source>
+        <translation>Este monedero no tiene semilla (creado desde claves)</translation>
+    </message>
+    <message>
+        <source>Creating account %1...</source>
+        <translation>Creando cuenta %1...</translation>
+    </message>
+    <message>
+        <source>Could not create the account: %1</source>
+        <translation>No se pudo crear la cuenta: %1</translation>
+    </message>
+    <message>
         <source>Wallet not found: %1</source>
         <translation>No se encuentra el monedero: %1</translation>
     </message>
@@ -6195,6 +6259,18 @@ Si no tienes la opción de ejecutar tu propio nodo, hay una opción de conectars
 <context>
     <name>SecurityConnections</name>
     <message>
+        <source>LIVE</source>
+        <translation>EN VIVO</translation>
+    </message>
+    <message>
+        <source>IP copied: %1</source>
+        <translation>IP copiada: %1</translation>
+    </message>
+    <message>
+        <source>Connections of the app</source>
+        <translation>Conexiones de la app</translation>
+    </message>
+    <message>
         <source>through %1 (extreme privacy)</source>
         <translation>por %1 (privacidad extrema)</translation>
     </message>
@@ -7398,6 +7474,69 @@ Si no tienes la opción de ejecutar tu propio nodo, hay una opción de conectars
     <message>
         <source>Node</source>
         <translation>Nodo</translation>
+    </message>
+</context>
+<context>
+    <name>NodePeers</name>
+    <message>
+        <source>Countries from the offline DB-IP base (IP Geolocation by DB-IP): the IPs are not sent anywhere.</source>
+        <translation>Países según la base offline de DB-IP (IP Geolocation by DB-IP): las IPs no se envían a ningún sitio.</translation>
+    </message>
+    <message>
+        <source>Countries are not available: this build does not include the offline GeoIP base.</source>
+        <translation>Países no disponibles: esta versión no incluye la base GeoIP offline.</translation>
+    </message>
+    <message>
+        <source>External IPs of the local node</source>
+        <translation>IPs externas del nodo local</translation>
+    </message>
+    <message>
+        <source>through %1 (extreme privacy)</source>
+        <translation>por %1 (privacidad extrema)</translation>
+    </message>
+    <message>
+        <source>blocked until there is an approved route</source>
+        <translation>bloqueado hasta que haya una ruta aprobada</translation>
+    </message>
+    <message>
+        <source>through NymVPN (--proxy)</source>
+        <translation>por NymVPN (--proxy)</translation>
+    </message>
+    <message>
+        <source>through the --proxy of the startup flags</source>
+        <translation>por el --proxy de las opciones de arranque</translation>
+    </message>
+    <message>
+        <source>direct, with your real IP</source>
+        <translation>directo, con tu IP real</translation>
+    </message>
+    <message>
+        <source>The local node does not answer (%1).</source>
+        <translation>El nodo local no responde (%1).</translation>
+    </message>
+    <message>
+        <source>Unexpected answer from the local node.</source>
+        <translation>Respuesta inesperada del nodo local.</translation>
+    </message>
+    <message>
+        <source>%1 peers connected now. They see the IP monerod leaves with: %2.</source>
+        <translation>%1 pares conectados ahora. Ven la IP con la que sale monerod: %2.</translation>
+    </message>
+    <message>
+        <source>The Monero nodes monerod is connected to right now, with their IP and port.</source>
+        <translation>Los nodos de Monero a los que está conectado monerod ahora mismo, con su IP y puerto.</translation>
+    </message>
+    <message>
+        <source>LIVE</source>
+        <translation>EN VIVO</translation>
+    </message>
+    <message>
+        <source>IP copied: %1</source>
+        <translation>IP copiada: %1</translation>
+    </message>
+    <message>
+        <source>block %1</source>
+        <translation>bloque %1</translation>
     </message>
 </context>
 </TS>

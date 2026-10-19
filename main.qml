@@ -733,6 +733,109 @@ ApplicationWindow {
         walletManager.closeParkedWallets(persistentSettings.quickWalletSwitch && !currentWallet ? cur : "");
     }
 
+    // ---- seed accounts: more wallets ("4..." addresses) from the same seed + passphrase N ----
+    // account 0 is the wallet itself (no passphrase); account N lives in <wallet>.cuenta-N and was
+    // restored from the same seed with the seed offset passphrase "N"
+    // the accounts live in <wallet folder>/wallets_passphrase/<name>.cuenta-N, a folder the wallet list skips
+    readonly property string seedAccountsFolder: "wallets_passphrase"
+
+    function seedBasePath(path) {
+        var p = String(path).replace(/\.keys$/, "");
+        var m = p.match(/^(.*)\/wallets_passphrase\/([^\/]+)\.cuenta-\d+$/);
+        if (m) return m[1] + "/" + m[2];
+        return p.replace(/\.cuenta-\d+$/, "");
+    }
+
+    function seedAccountOffset(path) {
+        var m = String(path).replace(/\.keys$/, "").match(/\.cuenta-(\d+)$/);
+        return m ? parseInt(m[1]) : 0;
+    }
+
+    function seedAccountPath(base, n, ext) {
+        if (n === 0) return base + ext;
+        var i = base.lastIndexOf("/");
+        return base.substring(0, i) + "/" + seedAccountsFolder + "/" + base.substring(i + 1) + ".cuenta-" + n + ext;
+    }
+
+    // [{ offset, path }] of the accounts of the open wallet's seed that exist on disk
+    function seedAccounts() {
+        var cur = String(persistentSettings.wallet_path);
+        if (!cur) return [];
+        var base = seedBasePath(cur);
+        var ext = /\.keys$/.test(cur) ? ".keys" : "";
+        var list = [{ offset: 0, path: seedAccountPath(base, 0, ext) }];
+        var misses = 0;
+        for (var n = 1; n <= 100 && misses < 5; n++) {
+            var p = seedAccountPath(base, n, ext);
+            if (walletManager.walletExists(p)) {
+                list.push({ offset: n, path: p });
+                misses = 0;
+            } else {
+                misses++;
+            }
+        }
+        return list;
+    }
+
+    // the accounts share the wallet password: unlocking one unlocks the switch to all of them
+    function rememberSeedAccounts() {
+        if (!persistentSettings.quickWalletSwitch || !currentWallet || currentWallet.isHwBacked()) return;
+        seedAccounts().forEach(function(a) {
+            if (!unlockedWallets.some(function(w) { return w.path === a.path; }))
+                rememberUnlockedWallet(a.path, walletPassword, persistentSettings.nettype);
+        });
+    }
+
+    function canCreateSeedAccount() {
+        return !!currentWallet && !currentWallet.isHwBacked() && !viewOnly
+               && seedAccountOffset(persistentSettings.wallet_path) === 0;
+    }
+
+    function createSeedAccount() {
+        if (!canCreateSeedAccount()) return;
+        var seed = currentWallet.seed;
+        if (!seed) {
+            appWindow.showStatusMessage(qsTr("This wallet has no seed (created from keys)"), 6);
+            return;
+        }
+        var cur = String(persistentSettings.wallet_path);
+        var ext = /\.keys$/.test(cur) ? ".keys" : "";
+        var accounts = seedAccounts();
+        var n = accounts[accounts.length - 1].offset + 1;
+        var path = seedAccountPath(seedBasePath(cur), n, ext);
+        var password = walletPassword;
+        var nettype = persistentSettings.nettype;
+        appWindow.showProcessingSplash(qsTr("Creating account %1...").arg(n));
+        walletManager.createSeedOffsetWalletAsync(path, password, seed, String(n), nettype,
+                                                  currentWallet.walletCreationHeight, persistentSettings.kdfRounds,
+                                                  function(ok, error, address) {
+            hideProcessingSplash();
+            if (!ok) {
+                appWindow.showStatusMessage(qsTr("Could not create the account: %1").arg(error), 8);
+                return;
+            }
+            console.log("seed account", n, "created:", address);
+            rememberUnlockedWallet(path, password, nettype);
+            openSeedAccount(path);
+        });
+    }
+
+    // switch to another account of the same seed (same password)
+    function openSeedAccount(path) {
+        if (!currentWallet || path === persistentSettings.wallet_path) return;
+        if (isUnlockedWallet(path)) {
+            switchWallet(path);
+            return;
+        }
+        var password = walletPassword;
+        closeWallet(function() {
+            clearMoneroCardLabelText();
+            persistentSettings.wallet_path = path;
+            walletPassword = password;
+            initialize();
+        }, true);
+    }
+
     function switchWallet(path) {
         if (!currentWallet || path === persistentSettings.wallet_path) return;
         var w = unlockedWallets.filter(function(x) { return x.path === path; })[0];
@@ -1108,6 +1211,7 @@ ApplicationWindow {
         // wallet opened successfully, subscribing for wallet updates
         connectWallet(wallet)
         rememberUnlockedWallet(persistentSettings.wallet_path, walletPassword, persistentSettings.nettype);
+        rememberSeedAccounts();
 
         // the start page (Account) was shown before the wallet existed: fill it now
         if (middlePanel.state === "Account")
@@ -2415,6 +2519,7 @@ ApplicationWindow {
         property int walletMode: 2
         property int lockOnUserInActivityInterval: 10  // minutes
         property bool blackTheme: MoneroComponents.Style.blackTheme
+        property string themePalette: "matrix"   // colour palette (Style.palettes), chosen from the title bar
         property bool checkForUpdates: true
         property bool autosave: true
         property int autosaveMinutes: 10
@@ -2485,6 +2590,7 @@ ApplicationWindow {
 
         Component.onCompleted: {
             MoneroComponents.Style.blackTheme = persistentSettings.blackTheme
+            MoneroComponents.Style.themePalette = persistentSettings.themePalette
 
             if (!appWindow.fiatPriceAPIs.hasOwnProperty(fiatPriceProvider)) {
                 console.warn("unsupported fiat price provider \"" + fiatPriceProvider + "\", resetting");

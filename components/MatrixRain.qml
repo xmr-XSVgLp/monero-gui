@@ -6,10 +6,12 @@ import "../components" as MoneroComponents
 Item {
     id: rain
     property color accent: MoneroComponents.Style.orange
-    property color headColor: MoneroComponents.Style.blackTheme ? "#E8FFE8" : "#003B00"
+    property color headColor: MoneroComponents.Style.blackTheme ? MoneroComponents.Style.c("#E8FFE8") : MoneroComponents.Style.c("#003B00")
     property int fontPx: 14
     property int colW: 18
+    // stops with the window minimized or hidden: nobody sees it and the 30 fps loop costs CPU
     property bool running: visible && opacity > 0
+                           && Window.visibility !== Window.Minimized && Window.visibility !== Window.Hidden
     readonly property string glyphs: "ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ0123456789XMR$#"
     clip: true
 

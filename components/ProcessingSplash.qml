@@ -41,7 +41,7 @@ Rectangle {
     visible: false
     z: 11
 
-    readonly property color neon: "#00FF41"
+    readonly property color neon: MoneroComponents.Style.c("#00FF41")
     readonly property color cyan: "#00E5FF"
     readonly property color magenta: "#FF2BD6"
     property int tick: 0          // drives the hex stream and the bar
@@ -88,7 +88,7 @@ Rectangle {
         onPaint: {
             var ctx = getContext("2d");
             ctx.reset();
-            ctx.fillStyle = "#00FF41";
+            ctx.fillStyle = MoneroComponents.Style.c("#00FF41");
             for (var y = 0; y < height; y += 3)
                 ctx.fillRect(0, y, width, 1);
         }
@@ -102,8 +102,8 @@ Rectangle {
         opacity: 0.5
         gradient: Gradient {
             GradientStop { position: 0.0; color: "transparent" }
-            GradientStop { position: 0.9; color: "#2200FF41" }
-            GradientStop { position: 1.0; color: "#6600FF41" }
+            GradientStop { position: 0.9; color: MoneroComponents.Style.c("#2200FF41") }
+            GradientStop { position: 1.0; color: MoneroComponents.Style.c("#6600FF41") }
         }
         NumberAnimation on y {
             running: root.visible
@@ -257,7 +257,7 @@ Rectangle {
                     ctx.reset();
                     var c = width / 2, r = c - 3;
                     ctx.lineWidth = 2;
-                    ctx.strokeStyle = "#00FF41";
+                    ctx.strokeStyle = MoneroComponents.Style.c("#00FF41");
                     for (var i = 0; i < 24; i++) {
                         if (i % 6 === 5) continue;
                         var a = i / 24 * Math.PI * 2;
@@ -375,10 +375,10 @@ Rectangle {
                     readonly property int dist: head - index
                     width: 8
                     height: 6
-                    color: dist >= 0 && dist < 6 ? (dist === 0 ? "#FFFFFF" : root.neon) : "#1A00FF41"
+                    color: dist >= 0 && dist < 6 ? (dist === 0 ? "#FFFFFF" : root.neon) : MoneroComponents.Style.c("#1A00FF41")
                     opacity: dist >= 0 && dist < 6 ? 1 - dist * 0.14 : 1
                     border.width: 1
-                    border.color: "#3300FF41"
+                    border.color: MoneroComponents.Style.c("#3300FF41")
                 }
             }
         }

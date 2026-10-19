@@ -327,7 +327,7 @@ Rectangle {
             MoneroComponents.Tooltip {
                 id: btnSwitchThemeTooltip
                 anchors.fill: parent
-                text: MoneroComponents.Style.blackTheme ? qsTr("Switch to light theme") : qsTr("Switch to dark theme") + translationManager.emptyString
+                text: qsTr("Theme") + translationManager.emptyString
             }
 
             MouseArea {
@@ -343,7 +343,136 @@ Rectangle {
                     btnSwitchThemeTooltip.tooltipPopup.close()
                 }
                 onClicked: {
-                    MoneroComponents.Style.blackTheme = !MoneroComponents.Style.blackTheme;
+                    btnSwitchThemeTooltip.tooltipPopup.close();
+                    themePopup.visible ? themePopup.close() : themePopup.open();
+                }
+            }
+
+            // theme list: dark / light and the colour palette (saved in persistentSettings)
+            QQC.Popup {
+                id: themePopup
+                x: 0   // opens to the right: the button sits near the left edge of the window
+                y: parent.height + 4
+                width: 230
+                padding: 10
+                closePolicy: QQC.Popup.CloseOnEscape | QQC.Popup.CloseOnPressOutsideParent
+
+                function setTheme(palette, dark) {
+                    MoneroComponents.Style.themePalette = palette;
+                    MoneroComponents.Style.blackTheme = dark;
+                    persistentSettings.themePalette = palette;
+                    persistentSettings.blackTheme = dark;
+                }
+
+                background: MoneroComponents.NeonFrame {
+                    cut: 8
+                    accent: MoneroComponents.Style.orange
+                    lineOpacity: 0.9
+                    glow: 0.3
+                    fillColor: MoneroComponents.Style.blackTheme ? "#0C0E0D" : "#EEF0EE"
+                    fillOpacity: 0.97
+                    ticks: false
+                }
+                contentItem: ColumnLayout {
+                    spacing: 4
+                    Text {
+                        text: qsTr("THEME") + translationManager.emptyString
+                        color: MoneroComponents.Style.orange
+                        font.family: MoneroComponents.Style.fontMonoMedium.name
+                        font.pixelSize: 11
+                        font.letterSpacing: 1
+                        Layout.bottomMargin: 4
+                    }
+                    // dark / light
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.bottomMargin: 6
+                        spacing: 6
+                        Repeater {
+                            model: [{ dark: true, label: qsTr("Dark") + translationManager.emptyString, icon: FontAwesome.moonO },
+                                    { dark: false, label: qsTr("Light") + translationManager.emptyString, icon: "\uf185" }]
+                            Rectangle {
+                                readonly property bool current: MoneroComponents.Style.blackTheme === modelData.dark
+                                Layout.fillWidth: true
+                                height: 28
+                                radius: 3
+                                color: current ? MoneroComponents.Style.c("#2E00FF41")
+                                       : modeArea.containsMouse ? Qt.rgba(0.5, 0.5, 0.5, 0.12) : "transparent"
+                                border.width: 1
+                                border.color: current ? MoneroComponents.Style.orange : Qt.rgba(0.5, 0.5, 0.5, 0.35)
+                                Row {
+                                    anchors.centerIn: parent
+                                    spacing: 6
+                                    Text {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: modelData.icon
+                                        font.family: FontAwesome.fontFamily
+                                        font.pixelSize: 12
+                                        color: MoneroComponents.Style.defaultFontColor
+                                    }
+                                    Text {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: modelData.label
+                                        font.family: MoneroComponents.Style.fontRegular.name
+                                        font.pixelSize: 12
+                                        color: MoneroComponents.Style.defaultFontColor
+                                    }
+                                }
+                                MouseArea {
+                                    id: modeArea
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: themePopup.setTheme(MoneroComponents.Style.themePalette, modelData.dark)
+                                }
+                            }
+                        }
+                    }
+                    Repeater {
+                        model: MoneroComponents.Style.paletteOrder
+                        Rectangle {
+                            readonly property var pal: MoneroComponents.Style.palettes[modelData]
+                            readonly property bool current: MoneroComponents.Style.themePalette === modelData
+                            Layout.fillWidth: true
+                            height: 30
+                            radius: 3
+                            color: palArea.containsMouse && !current ? Qt.rgba(0.5, 0.5, 0.5, 0.12) : "transparent"
+                            border.width: current ? 1 : 0
+                            border.color: pal.color
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.leftMargin: 8
+                                anchors.rightMargin: 8
+                                spacing: 10
+                                Rectangle {
+                                    width: 12
+                                    height: 12
+                                    radius: 6
+                                    color: pal.color
+                                }
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: pal.name
+                                    color: MoneroComponents.Style.defaultFontColor
+                                    font.family: MoneroComponents.Style.fontRegular.name
+                                    font.pixelSize: 13
+                                }
+                                Text {
+                                    visible: current
+                                    text: "✓"
+                                    color: pal.color
+                                    font.pixelSize: 13
+                                }
+                            }
+                            MouseArea {
+                                id: palArea
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: themePopup.setTheme(modelData, MoneroComponents.Style.blackTheme)
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -417,6 +546,14 @@ Rectangle {
                     anchors.verticalCenter: parent.verticalCenter
                     width: 22
                     height: 22
+
+                    // seed accounts menu
+                    MouseArea {
+                        anchors.fill: parent
+                        anchors.margins: -4
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: seedAccountsPopup.visible ? seedAccountsPopup.close() : seedAccountsPopup.open()
+                    }
                 }
 
                 MoneroComponents.UsbIcon {
@@ -425,6 +562,178 @@ Rectangle {
                     width: 22
                     height: 22
                     accent: walletTitle.accent
+
+                    MouseArea {
+                        anchors.fill: parent
+                        anchors.margins: -4
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: seedAccountsPopup.visible ? seedAccountsPopup.close() : seedAccountsPopup.open()
+                    }
+                }
+
+                // accounts of this seed: wallet + passphrase 1, 2, 3... (main.qml seedAccounts)
+                QQC.Popup {
+                    id: seedAccountsPopup
+                    x: 0
+                    y: walletTitle.height + 14
+                    width: 330
+                    padding: 12
+                    closePolicy: QQC.Popup.CloseOnEscape | QQC.Popup.CloseOnPressOutside
+
+                    property var accounts: []
+                    property var parked: ({})
+                    function key(p) { return String(p).replace(/\.keys$/, ""); }
+                    function refresh() {
+                        accounts = appWindow.seedAccounts();
+                        var m = {};
+                        walletManager.parkedWallets().forEach(function(w) { m[key(w.path)] = w.height; });
+                        parked = m;
+                    }
+                    function stateText(path, current) {
+                        if (current) return qsTr("open") + translationManager.emptyString;
+                        var h = parked[key(path)];
+                        if (h === undefined) return qsTr("closed") + translationManager.emptyString;
+                        if (appWindow.daemonTarget > 1 && h >= appWindow.daemonTarget - 1)
+                            return qsTr("in background · synced") + translationManager.emptyString;
+                        return qsTr("in background · syncing %1").arg(h) + translationManager.emptyString;
+                    }
+                    onOpened: refresh()
+                    Timer {
+                        interval: 2000
+                        repeat: true
+                        running: seedAccountsPopup.visible
+                        onTriggered: seedAccountsPopup.refresh()
+                    }
+
+                    background: MoneroComponents.NeonFrame {
+                        cut: 8
+                        accent: MoneroComponents.Style.c("#00FF41")
+                        lineOpacity: 0.9
+                        glow: 0.3
+                        fillColor: MoneroComponents.Style.blackTheme ? "#0C130E" : "#EEF1EE"
+                        fillOpacity: 0.97
+                        ticks: false
+                    }
+
+                    contentItem: ColumnLayout {
+                        spacing: 4
+                        Text {
+                            text: qsTr("ACCOUNTS OF THIS SEED") + translationManager.emptyString
+                            color: MoneroComponents.Style.c("#00FF41")
+                            font.family: MoneroComponents.Style.fontMonoMedium.name
+                            font.pixelSize: 11
+                            font.letterSpacing: 1
+                            Layout.bottomMargin: 4
+                        }
+                        Repeater {
+                            model: seedAccountsPopup.accounts
+                            Rectangle {
+                                readonly property bool current: modelData.path === persistentSettings.wallet_path
+                                Layout.fillWidth: true
+                                height: 40
+                                radius: 3
+                                color: accArea.containsMouse && !current ? MoneroComponents.Style.c("#2600FF41") : "transparent"
+                                border.width: current ? 1 : 0
+                                border.color: MoneroComponents.Style.c("#5500FF41")
+                                MouseArea {
+                                    id: accArea
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: current ? Qt.ArrowCursor : Qt.PointingHandCursor
+                                    onClicked: {
+                                        if (current) return;
+                                        seedAccountsPopup.close();
+                                        appWindow.openSeedAccount(modelData.path);
+                                    }
+                                }
+                                RowLayout {
+                                    anchors.fill: parent
+                                    anchors.leftMargin: 8
+                                    anchors.rightMargin: 8
+                                    spacing: 8
+                                    Text {
+                                        text: current ? "●" : "○"
+                                        color: MoneroComponents.Style.c("#00FF41")
+                                        font.pixelSize: 10
+                                    }
+                                    Column {
+                                        Layout.fillWidth: true
+                                        spacing: 1
+                                        Text {
+                                            width: parent.width
+                                            elide: Text.ElideRight
+                                            text: (modelData.offset === 0
+                                                   ? qsTr("Account 0 · main")
+                                                   : qsTr("Account %1 · passphrase \"%1\"").arg(modelData.offset)) + translationManager.emptyString
+                                            color: MoneroComponents.Style.defaultFontColor
+                                            font.family: MoneroComponents.Style.fontRegular.name
+                                            font.pixelSize: 13
+                                        }
+                                        Text {
+                                            width: parent.width
+                                            elide: Text.ElideRight
+                                            text: seedAccountsPopup.stateText(modelData.path, current)
+                                            color: MoneroComponents.Style.dimmedFontColor
+                                            font.family: MoneroComponents.Style.fontMonoRegular.name
+                                            font.pixelSize: 10
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.topMargin: 4
+                            height: 1
+                            color: MoneroComponents.Style.c("#3300FF41")
+                        }
+                        Rectangle {
+                            visible: appWindow.canCreateSeedAccount()
+                            Layout.fillWidth: true
+                            height: 30
+                            radius: 3
+                            color: newArea.containsMouse ? MoneroComponents.Style.c("#2600FF41") : "transparent"
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.left: parent.left
+                                anchors.leftMargin: 8
+                                text: "+  " + qsTr("New account (passphrase \"%1\")").arg(
+                                          seedAccountsPopup.accounts.length > 0 ? seedAccountsPopup.accounts[seedAccountsPopup.accounts.length - 1].offset + 1 : 1)
+                                      + translationManager.emptyString
+                                color: MoneroComponents.Style.defaultFontColor
+                                font.family: MoneroComponents.Style.fontRegular.name
+                                font.pixelSize: 13
+                            }
+                            MouseArea {
+                                id: newArea
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    seedAccountsPopup.close();
+                                    appWindow.createSeedAccount();
+                                }
+                            }
+                        }
+                        Text {
+                            visible: !appWindow.canCreateSeedAccount()
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            text: (appWindow.viewOnly
+                                   ? qsTr("View-only wallets have no seed: new accounts can't be created.")
+                                   : qsTr("Open account 0 to create new accounts.")) + translationManager.emptyString
+                            color: MoneroComponents.Style.dimmedFontColor
+                            font.pixelSize: 11
+                        }
+                        Text {
+                            Layout.fillWidth: true
+                            Layout.topMargin: 2
+                            wrapMode: Text.WordWrap
+                            text: qsTr("Each account is a separate wallet (address starting with 4) restored from this seed with the seed offset passphrase shown. To recover it elsewhere you need the seed and that passphrase. Accounts share this wallet's password and sync on their own.") + translationManager.emptyString
+                            color: MoneroComponents.Style.dimmedFontColor
+                            font.pixelSize: 10
+                        }
+                    }
                 }
 
                 MoneroComponents.TrezorIcon {
@@ -476,14 +785,16 @@ Rectangle {
                 // quick wallet switch (main.qml unlockedWallets)
                 Rectangle {
                     id: walletSwitchButton
+                    // seed accounts (wallets_passphrase) stay in their wallet's own menu, not here
+                    readonly property var wallets: appWindow.unlockedWallets.filter(function(w) { return appWindow.seedAccountOffset(w.path) === 0; })
                     visible: persistentSettings.quickWalletSwitch && typeof appWindow.currentWallet !== "undefined" && appWindow.currentWallet !== null
                     anchors.verticalCenter: parent.verticalCenter
                     width: switchRow.implicitWidth + 14
                     height: 22
                     radius: 3
-                    color: switchArea.containsMouse || walletSwitchPopup.visible ? "#2600FF41" : "#99000000"
+                    color: switchArea.containsMouse || walletSwitchPopup.visible ? MoneroComponents.Style.c("#2600FF41") : "#99000000"
                     border.width: 1
-                    border.color: switchArea.containsMouse || walletSwitchPopup.visible ? "#00FF41" : "#5500FF41"
+                    border.color: switchArea.containsMouse || walletSwitchPopup.visible ? MoneroComponents.Style.c("#00FF41") : MoneroComponents.Style.c("#5500FF41")
 
                     Row {
                         id: switchRow
@@ -491,13 +802,13 @@ Rectangle {
                         spacing: 5
                         Text {
                             text: "⇄"
-                            color: "#00FF41"
+                            color: MoneroComponents.Style.c("#00FF41")
                             font.pixelSize: 13
                             anchors.verticalCenter: parent.verticalCenter
                         }
                         Text {
-                            visible: appWindow.unlockedWallets.length > 1
-                            text: appWindow.unlockedWallets.length
+                            visible: walletSwitchButton.wallets.length > 1
+                            text: walletSwitchButton.wallets.length
                             color: "#FFFFFF"
                             font.family: MoneroComponents.Style.fontMonoRegular.name
                             font.pixelSize: 11
@@ -556,7 +867,7 @@ Rectangle {
                         }
                         background: MoneroComponents.NeonFrame {
                             cut: 8
-                            accent: "#00FF41"
+                            accent: MoneroComponents.Style.c("#00FF41")
                             lineOpacity: 0.9
                             glow: 0.3
                             fillColor: MoneroComponents.Style.blackTheme ? "#0C130E" : "#EEF1EE"
@@ -567,29 +878,31 @@ Rectangle {
                             spacing: 4
                             Text {
                                 text: qsTr("UNLOCKED WALLETS") + translationManager.emptyString
-                                color: "#00FF41"
+                                color: MoneroComponents.Style.c("#00FF41")
                                 font.family: MoneroComponents.Style.fontMonoMedium.name
                                 font.pixelSize: 11
                                 font.letterSpacing: 1
                                 Layout.bottomMargin: 4
                             }
                             Repeater {
-                                model: appWindow.unlockedWallets
+                                model: walletSwitchButton.wallets
                                 Rectangle {
-                                    readonly property bool current: modelData.path === persistentSettings.wallet_path
+                                    // also "current" while one of its seed accounts is open
+                                    readonly property bool current: appWindow.seedBasePath(modelData.path) === appWindow.seedBasePath(persistentSettings.wallet_path)
                                     Layout.fillWidth: true
                                     height: 40
                                     radius: 3
-                                    color: rowArea.containsMouse && !current ? "#2600FF41" : "transparent"
+                                    color: rowArea.containsMouse && !current ? MoneroComponents.Style.c("#2600FF41") : "transparent"
                                     border.width: current ? 1 : 0
-                                    border.color: "#5500FF41"
+                                    border.color: MoneroComponents.Style.c("#5500FF41")
                                     MouseArea {
                                         id: rowArea
                                         anchors.fill: parent
                                         hoverEnabled: true
-                                        cursorShape: current ? Qt.ArrowCursor : Qt.PointingHandCursor
+                                        cursorShape: modelData.path === persistentSettings.wallet_path ? Qt.ArrowCursor : Qt.PointingHandCursor
                                         onClicked: {
-                                            if (current) return;
+                                            // from one of its accounts: back to the wallet itself
+                                            if (modelData.path === persistentSettings.wallet_path) return;
                                             walletSwitchPopup.close();
                                             appWindow.switchWallet(modelData.path);
                                         }
@@ -601,7 +914,7 @@ Rectangle {
                                         spacing: 6
                                         Text {
                                             text: current ? "●" : "○"
-                                            color: "#00FF41"
+                                            color: MoneroComponents.Style.c("#00FF41")
                                             font.pixelSize: 10
                                         }
                                         Column {
@@ -647,13 +960,13 @@ Rectangle {
                                 Layout.fillWidth: true
                                 Layout.topMargin: 4
                                 height: 1
-                                color: "#3300FF41"
+                                color: MoneroComponents.Style.c("#3300FF41")
                             }
                             Rectangle {
                                 Layout.fillWidth: true
                                 height: 30
                                 radius: 3
-                                color: openArea.containsMouse ? "#2600FF41" : "transparent"
+                                color: openArea.containsMouse ? MoneroComponents.Style.c("#2600FF41") : "transparent"
                                 Text {
                                     anchors.verticalCenter: parent.verticalCenter
                                     anchors.left: parent.left
@@ -736,23 +1049,21 @@ Rectangle {
             readonly property bool remote: persistentSettings.useRemoteNode
             readonly property string nodeAddress: remote ? remoteNodesModel.currentRemoteNode().address : "127.0.0.1 (monerod)"
 
+            // one NODE chip: node connection + Nym state in the dot and tooltip
             Chip {
-                label: "NYM"
-                dot: privacyStatus.nymUp ? "#3DDC84" : privacyStatus.nymWorking ? "#F5B83D" : persistentSettings.nymVpnRequired ? "#FF5A5A" : "#8C8C8C"
-                blink: privacyStatus.nymWorking
-                tip: privacyStatus.nymUp
-                     ? qsTr("All the app's traffic goes through NymVPN.") + (appWindow.nymVpnIpPlace !== "" ? " " + qsTr("Exit: %1").arg(appWindow.nymVpnIpPlace) : "") + translationManager.emptyString
-                     : privacyStatus.nymWorking ? qsTr("NymVPN is connecting…") + translationManager.emptyString
-                     : persistentSettings.nymVpnRequired ? qsTr("Nym required is on but NymVPN is not connected: nothing goes out.") + translationManager.emptyString
-                     : qsTr("NymVPN is off: the app connects directly.") + translationManager.emptyString
-            }
-
-            Chip {
-                label: privacyStatus.remote ? qsTr("REMOTE") + translationManager.emptyString : qsTr("LOCAL") + translationManager.emptyString
-                dot: appWindow.disconnected ? "#FF5A5A" : "#3DDC84"
+                label: qsTr("NODE") + translationManager.emptyString
+                dot: appWindow.disconnected ? "#FF5A5A"
+                     : privacyStatus.nymWorking ? "#F5B83D"
+                     : "#3DDC84"
+                blink: !appWindow.disconnected && privacyStatus.nymWorking
                 tip: (privacyStatus.remote ? qsTr("Remote node: %1").arg(privacyStatus.nodeAddress) : qsTr("Local node: %1").arg(privacyStatus.nodeAddress))
                      + " · " + (appWindow.disconnected ? qsTr("disconnected") : qsTr("connected"))
-                     + (privacyStatus.nymUp ? " · " + qsTr("through Nym") : "") + translationManager.emptyString
+                     + "<br>" + (privacyStatus.nymUp
+                         ? qsTr("All the app's traffic goes through NymVPN.") + (appWindow.nymVpnIpPlace !== "" ? " " + qsTr("Exit: %1").arg(appWindow.nymVpnIpPlace) : "")
+                         : privacyStatus.nymWorking ? qsTr("NymVPN is connecting…")
+                         : persistentSettings.nymVpnRequired ? qsTr("Nym required is on but NymVPN is not connected: nothing goes out.")
+                         : qsTr("NymVPN is off: the app connects directly."))
+                     + translationManager.emptyString
             }
 
             Chip {
@@ -768,7 +1079,7 @@ Rectangle {
         Rectangle {
             color: "transparent"
             visible: root.showMinimizeButton
-            Layout.preferredWidth: parent.height
+            Layout.preferredWidth: 45  // narrow window buttons, more room for the title
             Layout.preferredHeight: parent.height
 
             MoneroEffects.ImageMask {
@@ -800,7 +1111,7 @@ Rectangle {
             id: test
             visible: root.showMaximizeButton
             color: "transparent"
-            Layout.preferredWidth: parent.height
+            Layout.preferredWidth: 45  // narrow window buttons, more room for the title
             Layout.preferredHeight: parent.height
 
             Image {
@@ -830,7 +1141,7 @@ Rectangle {
         Rectangle {
             visible: root.showCloseButton
             color: "transparent"
-            Layout.preferredWidth: parent.height
+            Layout.preferredWidth: 45  // narrow window buttons, more room for the title
             Layout.preferredHeight: parent.height
 
             MoneroEffects.ImageMask {

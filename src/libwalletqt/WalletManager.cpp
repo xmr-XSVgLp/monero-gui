@@ -165,6 +165,29 @@ void WalletManager::parkWallet()
     qDebug() << "Wallet parked, keeps syncing:" << wallet->path();
 }
 
+void WalletManager::createSeedOffsetWalletAsync(const QString &path, const QString &password, const QString &seed,
+                                                const QString &seedOffset, NetworkType::Type nettype,
+                                                quint64 restoreHeight, quint64 kdfRounds, const QJSValue &callback)
+{
+    m_scheduler.run([this, path, password, seed, seedOffset, nettype, restoreHeight, kdfRounds] {
+        if (m_pimpl->walletExists(path.toStdString()))
+            return QJSValueList({false, QString("A wallet with that name already exists"), QString()});
+        // the accounts folder (wallets_passphrase) is created with the first account
+        if (!QDir().mkpath(QFileInfo(path).absolutePath()))
+            return QJSValueList({false, QString("Could not create the accounts folder"), QString()});
+        Monero::Wallet *w = m_pimpl->recoveryWallet(path.toStdString(), password.toStdString(), seed.toStdString(),
+                                                    static_cast<Monero::NetworkType>(nettype), restoreHeight, kdfRounds,
+                                                    seedOffset.toStdString());
+        if (!w)
+            return QJSValueList({false, QString("Could not create the wallet"), QString()});
+        const bool ok = w->status() == Monero::Wallet::Status_Ok;
+        const QString error = QString::fromStdString(w->errorString());
+        const QString address = ok ? QString::fromStdString(w->mainAddress()) : QString();
+        m_pimpl->closeWallet(w, ok);
+        return QJSValueList({ok, error, address});
+    }, callback);
+}
+
 void WalletManager::closeParkedHwWallets()
 {
     QList<Wallet *> wallets;

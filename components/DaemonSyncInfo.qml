@@ -94,12 +94,16 @@ GridLayout {
     }
 
     Timer {
-        interval: 10000
+        // hidden and synced: nothing changes much, read once a minute instead of every 10 s
+        interval: !info.visible && info.synced ? 60000 : 10000
         repeat: true
         triggeredOnStart: true
         running: info.active && (info.visible || info.pollHidden) && !persistentSettings.useRemoteNode
         onTriggered: info.load()
     }
+
+    // fresh figures as soon as the popup opens (the hidden poll may be up to a minute old)
+    onVisibleChanged: if (visible && pollHidden && synced) load()
 
     readonly property var allRows: [
         [qsTr("Blocks left"), ok ? String(blocksLeft) : "—"],

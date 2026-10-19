@@ -9,10 +9,6 @@ ColumnLayout {
     id: tab
     spacing: 16
 
-    property var peers: []
-    property bool peersLoading: false
-    property string peersError: ""
-
     readonly property var monerodRoute: {
         if (persistentSettings.extremePrivacy) {
             var r = appWindow.approvedRoute();
@@ -97,37 +93,27 @@ ColumnLayout {
         return list;
     }
 
-    function loadPeers() {
-        peersLoading = true;
-        peersError = "";
-        oshelper.nodeRpc(appWindow.localDaemonAddress, "", "/json_rpc", "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_connections\"}", 8000,
-                         function(ok, ms, body, error) {
-            peersLoading = false;
-            if (!ok) {
-                peers = [];
-                peersError = qsTr("The local node does not answer (%1).").arg(error) + translationManager.emptyString;
-                return;
-            }
-            try {
-                var c = JSON.parse(body).result.connections || [];
-                c.sort(function(a, b) { return (b.live_time || 0) - (a.live_time || 0); });
-                peers = c;
-            } catch (e) {
-                peers = [];
-                peersError = qsTr("Unexpected answer from the local node.") + translationManager.emptyString;
-            }
-        });
+    // ---- peers of the local node ----
+    MoneroComponents.SectionTitle {
+        Layout.fillWidth: true
+        visible: !persistentSettings.useRemoteNode
+        text: qsTr("External IPs of the local node") + translationManager.emptyString
     }
 
-    function liveTime(s) {
-        if (s >= 3600) return Math.floor(s / 3600) + " h " + Math.floor((s % 3600) / 60) + " min";
-        if (s >= 60) return Math.floor(s / 60) + " min";
-        return s + " s";
+    MoneroComponents.SettingsCard {
+        visible: !persistentSettings.useRemoteNode
+        padding: 18
+        spacing: 10
+
+        MoneroComponents.NodePeers {
+            Layout.fillWidth: true
+        }
     }
 
-    function onPageCompleted() {
-        if (!persistentSettings.useRemoteNode && appWindow.daemonRunning && peers.length === 0 && !peersLoading)
-            loadPeers();
+    MoneroComponents.SectionTitle {
+        Layout.fillWidth: true
+        Layout.topMargin: 8
+        text: qsTr("Connections of the app") + translationManager.emptyString
     }
 
     MoneroComponents.TextPlain {
@@ -151,73 +137,6 @@ ColumnLayout {
                 tag: modelData.via.text
                 dot: modelData.via.color
                 detail: "<font face=\"" + MoneroComponents.Style.fontMonoRegular.name + "\">" + modelData.hosts + "</font><br>" + modelData.when
-            }
-        }
-    }
-
-    // ---- peers of the local node ----
-    MoneroComponents.SectionTitle {
-        Layout.fillWidth: true
-        Layout.topMargin: 8
-        visible: !persistentSettings.useRemoteNode
-        text: qsTr("External IPs of the local node") + translationManager.emptyString
-    }
-
-    MoneroComponents.SettingsCard {
-        visible: !persistentSettings.useRemoteNode
-        padding: 18
-        spacing: 10
-
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-            MoneroComponents.TextPlain {
-                Layout.fillWidth: true
-                wrapMode: Text.WordWrap
-                font.pixelSize: 13
-                color: MoneroComponents.Style.dimmedFontColor
-                themeTransition: false
-                text: tab.peersError !== "" ? tab.peersError
-                      : tab.peers.length > 0 ? qsTr("%1 peers connected now. They see the IP monerod leaves with: %2.").arg(tab.peers.length).arg(tab.monerodRoute.text) + translationManager.emptyString
-                      : qsTr("The Monero nodes monerod is connected to right now, with their IP and port.") + translationManager.emptyString
-            }
-            MoneroComponents.StandardButton {
-                small: true
-                enabled: !tab.peersLoading
-                text: (tab.peersLoading ? qsTr("Loading…") : qsTr("Show now")) + translationManager.emptyString
-                onClicked: tab.loadPeers()
-            }
-        }
-
-        Repeater {
-            model: tab.peers.slice(0, 40)
-            delegate: RowLayout {
-                Layout.fillWidth: true
-                spacing: 14
-                MoneroComponents.TextPlain {
-                    Layout.preferredWidth: 200
-                    text: (modelData.host || modelData.ip || "?") + ":" + (modelData.port || "")
-                    font.family: MoneroComponents.Style.fontMonoRegular.name
-                    font.pixelSize: 12
-                    color: MoneroComponents.Style.defaultFontColor
-                    themeTransition: false
-                }
-                MoneroComponents.TextPlain {
-                    Layout.preferredWidth: 60
-                    text: modelData.incoming ? "IN" : "OUT"
-                    font.family: MoneroComponents.Style.fontMonoRegular.name
-                    font.pixelSize: 12
-                    color: modelData.incoming ? securityPage.warnColor : MoneroComponents.Style.dimmedFontColor
-                    themeTransition: false
-                }
-                MoneroComponents.TextPlain {
-                    Layout.fillWidth: true
-                    text: (modelData.state || "") + " · " + qsTr("block %1").arg(modelData.height || 0) + " · " + tab.liveTime(modelData.live_time || 0) + translationManager.emptyString
-                    font.family: MoneroComponents.Style.fontMonoRegular.name
-                    font.pixelSize: 12
-                    color: MoneroComponents.Style.dimmedFontColor
-                    themeTransition: false
-                }
             }
         }
     }

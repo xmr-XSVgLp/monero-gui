@@ -38,6 +38,7 @@
 #include <QObject>
 #include <QString>
 #include <QVariantMap>
+#include <vector>
 /**
  * @brief The OSHelper class - exports to QML some OS-related functions
  */
@@ -46,6 +47,7 @@ class OSHelper : public QObject
     Q_OBJECT
     Q_PROPERTY(bool installed READ installed CONSTANT);
     Q_PROPERTY(QObject* nymClient READ nymClient CONSTANT)
+    Q_PROPERTY(bool geoIpReady READ geoIpReady NOTIFY geoIpReadyChanged)
 
 public:
     explicit OSHelper(QObject *parent = 0);
@@ -94,6 +96,11 @@ public:
     // images (jpg, jpeg, png) directly inside a folder of the app resources, e.g. "images/trezor-wallpapers",
     // as qrc:/ urls sorted by name; used by the Trezor wallpaper galleries
     Q_INVOKABLE QStringList resourceImages(const QString &folder) const;
+    // offline country of an IP (DB-IP Lite CSV packaged in the app or in ~/Monero/xmr-wallet-plus/geoip, no request leaves the app):
+    // "ES", or "" while the base loads (in its own thread, geoIpReadyChanged when done) or is missing
+    Q_INVOKABLE QString ipCountry(const QString &ip);
+    Q_INVOKABLE QString geoIpFile() const;
+    bool geoIpReady() const { return m_geoIpReady; }
     Q_INVOKABLE QString randomPassword(int numBytes = 32) const;
     Q_INVOKABLE bool isCapsLock() const;
     Q_INVOKABLE quint8 getNetworkTypeFromFile(const QString &keysPath, quint8 fallbackNetworkType) const;
@@ -110,9 +117,19 @@ private:
     quint64 m_connectionTestCallback = 0;
     std::shared_ptr<std::atomic<bool>> m_connectionTestCancellation;
     NymClient m_nymClient;
+    // GeoIP ranges sorted by start (IPv6 by its first 64 bits), country as 2 ASCII letters
+    struct GeoRanges4 { std::vector<quint32> start, end; std::vector<quint16> cc; };
+    struct GeoRanges6 { std::vector<quint64> start, end; std::vector<quint16> cc; };
+    void loadGeoIp();
+    GeoRanges4 m_geo4;
+    GeoRanges6 m_geo6;
+    bool m_geoIpReady = false;
+    bool m_geoIpLoading = false;
+    qint64 m_geoIpLastTry = 0;
 
 signals:
     void menuBarOpenRequested();
+    void geoIpReadyChanged();
 
 public slots:
 };

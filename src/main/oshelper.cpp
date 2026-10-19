@@ -64,6 +64,7 @@
 #include <QJsonObject>
 #include <QNetworkProxy>
 #include <QSslSocket>
+#include <QHostAddress>
 #include <QTcpSocket>
 #ifdef Q_OS_MAC
 #include <QEventLoop>
@@ -748,6 +749,26 @@ QVariantMap OSHelper::backupWallet(const QString &walletPath, const QString &fol
         QFile::setPermissions(dest, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ReadUser | QFileDevice::WriteUser);
         copied.append(name + suffix);
     }
+    // the wallet's seed accounts (wallets_passphrase/<name>.cuenta-N with cache and notes) go with it
+    const QDir accounts(QFileInfo(walletPath).absolutePath() + "/wallets_passphrase");
+    const QStringList accountFiles = accounts.entryList({name + ".cuenta-*"}, QDir::Files);
+    if (!accountFiles.isEmpty()) {
+        const QString accountsTarget = QDir(target).filePath("wallets_passphrase");
+        QDir().mkpath(accountsTarget);
+        QFile::setPermissions(accountsTarget, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner
+                                              | QFileDevice::ReadUser | QFileDevice::WriteUser | QFileDevice::ExeUser);
+        for (const QString &file : accountFiles) {
+            const QString dest = QDir(accountsTarget).filePath(file);
+            if (QFileInfo(accounts.filePath(file)).canonicalFilePath() == QFileInfo(dest).canonicalFilePath())
+                continue;
+            if (QFile::exists(dest))
+                QFile::remove(dest);
+            if (!QFile::copy(accounts.filePath(file), dest))
+                return result;
+            QFile::setPermissions(dest, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ReadUser | QFileDevice::WriteUser);
+            copied.append("wallets_passphrase/" + file);
+        }
+    }
     result["ok"] = true;
     result["dir"] = target;
     result["files"] = copied;
@@ -934,4 +955,114 @@ void OSHelper::openSeedTemplate() const
 {
     QFile::copy(":/wizard/template.pdf", QDir::tempPath() + "/seed_template.pdf");
     openFile(QDir::tempPath() + "/seed_template.pdf");
+}
+
+// ---- offline GeoIP (DB-IP "IP to Country Lite", CC BY 4.0) ----
+
+QString OSHelper::geoIpFile() const
+{
+    // a base downloaded with actualizar-geoip.sh wins (newer); else the one packaged in the app
+    const QString user = QDir::homePath() + "/Monero/xmr-wallet-plus/geoip/dbip-country-lite.csv";
+    if (QFileInfo::exists(user))
+        return user;
+#if defined(Q_OS_MAC)
+    return QCoreApplication::applicationDirPath() + "/../Resources/geoip/dbip-country-lite.csv";
+#else
+    return QCoreApplication::applicationDirPath() + "/geoip/dbip-country-lite.csv";
+#endif
+}
+
+void OSHelper::loadGeoIp()
+{
+    m_geoIpLoading = true;
+    m_geoIpLastTry = QDateTime::currentMSecsSinceEpoch();
+    const QString path = geoIpFile();
+    QThread *thread = QThread::create([this, path]() {
+        auto r4 = std::make_shared<GeoRanges4>();
+        auto r6 = std::make_shared<GeoRanges6>();
+        QFile file(path);
+        if (file.open(QIODevice::ReadOnly)) {
+            while (!file.atEnd()) {
+                const QByteArray line = file.readLine().trimmed();
+                const QList<QByteArray> f = line.split(',');
+                if (f.size() < 3 || f[2].size() != 2)
+                    continue;
+                const quint16 cc = quint16((quint8(f[2][0]) << 8) | quint8(f[2][1]));
+                QHostAddress a, b;
+                if (!a.setAddress(QString::fromLatin1(f[0])) || !b.setAddress(QString::fromLatin1(f[1])))
+                    continue;
+                if (a.protocol() == QAbstractSocket::IPv4Protocol) {
+                    const quint32 s4 = a.toIPv4Address(), e4 = b.toIPv4Address();
+                    // the file is sorted: merge touching ranges of the same country
+                    if (!r4->cc.empty() && r4->cc.back() == cc && r4->end.back() + 1 == s4) {
+                        r4->end.back() = e4;
+                        continue;
+                    }
+                    r4->start.push_back(s4); r4->end.push_back(e4); r4->cc.push_back(cc);
+                } else {
+                    const Q_IPV6ADDR x = a.toIPv6Address(), y = b.toIPv6Address();
+                    quint64 s6 = 0, e6 = 0;
+                    for (int i = 0; i < 8; ++i) { s6 = (s6 << 8) | x[i]; e6 = (e6 << 8) | y[i]; }
+                    if (!r6->cc.empty() && r6->cc.back() == cc && (r6->end.back() == e6 || r6->end.back() + 1 == s6)) {
+                        r6->end.back() = std::max(r6->end.back(), e6);
+                        continue;
+                    }
+                    r6->start.push_back(s6); r6->end.push_back(e6); r6->cc.push_back(cc);
+                }
+            }
+        }
+        QMetaObject::invokeMethod(this, [this, r4, r6]() {
+            m_geo4 = std::move(*r4);
+            m_geo6 = std::move(*r6);
+            m_geoIpLoading = false;
+            m_geoIpReady = !m_geo4.cc.empty() || !m_geo6.cc.empty();
+            qDebug() << "GeoIP ranges loaded:" << m_geo4.cc.size() << "IPv4," << m_geo6.cc.size() << "IPv6";
+            emit geoIpReadyChanged();
+        }, Qt::QueuedConnection);
+    });
+    connect(thread, &QThread::finished, thread, &QObject::deleteLater);
+    thread->start();
+}
+
+QString OSHelper::ipCountry(const QString &ip)
+{
+    if (!m_geoIpReady) {
+        // load on first use; when the file is missing, look again at most once a minute
+        if (!m_geoIpLoading && QDateTime::currentMSecsSinceEpoch() - m_geoIpLastTry > 60000) {
+            if (QFileInfo::exists(geoIpFile()))
+                loadGeoIp();
+            else
+                m_geoIpLastTry = QDateTime::currentMSecsSinceEpoch();
+        }
+        return QString();
+    }
+    QHostAddress address;
+    if (!address.setAddress(ip))
+        return QString();
+    // IPv4-mapped IPv6 (::ffff:a.b.c.d) as IPv4
+    bool mapped = false;
+    const quint32 mapped4 = address.toIPv4Address(&mapped);
+    quint16 cc = 0;
+    if (mapped) {
+        auto it = std::upper_bound(m_geo4.start.begin(), m_geo4.start.end(), mapped4);
+        if (it != m_geo4.start.begin()) {
+            const size_t i = size_t(it - m_geo4.start.begin()) - 1;
+            if (mapped4 <= m_geo4.end[i])
+                cc = m_geo4.cc[i];
+        }
+    } else if (address.protocol() == QAbstractSocket::IPv6Protocol) {
+        const Q_IPV6ADDR x = address.toIPv6Address();
+        quint64 v = 0;
+        for (int i = 0; i < 8; ++i) v = (v << 8) | x[i];
+        auto it = std::upper_bound(m_geo6.start.begin(), m_geo6.start.end(), v);
+        if (it != m_geo6.start.begin()) {
+            const size_t i = size_t(it - m_geo6.start.begin()) - 1;
+            if (v <= m_geo6.end[i])
+                cc = m_geo6.cc[i];
+        }
+    }
+    if (!cc)
+        return QString();
+    const char code[3] = { char(cc >> 8), char(cc & 0xff), 0 };
+    return QString::fromLatin1(code);
 }
