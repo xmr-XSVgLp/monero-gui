@@ -66,7 +66,9 @@
 #include <QSslSocket>
 #include <QHostAddress>
 #include <QTcpSocket>
-#ifdef Q_OS_MAC
+#include <QHostInfo>
+#include <QSet>
+#ifdef Q_OS_APPLE
 #include <QEventLoop>
 #include <QThread>
 #include "qt/macoshelper.h"
@@ -99,7 +101,7 @@ QPixmap screenshot()
         }
     }
 
-#if defined(Q_OS_MAC)
+#if defined(Q_OS_APPLE)
     // Let Qt submit the native hide operations before blocking the GUI thread.
     QGuiApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
     // Give WindowServer time to finish removing the window.
@@ -202,7 +204,7 @@ bool OSHelper::openContainingFolder(const QString &filePath) const
     {
         return true;
     }
-#elif defined(Q_OS_MAC)
+#elif defined(Q_OS_APPLE)
     if (MacOSHelper::openFolderAndSelectItem(QUrl::fromLocalFile(canonicalFilePath)))
     {
         return true;
@@ -228,7 +230,7 @@ bool OSHelper::isCapsLock() const
 {
 #if defined(Q_OS_WIN)
     return (GetKeyState(VK_CAPITAL) & 0x0001) != 0;
-#elif defined(Q_OS_MAC)
+#elif defined(Q_OS_APPLE)
     return MacOSHelper::isCapsLock();
 #else
     return false;
@@ -297,7 +299,7 @@ bool OSHelper::writeTextFile(const QString &path, const QString &text) const
 void OSHelper::setMenuBarItem(bool visible, const QString &title, const QStringList &lines, const QString &openLabel)
 {
 #ifdef Q_OS_MACOS
-    static const QImage icon = QImage(":/images/menubar-icon.png");
+    static const QImage icon = QImage(":/images/logos/menubar-icon.png");
     MacOSHelper::setStatusItem(visible, title, lines, openLabel, icon, [this] { emit menuBarOpenRequested(); });
 #else
     Q_UNUSED(visible);
@@ -440,7 +442,7 @@ void OSHelper::cancelConnectionTest()
     if (m_connectionTestCancellation) m_connectionTestCancellation->store(true);
 }
 
-void OSHelper::nymVpnTest(const QString &socksAddress, const QString &daemonAddress, const QJSValue &callback)
+void OSHelper::nymVpnTest(const QString &socksAddress, const QString &daemonAddress, const QJSValue &callback, const QString &nodeSocks)
 {
     cancelConnectionTest();
     auto cancellation = std::make_shared<std::atomic<bool>>(false);
@@ -451,7 +453,7 @@ void OSHelper::nymVpnTest(const QString &socksAddress, const QString &daemonAddr
     m_connectionTestCallback = callbackId;
     // the worker thread never touches the QJSValue (copying it off the main thread corrupted the
     // JS engine's storage and crashed the app): it posts the JSON and the id back to the main thread
-    QThread *thread = QThread::create([this, socksAddress, daemonAddress, callbackId, cancellation]() {
+    QThread *thread = QThread::create([this, socksAddress, daemonAddress, nodeSocks, callbackId, cancellation]() {
         const auto cancelled = [cancellation] { return cancellation->load(); };
         const auto report = [this, callbackId, cancellation](const QJsonObject &o) {
             if (cancellation->load()) return;
@@ -494,27 +496,36 @@ void OSHelper::nymVpnTest(const QString &socksAddress, const QString &daemonAddr
         if (QSslSocket::supportsSsl())
         {
             QJsonObject ip{{"key", "ip"}, {"ok", false}};
-            const HttpResult who = httpRequest(proxy, true, "ipwho.is", 443, "GET", "/", QByteArray(), 30000, true, cancelled);
-            const QJsonObject j = QJsonDocument::fromJson(who.body).object();
-            if (who.ok && !j["ip"].toString().isEmpty())
+            // one provider after another: several of them refuse Tor exits (ipinfo.io answers 403)
+            struct IpService { const char *host, *path, *ipKey; };
+            const IpService services[] = {
+                {"ipwho.is", "/", "ip"},
+                {"ipinfo.io", "/json", "ip"},
+                {"check.torproject.org", "/api/ip", "IP"},
+                {"api.ipify.org", "/?format=json", "ip"},
+            };
+            QStringList errors;
+            for (const IpService &svc : services)
             {
-                ip["ok"] = true;
-                ip["ip"] = j["ip"];
-                ip["place"] = QStringList({j["city"].toString(), j["country"].toString()}).filter(QRegularExpression(".")).join(", ");
-            }
-            else
-            {
-                const HttpResult info = httpRequest(proxy, true, "ipinfo.io", 443, "GET", "/json", QByteArray(), 30000, true, cancelled);
-                const QJsonObject k = QJsonDocument::fromJson(info.body).object();
-                if (info.ok && !k["ip"].toString().isEmpty())
+                if (cancelled()) return;
+                const HttpResult r = httpRequest(proxy, true, svc.host, 443, "GET", svc.path, QByteArray(), 30000, true, cancelled);
+                const QJsonObject k = QJsonDocument::fromJson(r.body).object();
+                const QString addr = k[svc.ipKey].toString();
+                if (r.ok && !addr.isEmpty())
                 {
                     ip["ok"] = true;
-                    ip["ip"] = k["ip"];
-                    ip["place"] = QStringList({k["city"].toString(), k["country"].toString()}).filter(QRegularExpression(".")).join(", ");
+                    ip["ip"] = addr;
+                    QString place = QStringList({k["city"].toString(), k["country"].toString()}).filter(QRegularExpression(".")).join(", ");
+                    if (k.contains("IsTor"))
+                        place = k["IsTor"].toBool() ? QString("Tor") : QString();
+                    ip["place"] = place;
+                    ip["source"] = QString(svc.host);
+                    break;
                 }
-                else
-                    ip["error"] = info.error.isEmpty() ? QString("unexpected answer") : info.error;
+                errors << QString("%1: %2").arg(svc.host, r.error.isEmpty() ? QString("unexpected answer") : r.error);
             }
+            if (!ip["ok"].toBool())
+                ip["error"] = errors.join(" · ");
             report(ip);
         }
         else
@@ -585,12 +596,24 @@ void OSHelper::nymVpnTest(const QString &socksAddress, const QString &daemonAddr
         }
 
         if (cancelled()) return;
-        // 6. the local node (directly, no proxy): height, target and peers
+        // 6. the node: the local one directly, a remote one through nodeSocks (https:// or :443 = TLS);
+        //    no address = this network does not carry the node
+        if (!daemonAddress.trimmed().isEmpty())
         {
-            const auto daemon = splitHostPort(daemonAddress, 18081);
+            QString target = daemonAddress.trimmed();
+            bool nodeTls = false;
+            if (target.startsWith("https://")) { nodeTls = true; target = target.mid(8); }
+            else if (target.startsWith("http://")) target = target.mid(7);
+            target = target.section('/', 0, 0);
+            const auto daemon = splitHostPort(target, 18081);
+            if (daemon.second == 443) nodeTls = true;
             const QString host = daemon.first == "localhost" ? QString("127.0.0.1") : daemon.first;
-            const HttpResult info = httpRequest(QNetworkProxy(QNetworkProxy::NoProxy), false, host, daemon.second,
-                                                "POST", "/get_info", "{}", 5000, true, cancelled);
+            const auto ns = splitHostPort(nodeSocks, 1080);
+            const QNetworkProxy nodeProxy = nodeSocks.isEmpty() ? QNetworkProxy(QNetworkProxy::NoProxy)
+                                                                : QNetworkProxy(QNetworkProxy::Socks5Proxy, ns.first, ns.second);
+            const int nodeTimeout = nodeSocks.isEmpty() ? 5000 : 60000;
+            const HttpResult info = httpRequest(nodeProxy, nodeTls, host, daemon.second,
+                                                "POST", "/get_info", "{}", nodeTimeout, true, cancelled);
             QJsonObject o{{"key", "node"}, {"ok", info.ok}};
             if (!info.ok)
                 o["error"] = info.error;
@@ -599,8 +622,11 @@ void OSHelper::nymVpnTest(const QString &socksAddress, const QString &daemonAddr
                 const QJsonObject j = QJsonDocument::fromJson(info.body).object();
                 for (const char *k : {"height", "target_height", "outgoing_connections_count", "incoming_connections_count", "synchronized", "busy_syncing"})
                     o[k] = j[k];
-                const HttpResult conns = httpRequest(QNetworkProxy(QNetworkProxy::NoProxy), false, host, daemon.second, "POST", "/json_rpc",
-                                                     "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_connections\"}", 5000, true, cancelled);
+                // remote nodes keep get_connections restricted: only asked of the local node
+                const HttpResult conns = nodeSocks.isEmpty()
+                    ? httpRequest(nodeProxy, nodeTls, host, daemon.second, "POST", "/json_rpc",
+                                  "{\"jsonrpc\":\"2.0\",\"id\":\"0\",\"method\":\"get_connections\"}", 5000, true, cancelled)
+                    : HttpResult{};
                 if (conns.ok)
                 {
                     QJsonObject states;
@@ -785,7 +811,7 @@ QVariantList OSHelper::removableVolumes() const
         const QString root = volume.rootPath();
         if (home.startsWith(root + "/"))
             continue;
-#if defined(Q_OS_MAC)
+#if defined(Q_OS_APPLE)
         if (!root.startsWith("/Volumes/"))
             continue;
 #elif defined(Q_OS_WIN)
@@ -925,7 +951,8 @@ std::pair<quint8, QString> OSHelper::getNetworkTypeAndAddressFromFile(const QStr
     // attempt to retreive wallet address
     if(QFile::exists(wallet + ".address.txt")){
         QFile file(wallet + ".address.txt");
-        file.open(QFile::ReadOnly | QFile::Text);
+        if (!file.open(QFile::ReadOnly | QFile::Text))
+            return std::make_pair(networkType, address);
         QString _address = QString(file.readAll());
         if(!_address.isEmpty()){
             address = _address;
@@ -965,7 +992,7 @@ QString OSHelper::geoIpFile() const
     const QString user = QDir::homePath() + "/Monero/xmr-wallet-plus/geoip/dbip-country-lite.csv";
     if (QFileInfo::exists(user))
         return user;
-#if defined(Q_OS_MAC)
+#if defined(Q_OS_APPLE)
     return QCoreApplication::applicationDirPath() + "/../Resources/geoip/dbip-country-lite.csv";
 #else
     return QCoreApplication::applicationDirPath() + "/geoip/dbip-country-lite.csv";
@@ -1065,4 +1092,596 @@ QString OSHelper::ipCountry(const QString &ip)
         return QString();
     const char code[3] = { char(cc >> 8), char(cc & 0xff), 0 };
     return QString::fromLatin1(code);
+}
+
+namespace {
+
+// MRL spy-node ban list: single IPv4 hosts and subnets, addresses in host order
+struct BanList
+{
+    QSet<quint32> hosts;
+    std::vector<std::pair<quint32, quint32>> subnets; // (network, mask)
+    int entries = 0;
+    QString title;
+    bool contains(quint32 ip) const
+    {
+        if (hosts.contains(ip))
+            return true;
+        for (const auto &s : subnets)
+            if ((ip & s.second) == s.first)
+                return true;
+        return false;
+    }
+};
+
+BanList loadBanList(const QString &path)
+{
+    BanList b;
+    QFile f(path);
+    if (path.isEmpty() || !f.open(QIODevice::ReadOnly | QIODevice::Text))
+        return b;
+    while (!f.atEnd())
+    {
+        QString line = QString::fromLatin1(f.readLine());
+        const int hash = line.indexOf('#');
+        if (hash >= 0)
+        {
+            if (b.title.isEmpty() && hash == 0)
+                b.title = line.mid(1).trimmed();
+            line.truncate(hash);
+        }
+        line = line.trimmed();
+        if (line.isEmpty())
+            continue;
+        const int slash = line.indexOf('/');
+        const QHostAddress a(slash < 0 ? line : line.left(slash));
+        if (a.protocol() != QAbstractSocket::IPv4Protocol)
+            continue;
+        const quint32 ip = a.toIPv4Address();
+        if (slash < 0)
+        {
+            b.hosts.insert(ip);
+            ++b.entries;
+            continue;
+        }
+        bool ok = false;
+        const int bits = line.mid(slash + 1).toInt(&ok);
+        if (!ok || bits < 0 || bits > 32)
+            continue;
+        const quint32 mask = bits == 0 ? 0 : 0xffffffffu << (32 - bits);
+        b.subnets.push_back({ip & mask, mask});
+        ++b.entries;
+    }
+    return b;
+}
+
+// epee portable storage (the format of Monero's P2P messages), just what a handshake needs
+enum : quint8 { PS_UINT64 = 5, PS_UINT32 = 6, PS_UINT16 = 7, PS_UINT8 = 8, PS_STRING = 10, PS_OBJECT = 12, PS_ARRAY = 0x80 };
+
+void psLe(QByteArray &out, quint64 v, int bytes)
+{
+    for (int i = 0; i < bytes; ++i, v >>= 8)
+        out.append(char(v & 0xff));
+}
+
+void psVarint(QByteArray &out, quint64 v)
+{
+    if (v <= 63)
+        psLe(out, v << 2, 1);
+    else if (v <= 16383)
+        psLe(out, (v << 2) | 1, 2);
+    else if (v <= 1073741823)
+        psLe(out, (v << 2) | 2, 4);
+    else
+        psLe(out, (v << 2) | 3, 8);
+}
+
+void psName(QByteArray &out, const char *name, quint8 type)
+{
+    out.append(char(qstrlen(name)));
+    out.append(name);
+    out.append(char(type));
+}
+
+void psUint(QByteArray &out, const char *name, quint8 type, quint64 v)
+{
+    psName(out, name, type);
+    psLe(out, v, type == PS_UINT64 ? 8 : type == PS_UINT32 ? 4 : type == PS_UINT16 ? 2 : 1);
+}
+
+void psBlob(QByteArray &out, const char *name, const QByteArray &blob)
+{
+    psName(out, name, PS_STRING);
+    psVarint(out, quint64(blob.size()));
+    out.append(blob);
+}
+
+struct PsReader
+{
+    const QByteArray &d;
+    int pos = 0;
+    bool ok = true;
+    bool need(quint64 n)
+    {
+        if (!ok || n > quint64(d.size() - pos))
+            ok = false;
+        return ok;
+    }
+    quint64 le(int n)
+    {
+        if (!need(n))
+            return 0;
+        quint64 v = 0;
+        for (int i = n - 1; i >= 0; --i)
+            v = (v << 8) | quint8(d[pos + i]);
+        pos += n;
+        return v;
+    }
+    quint64 varint()
+    {
+        if (!need(1))
+            return 0;
+        return le(1 << (quint8(d[pos]) & 3)) >> 2;
+    }
+};
+
+QVariant psValue(PsReader &r, quint8 type, int depth);
+
+QVariantMap psSection(PsReader &r, int depth)
+{
+    QVariantMap m;
+    if (depth > 8)
+    {
+        r.ok = false;
+        return m;
+    }
+    const quint64 count = r.varint();
+    for (quint64 i = 0; r.ok && i < count; ++i)
+    {
+        const int len = int(r.le(1));
+        if (!r.need(quint64(len)))
+            break;
+        const QString name = QString::fromLatin1(r.d.mid(r.pos, len));
+        r.pos += len;
+        const quint8 type = quint8(r.le(1));
+        if (!r.ok)
+            break;
+        m.insert(name, psValue(r, type, depth));
+    }
+    return m;
+}
+
+QVariant psScalar(PsReader &r, quint8 type, int depth)
+{
+    switch (type)
+    {
+    case 1: case 5: case 9: return QVariant::fromValue(r.le(8)); // int64, uint64, double (raw)
+    case 2: case 6: return QVariant::fromValue(r.le(4));
+    case 3: case 7: return QVariant::fromValue(r.le(2));
+    case 4: case 8: case 11: return QVariant::fromValue(r.le(1));
+    case PS_STRING:
+    {
+        const quint64 n = r.varint();
+        if (!r.need(n))
+            return QVariant();
+        const QByteArray s = r.d.mid(r.pos, int(n));
+        r.pos += int(n);
+        return s;
+    }
+    case PS_OBJECT: return psSection(r, depth + 1);
+    }
+    r.ok = false;
+    return QVariant();
+}
+
+QVariant psValue(PsReader &r, quint8 type, int depth)
+{
+    if (!(type & PS_ARRAY))
+        return psScalar(r, type, depth);
+    QVariantList list;
+    const quint64 n = r.varint();
+    if (n > 100000)
+    {
+        r.ok = false;
+        return list;
+    }
+    for (quint64 i = 0; r.ok && i < n; ++i)
+        list.append(psScalar(r, type & 0x7f, depth));
+    return list;
+}
+
+QByteArray levinPacket(quint32 command, const QByteArray &body)
+{
+    QByteArray p;
+    psLe(p, 0x0101010101012101ULL, 8);   // levin signature
+    psLe(p, quint64(body.size()), 8);
+    p.append(char(1));                   // expects a response
+    psLe(p, command, 4);
+    psLe(p, 0, 4);                       // return code
+    psLe(p, 1, 4);                       // request
+    psLe(p, 1, 4);                       // protocol version
+    return p + body;
+}
+
+// mainnet COMMAND_HANDSHAKE (1001) as a node at height 1 that takes no incoming connections
+QByteArray handshakeRequest()
+{
+    QByteArray b;
+    psLe(b, 0x01011101, 4);
+    psLe(b, 0x01020101, 4);
+    b.append(char(1));
+    psVarint(b, 2);
+    psName(b, "node_data", PS_OBJECT);
+    psVarint(b, 6);
+    psBlob(b, "network_id", QByteArray::fromHex("1230f171610441611731008216a1a110"));
+    psUint(b, "peer_id", PS_UINT64, QRandomGenerator::system()->generate64());
+    psUint(b, "my_port", PS_UINT32, 0);
+    psUint(b, "rpc_port", PS_UINT16, 0);
+    psUint(b, "rpc_credits_per_hash", PS_UINT32, 0);
+    psUint(b, "support_flags", PS_UINT32, 1);
+    psName(b, "payload_data", PS_OBJECT);
+    psVarint(b, 6);
+    psUint(b, "current_height", PS_UINT64, 1);
+    psUint(b, "cumulative_difficulty", PS_UINT64, 1);
+    psUint(b, "cumulative_difficulty_top64", PS_UINT64, 0);
+    psBlob(b, "top_id", QByteArray::fromHex("418015bb9ae982a1975da7d79277c2705727a56894ba0fb246adaabb1f4632e3"));
+    psUint(b, "top_version", PS_UINT8, 1);
+    psUint(b, "pruning_seed", PS_UINT32, 0);
+    return levinPacket(1001, b);
+}
+
+} // namespace
+
+QString OSHelper::banListPath()
+{
+#if defined(Q_OS_APPLE)
+    const QString packaged = QCoreApplication::applicationDirPath() + "/../Resources/ban_list.txt";
+#else
+    const QString packaged = QCoreApplication::applicationDirPath() + "/ban_list.txt";
+#endif
+    if (QFileInfo::exists(packaged))
+        return QFileInfo(packaged).canonicalFilePath();
+    // a build that has not been packaged yet uses the copy actualizar-banlist.sh downloads
+    const QString user = QDir::homePath() + "/Monero/xmr-wallet-plus/ban_list.txt";
+    return QFileInfo::exists(user) ? user : QString();
+}
+
+QVariantMap OSHelper::banListInfo() const
+{
+    const QString path = banListPath();
+    const BanList b = loadBanList(path);
+    return {{"path", path}, {"entries", b.entries}, {"title", b.title}};
+}
+
+void OSHelper::nodeBanCheck(const QString &address, const QString &socksAddress, int timeoutMs, const QJSValue &callback)
+{
+    const quint64 callbackId = keepCallback(callback);
+    QThread *thread = QThread::create([this, address, socksAddress, timeoutMs, callbackId]() {
+        QVariantMap r;
+        r["ok"] = false;
+        auto finish = [this, callbackId, &r]() {
+            const QString json = QString::fromUtf8(QJsonDocument(QJsonObject::fromVariantMap(r)).toJson(QJsonDocument::Compact));
+            QMetaObject::invokeMethod(this, [this, callbackId, json]() {
+                QJSValue cb = m_callbacks.take(callbackId);
+                if (cb.isCallable())
+                    cb.call(QJSValueList({json}));
+            }, Qt::QueuedConnection);
+        };
+        const BanList banList = loadBanList(banListPath());
+        if (banList.entries == 0)
+        {
+            r["error"] = "no ban list";
+            return finish();
+        }
+        QString target = address.trimmed();
+        target.remove(QRegularExpression("^https?://"));
+        target = target.section('/', 0, 0);
+        const QString host = splitHostPort(target, 18081).first;
+        if (host.endsWith(".onion") || host.endsWith(".i2p"))
+        {
+            r["error"] = "hidden service";
+            return finish();
+        }
+
+        // the node itself on the list? Hostnames are only resolved here when there is no proxy (no DNS leak)
+        QList<QHostAddress> ips;
+        QHostAddress literal;
+        if (literal.setAddress(host))
+            ips << literal;
+        else if (socksAddress.isEmpty())
+            ips = QHostInfo::fromName(host).addresses();
+        for (const QHostAddress &ip : ips)
+            if (ip.protocol() == QAbstractSocket::IPv4Protocol && banList.contains(ip.toIPv4Address()))
+                r["selfBanned"] = true;
+
+        const auto socks = splitHostPort(socksAddress, 1080);
+        QTcpSocket s;
+        s.setProxy(socksAddress.isEmpty() ? QNetworkProxy(QNetworkProxy::NoProxy)
+                                          : QNetworkProxy(QNetworkProxy::Socks5Proxy, socks.first, socks.second));
+        QElapsedTimer t;
+        t.start();
+        auto left = [&]() { return int(qMax<qint64>(1, timeoutMs - t.elapsed())); };
+        s.connectToHost(host, 18080);
+        if (!s.waitForConnected(left()))
+        {
+            r["error"] = "p2p port closed: " + s.errorString();
+            return finish();
+        }
+        s.write(handshakeRequest());
+        s.waitForBytesWritten(left());
+
+        QByteArray buf, body;
+        while (t.elapsed() < timeoutMs)
+        {
+            if (buf.size() >= 33)
+            {
+                PsReader h{buf};
+                const quint64 sig = h.le(8), cb = h.le(8);
+                h.le(1);
+                const quint32 command = quint32(h.le(4));
+                h.le(4);
+                const quint32 flags = quint32(h.le(4));
+                if (sig != 0x0101010101012101ULL || cb > 4 * 1024 * 1024)
+                {
+                    r["error"] = "not a monero p2p port";
+                    break;
+                }
+                if (quint64(buf.size()) >= 33 + cb)
+                {
+                    if (command == 1001 && (flags & 2))
+                    {
+                        body = buf.mid(33, int(cb));
+                        break;
+                    }
+                    buf.remove(0, int(33 + cb)); // some other message first: skip it
+                    continue;
+                }
+            }
+            if (!s.waitForReadyRead(left()))
+                break;
+            buf += s.readAll();
+        }
+        s.abort();
+        if (body.isEmpty())
+        {
+            if (!r.contains("error"))
+                r["error"] = "no handshake answer";
+            return finish();
+        }
+
+        PsReader pr{body};
+        pr.le(9); // portable storage signature and version
+        const QVariantMap root = psSection(pr, 0);
+        int peers = 0, banned = 0;
+        for (const QVariant &e : root.value("local_peerlist_new").toList())
+        {
+            const QVariantMap adr = e.toMap().value("adr").toMap();
+            if (adr.value("type").toULongLong() != 1) // IPv4 only, like the list
+                continue;
+            const quint32 raw = quint32(adr.value("addr").toMap().value("m_ip").toULongLong());
+            // m_ip travels in network byte order: the first octet is the lowest byte
+            const quint32 ip = ((raw & 0xff) << 24) | ((raw & 0xff00) << 8) | ((raw >> 8) & 0xff00) | (raw >> 24);
+            ++peers;
+            if (banList.contains(ip))
+                ++banned;
+        }
+        r["ok"] = pr.ok || peers > 0;
+        r["peers"] = peers;
+        r["banned"] = banned;
+        r["height"] = root.value("payload_data").toMap().value("current_height").toULongLong();
+        finish();
+    });
+    connect(thread, &QThread::finished, thread, &QObject::deleteLater);
+    thread->start();
+}
+
+void OSHelper::nodeP2pProbe(const QString &host, const QString &socksAddress, const QVariantList &ports,
+                            int timeoutMs, const QJSValue &callback)
+{
+    const quint64 callbackId = keepCallback(callback);
+    QThread *thread = QThread::create([this, host, socksAddress, ports, timeoutMs, callbackId]() {
+        QVariantMap r;
+        r["ok"] = false;
+        auto finish = [this, callbackId, &r]() {
+            const QString json = QString::fromUtf8(QJsonDocument(QJsonObject::fromVariantMap(r)).toJson(QJsonDocument::Compact));
+            QMetaObject::invokeMethod(this, [this, callbackId, json]() {
+                QJSValue cb = m_callbacks.take(callbackId);
+                if (cb.isCallable())
+                    cb.call(QJSValueList({json}));
+            }, Qt::QueuedConnection);
+        };
+        const auto socks = splitHostPort(socksAddress, 1080);
+        QStringList errors;
+        for (const QVariant &p : ports)
+        {
+            const quint16 port = quint16(p.toUInt());
+            const int budget = qMax(1000, timeoutMs / qMax(1, int(ports.size())));
+            QTcpSocket s;
+            s.setProxy(socksAddress.isEmpty() ? QNetworkProxy(QNetworkProxy::NoProxy)
+                                              : QNetworkProxy(QNetworkProxy::Socks5Proxy, socks.first, socks.second));
+            QElapsedTimer t;
+            t.start();
+            auto left = [&]() { return int(qMax<qint64>(1, budget - t.elapsed())); };
+            s.connectToHost(host, port);
+            if (!s.waitForConnected(left()))
+            {
+                errors << QString("%1: %2").arg(port).arg(s.errorString());
+                continue;
+            }
+            s.write(handshakeRequest());
+            s.waitForBytesWritten(left());
+            QByteArray buf;
+            bool answered = false;
+            quint64 height = 0;
+            while (t.elapsed() < budget)
+            {
+                if (buf.size() >= 33)
+                {
+                    PsReader h{buf};
+                    const quint64 sig = h.le(8), cb = h.le(8);
+                    h.le(1);
+                    const quint32 command = quint32(h.le(4));
+                    h.le(4);
+                    const quint32 flags = quint32(h.le(4));
+                    if (sig != 0x0101010101012101ULL || cb > 4 * 1024 * 1024)
+                        break;
+                    if (quint64(buf.size()) >= 33 + cb)
+                    {
+                        if (command == 1001 && (flags & 2))
+                        {
+                            PsReader pr{buf.mid(33, int(cb))};
+                            pr.le(9);
+                            height = psSection(pr, 0).value("payload_data").toMap().value("current_height").toULongLong();
+                            answered = true;
+                            break;
+                        }
+                        buf.remove(0, int(33 + cb));
+                        continue;
+                    }
+                }
+                if (!s.waitForReadyRead(left()))
+                    break;
+                buf += s.readAll();
+            }
+            s.abort();
+            if (answered)
+            {
+                r["ok"] = true;
+                r["port"] = port;
+                r["height"] = height;
+                return finish();
+            }
+            errors << QString("%1: %2").arg(port).arg("no Monero P2P answer");
+        }
+        r["error"] = errors.join(" · ");
+        finish();
+    });
+    connect(thread, &QThread::finished, thread, &QObject::deleteLater);
+    thread->start();
+}
+
+namespace {
+
+// files that belong to the wallet "<dir>/<base>" (cache, keys, address, notes, chosen icon, background sync, MMS)
+QStringList walletFiles(const QString &walletPath)
+{
+    QStringList files;
+    for (const char *suffix : {"", ".keys", ".address.txt", "_notes", ".json", ".background", ".background.keys", ".mms"})
+        if (QFileInfo(walletPath + suffix).isFile())
+            files << walletPath + suffix;
+    return files;
+}
+
+// the wallet has a folder of its own: named like it and with no other wallet's keys inside
+bool walletOwnsFolder(const QString &walletPath)
+{
+    const QFileInfo info(walletPath);
+    const QDir dir = info.dir();
+    if (dir.dirName() != info.fileName())
+        return false;
+    const QStringList keys = dir.entryList({"*.keys"}, QDir::Files);
+    for (const QString &k : keys)
+        if (k != info.fileName() + ".keys" && k != info.fileName() + ".background.keys")
+            return false;
+    return true;
+}
+
+} // namespace
+
+QVariantMap OSHelper::renameWallet(const QString &walletPath, const QString &newName) const
+{
+    QVariantMap r;
+    r["ok"] = false;
+    const QString path = QDir::fromNativeSeparators(walletPath).remove(QRegularExpression("\\.keys$"));
+    const QString name = newName.trimmed();
+    if (name.isEmpty() || name.contains('/') || name.contains('\\') || name.startsWith('.') || name.contains(':'))
+    {
+        r["error"] = "invalid name";
+        return r;
+    }
+    const QFileInfo info(path);
+    if (!QFileInfo(path + ".keys").isFile())
+    {
+        r["error"] = "not found";
+        return r;
+    }
+    if (name == info.fileName())
+    {
+        r["ok"] = true;
+        r["path"] = path;
+        return r;
+    }
+    const bool ownFolder = walletOwnsFolder(path);
+    QDir parent = info.dir();
+    if (ownFolder)
+        parent.cdUp();
+    const QString targetDir = ownFolder ? parent.filePath(name) : info.dir().path();
+    const QString target = QDir(targetDir).filePath(name);
+    if ((ownFolder && QFileInfo::exists(targetDir)) || QFileInfo::exists(target + ".keys") || QFileInfo::exists(target))
+    {
+        r["error"] = "exists";
+        return r;
+    }
+    // rename the files inside the current folder first, then the folder; undo on failure
+    const QStringList files = walletFiles(path);
+    QList<QPair<QString, QString>> done;
+    const QString newInFolder = info.dir().filePath(name);
+    for (const QString &f : files)
+    {
+        const QString to = newInFolder + f.mid(path.size());
+        if (!QFile::rename(f, to))
+        {
+            for (const auto &d : done)
+                QFile::rename(d.second, d.first);
+            r["error"] = "rename failed: " + QFileInfo(f).fileName();
+            return r;
+        }
+        done << qMakePair(f, to);
+    }
+    if (ownFolder && !QDir().rename(info.dir().path(), targetDir))
+    {
+        for (const auto &d : done)
+            QFile::rename(d.second, d.first);
+        r["error"] = "folder rename failed";
+        return r;
+    }
+    r["ok"] = true;
+    r["path"] = target;
+    return r;
+}
+
+QVariantMap OSHelper::trashWallet(const QString &walletPath) const
+{
+    QVariantMap r;
+    r["ok"] = false;
+    const QString path = QDir::fromNativeSeparators(walletPath).remove(QRegularExpression("\\.keys$"));
+    if (!QFileInfo(path + ".keys").isFile())
+    {
+        r["error"] = "not found";
+        return r;
+    }
+    // to the Trash, never deleted: the user can still put it back from Finder
+    if (walletOwnsFolder(path))
+    {
+        QString folder = QFileInfo(path).dir().path();
+        if (!QFile::moveToTrash(folder))
+        {
+            r["error"] = "could not move the folder to the Trash";
+            return r;
+        }
+    }
+    else
+    {
+        for (const QString &f : walletFiles(path))
+        {
+            QString file = f;
+            if (!QFile::moveToTrash(file))
+            {
+                r["error"] = "could not move " + QFileInfo(f).fileName() + " to the Trash";
+                return r;
+            }
+        }
+    }
+    r["ok"] = true;
+    return r;
 }

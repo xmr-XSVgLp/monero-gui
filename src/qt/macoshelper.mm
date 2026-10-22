@@ -35,6 +35,7 @@
 
 #import <Foundation/Foundation.h>
 #import <Cocoa/Cocoa.h>
+#import <UserNotifications/UserNotifications.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <ApplicationServices/ApplicationServices.h>
 #include <Availability.h>
@@ -42,15 +43,19 @@
 #include "ScopeGuard.h"
 
 // Shows our notifications even while the app is in front (macOS hides them by default).
-@interface WalletNotificationDelegate : NSObject <NSUserNotificationCenterDelegate>
+@interface WalletNotificationDelegate : NSObject <UNUserNotificationCenterDelegate>
 @end
 
 @implementation WalletNotificationDelegate
-- (BOOL)userNotificationCenter:(NSUserNotificationCenter *)center shouldPresentNotification:(NSUserNotification *)notification
+- (void)userNotificationCenter:(UNUserNotificationCenter *)center
+      willPresentNotification:(UNNotification *)notification
+        withCompletionHandler:(void (^)(UNNotificationPresentationOptions))completionHandler
 {
     Q_UNUSED(center);
     Q_UNUSED(notification);
-    return YES;
+    completionHandler(UNNotificationPresentationOptionBanner |
+                      UNNotificationPresentationOptionList |
+                      UNNotificationPresentationOptionSound);
 }
 @end
 
@@ -101,23 +106,28 @@ QString MacOSHelper::bundlePath()
 // app runs outside a bundle, where macOS refuses to post them.
 bool MacOSHelper::notify(const QString &title, const QString &message)
 {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     if (![[NSBundle mainBundle] bundleIdentifier])
         return false;
-    NSUserNotificationCenter *center = [NSUserNotificationCenter defaultUserNotificationCenter];
-    if (!center)
-        return false;
+    UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
     static WalletNotificationDelegate *delegate = [[WalletNotificationDelegate alloc] init];
     center.delegate = delegate;
-    NSUserNotification *note = [[NSUserNotification alloc] init];
+    UNMutableNotificationContent *note = [[UNMutableNotificationContent alloc] init];
     note.title = title.toNSString();
-    note.informativeText = message.toNSString();
-    note.soundName = @"Glass";
-    [center deliverNotification:note];
+    note.body = message.toNSString();
+    note.sound = [UNNotificationSound defaultSound];
+    UNNotificationRequest *request = [UNNotificationRequest
+        requestWithIdentifier:[[NSUUID UUID] UUIDString] content:note trigger:nil];
     [note release];
-    return true;
-#pragma clang diagnostic pop
+    [center requestAuthorizationWithOptions:(UNAuthorizationOptionAlert | UNAuthorizationOptionSound)
+                         completionHandler:^(BOOL granted, NSError *error) {
+        if (granted && !error) {
+            [center addNotificationRequest:request withCompletionHandler:^(NSError *deliveryError) {
+                if (deliveryError)
+                    qWarning() << "Could not schedule macOS notification:" << deliveryError.code;
+            }];
+        }
+    }];
+    return true; // Queued; macOS delivers only if the user permits notifications.
 }
 
 // ---- menu bar item ----

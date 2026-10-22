@@ -22,17 +22,11 @@ ColumnLayout {
 
     // the IP the peers see: which way monerod goes out
     readonly property string routeText: {
-        if (persistentSettings.extremePrivacy) {
-            var r = appWindow.approvedRoute();
-            return r !== "" ? qsTr("through %1 (extreme privacy)").arg(r) + translationManager.emptyString
-                            : qsTr("blocked until there is an approved route") + translationManager.emptyString;
-        }
-        if (persistentSettings.nymVpnEnabled || persistentSettings.nymVpnRequired)
-            return qsTr("through NymVPN (--proxy)") + translationManager.emptyString;
-        if ((persistentSettings.daemonFlags || "").indexOf("--proxy") >= 0)
-            return qsTr("through the --proxy of the startup flags") + translationManager.emptyString;
-        return qsTr("direct, with your real IP") + translationManager.emptyString;
+        var sync = persistentSettings.netSync === "nym" ? "NymVPN" : persistentSettings.netSync === "i2p" ? "I2P" : "Tor";
+        var tx = persistentSettings.netTx === "i2p" ? ".i2p" : persistentSettings.netTx === "both" ? ".onion / .i2p" : ".onion";
+        return qsTr("through %1 (--proxy); your transactions only to %2 peers").arg(sync).arg(tx) + translationManager.emptyString;
     }
+
 
     function load() {
         loading = true;
@@ -60,6 +54,16 @@ ColumnLayout {
     function flag(cc) {
         if (!cc || cc.length !== 2) return "";
         return String.fromCodePoint(0x1F1E6 + cc.charCodeAt(0) - 65, 0x1F1E6 + cc.charCodeAt(1) - 65);
+    }
+
+    // .onion / .i2p peers have no IP or country: show a short name (full one copied on click)
+    function anonNet(host) {
+        if (/\.onion$/i.test(host)) return "TOR";
+        if (/\.i2p$/i.test(host)) return "I2P";
+        return "";
+    }
+    function shortHost(host) {
+        return anonNet(host) !== "" && host.length > 22 ? host.slice(0, 8) + "…" + host.slice(-12) : host;
     }
 
     function liveTime(s) {
@@ -139,8 +143,12 @@ ColumnLayout {
             MoneroComponents.TextPlain {
                 id: peerIp
                 readonly property string ip: modelData.host || modelData.ip || "?"
+                readonly property string net: peersView.anonNet(ip)
                 Layout.preferredWidth: 200
-                text: ip + ":" + (modelData.port || "")
+                Layout.maximumWidth: 200
+                elide: Text.ElideMiddle
+                // hidden-service peers come without a port in get_connections
+                text: peersView.shortHost(ip) + (modelData.port && modelData.port !== "0" ? ":" + modelData.port : "")
                 font.family: MoneroComponents.Style.fontMonoRegular.name
                 font.pixelSize: 12
                 font.underline: ipArea.containsMouse
@@ -153,18 +161,19 @@ ColumnLayout {
                     cursorShape: Qt.PointingHandCursor
                     onClicked: {
                         peerClipboard.setText(peerIp.ip);
-                        appWindow.showStatusMessage(qsTr("IP copied: %1").arg(peerIp.ip) + translationManager.emptyString, 3);
+                        appWindow.showStatusMessage((peerIp.net !== "" ? qsTr("Address copied: %1") : qsTr("IP copied: %1")).arg(peerIp.ip) + translationManager.emptyString, 3);
                     }
                 }
             }
             // country from the offline GeoIP base (oshelper.geoIpReady re-reads it once the base is loaded)
             MoneroComponents.TextPlain {
-                readonly property string cc: (oshelper.geoIpReady, oshelper.ipCountry(peerIp.ip))
+                readonly property string cc: peerIp.net !== "" ? "" : (oshelper.geoIpReady, oshelper.ipCountry(peerIp.ip))
                 Layout.preferredWidth: 56
-                text: cc !== "" ? peersView.flag(cc) + " " + cc : "—"
+                // hidden service: no IP, so no location; the network name instead
+                text: peerIp.net === "TOR" ? "🧅 TOR" : peerIp.net !== "" ? peerIp.net : cc !== "" ? peersView.flag(cc) + " " + cc : "—"
                 font.family: MoneroComponents.Style.fontMonoRegular.name
                 font.pixelSize: 12
-                color: MoneroComponents.Style.defaultFontColor
+                color: peerIp.net !== "" ? "#B07CFF" : MoneroComponents.Style.defaultFontColor
                 themeTransition: false
             }
             MoneroComponents.TextPlain {
@@ -177,6 +186,7 @@ ColumnLayout {
             }
             MoneroComponents.TextPlain {
                 Layout.fillWidth: true
+                elide: Text.ElideRight
                 text: (modelData.state || "") + " · " + qsTr("block %1").arg(modelData.height || 0) + " · " + peersView.liveTime(modelData.live_time || 0) + translationManager.emptyString
                 font.family: MoneroComponents.Style.fontMonoRegular.name
                 font.pixelSize: 12
@@ -195,6 +205,8 @@ ColumnLayout {
         themeTransition: false
         text: oshelper.geoIpReady
               ? qsTr("Countries from the offline DB-IP base (IP Geolocation by DB-IP): the IPs are not sent anywhere.") + translationManager.emptyString
+                + (peersView.peers.some(function(p) { return peersView.anonNet(p.host || "") !== ""; })
+                   ? " " + qsTr(".onion peers are Tor hidden services: they have no public IP or location (that is the point). Click to copy the full address.") + translationManager.emptyString : "")
               : qsTr("Countries are not available: this build does not include the offline GeoIP base.") + translationManager.emptyString
     }
 }

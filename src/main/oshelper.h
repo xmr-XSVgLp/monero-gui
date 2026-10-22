@@ -31,6 +31,8 @@
 
 #include <QJSValue>
 #include "NymClient.h"
+#include "TorClient.h"
+#include "I2pClient.h"
 #include <atomic>
 #include <memory>
 #include <QHash>
@@ -47,6 +49,8 @@ class OSHelper : public QObject
     Q_OBJECT
     Q_PROPERTY(bool installed READ installed CONSTANT);
     Q_PROPERTY(QObject* nymClient READ nymClient CONSTANT)
+    Q_PROPERTY(QObject* torClient READ torClient CONSTANT)
+    Q_PROPERTY(QObject* i2pClient READ i2pClient CONSTANT)
     Q_PROPERTY(bool geoIpReady READ geoIpReady NOTIFY geoIpReadyChanged)
 
 public:
@@ -70,12 +74,15 @@ public:
     // macOS: keep a QML Window on the wallpaper (desktop widget); no-op elsewhere
     Q_INVOKABLE void pinToDesktop(QObject *window);
     QObject *nymClient() { return &m_nymClient; }
+    QObject *torClient() { return &m_torClient; }
+    QObject *i2pClient() { return &m_i2pClient; }
     // ends the process after `seconds` if the graceful shutdown has not finished by then
     Q_INVOKABLE void armShutdownWatchdog(int seconds) const;
     // connection check: SOCKS5 proxy (empty: direct), web latency and speed through it, Monero P2P ping
     // through it and the local node's state. Runs in its own thread; callback(json) once per finished check, last {"key":"done"}
     Q_INVOKABLE void cancelConnectionTest();
-    Q_INVOKABLE void nymVpnTest(const QString &socksAddress, const QString &daemonAddress, const QJSValue &callback);
+    // nodeSocks: SOCKS5 for a remote node ("" = the local node, reached directly)
+    Q_INVOKABLE void nymVpnTest(const QString &socksAddress, const QString &daemonAddress, const QJSValue &callback, const QString &nodeSocks = QString());
     // Security page: one HTTP(S) request to a node's RPC (path, JSON body) through a SOCKS5 proxy ("" = direct),
     // in its own thread; callback(ok, ms, body, error). "https://" or port 443 use TLS.
     Q_INVOKABLE void nodeRpc(const QString &address, const QString &socksAddress, const QString &path,
@@ -89,6 +96,10 @@ public:
     // copies the wallet files (keys, cache, _notes) into <folder>/xmr_<wallet name>, 600/700
     Q_INVOKABLE QVariantMap backupWallet(const QString &walletPath, const QString &folder) const;
     // removable volumes (USB, SD...): [{ root, name, free, total }]
+    // open-wallet page: rename a wallet (all its files, and its folder when it is named like it) or move it to
+    // the Trash. path = wallet path without .keys. Result {ok, path (new wallet path), error}
+    Q_INVOKABLE QVariantMap renameWallet(const QString &walletPath, const QString &newName) const;
+    Q_INVOKABLE QVariantMap trashWallet(const QString &walletPath) const;
     Q_INVOKABLE QVariantList removableVolumes() const;
     // wallets inside the "XMR" folder of removable volumes: [{ path, fileName, volume, modified, networktype, address }]
     Q_INVOKABLE QVariantList removableWallets() const;
@@ -100,6 +111,18 @@ public:
     // "ES", or "" while the base loads (in its own thread, geoIpReadyChanged when done) or is missing
     Q_INVOKABLE QString ipCountry(const QString &ip);
     Q_INVOKABLE QString geoIpFile() const;
+    // MRL spy-node ban list packaged in the app (Resources/ban_list.txt), "" when missing
+    static QString banListPath();
+    // {path, entries, title} of that list, for the UI
+    Q_INVOKABLE QVariantMap banListInfo() const;
+    // P2P handshake with a remote node (port 18080) in its own thread: a node that applies the ban
+    // list never hands out banned IPs in its peer list. callback(JSON {ok, peers, banned, selfBanned, height, error})
+    Q_INVOKABLE void nodeBanCheck(const QString &address, const QString &socksAddress, int timeoutMs,
+                                  const QJSValue &callback);
+    // Monero P2P (levin handshake) on host through the SOCKS proxy, trying each port in turn;
+    // cb(json): {ok, port, height} or {ok: false, error}. For .onion / .b32.i2p peers of --tx-proxy.
+    Q_INVOKABLE void nodeP2pProbe(const QString &host, const QString &socksAddress, const QVariantList &ports,
+                                  int timeoutMs, const QJSValue &callback);
     bool geoIpReady() const { return m_geoIpReady; }
     Q_INVOKABLE QString randomPassword(int numBytes = 32) const;
     Q_INVOKABLE bool isCapsLock() const;
@@ -117,6 +140,8 @@ private:
     quint64 m_connectionTestCallback = 0;
     std::shared_ptr<std::atomic<bool>> m_connectionTestCancellation;
     NymClient m_nymClient;
+    TorClient m_torClient;
+    I2pClient m_i2pClient;
     // GeoIP ranges sorted by start (IPv6 by its first 64 bits), country as 2 ASCII letters
     struct GeoRanges4 { std::vector<quint32> start, end; std::vector<quint16> cc; };
     struct GeoRanges6 { std::vector<quint64> start, end; std::vector<quint16> cc; };

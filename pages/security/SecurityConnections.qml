@@ -15,8 +15,12 @@ ColumnLayout {
             return r !== "" ? { text: qsTr("through %1 (extreme privacy)").arg(r) + translationManager.emptyString, color: securityPage.goodColor }
                             : { text: qsTr("blocked until there is an approved route") + translationManager.emptyString, color: securityPage.badColor };
         }
-        if (persistentSettings.nymVpnEnabled || persistentSettings.nymVpnRequired)
+        if (persistentSettings.netSync === "nym")
             return { text: qsTr("through NymVPN (--proxy)") + translationManager.emptyString, color: securityPage.goodColor };
+        if (persistentSettings.netSync === "i2p")
+            return { text: qsTr("through I2P (--proxy): it does not sync blocks") + translationManager.emptyString, color: securityPage.warnColor };
+        if (persistentSettings.netSync === "tor")
+            return { text: qsTr("through Tor (--proxy)") + translationManager.emptyString, color: securityPage.goodColor };
         if ((persistentSettings.daemonFlags || "").indexOf("--proxy") >= 0)
             return { text: qsTr("through the --proxy of the startup flags") + translationManager.emptyString, color: securityPage.goodColor };
         return { text: qsTr("direct, with your real IP") + translationManager.emptyString, color: securityPage.warnColor };
@@ -75,7 +79,7 @@ ColumnLayout {
                     when: qsTr("when Nym connects: gateway names and the exit IP") + translationManager.emptyString,
                     via: persistentSettings.nymVpnEnabled ? app : appRoute(false) });
         list.push({ name: qsTr("Connection check") + translationManager.emptyString,
-                    hosts: "speed.cloudflare.com, ipwho.is, ipinfo.io, " + qsTr("4 Monero seed nodes") + translationManager.emptyString,
+                    hosts: "speed.cloudflare.com, ipwho.is, ipinfo.io, check.torproject.org, api.ipify.org, " + qsTr("4 Monero seed nodes") + translationManager.emptyString,
                     when: qsTr("when you press the button, and 20 seconds after Nym connects") + translationManager.emptyString,
                     via: app });
         list.push({ name: qsTr("Node manager") + translationManager.emptyString,

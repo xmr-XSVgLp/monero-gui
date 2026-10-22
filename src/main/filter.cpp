@@ -77,7 +77,7 @@ bool filter::eventFilter(QObject *obj, QEvent *ev) {
         QString sks;
         if(ke->key() == Qt::Key_Control) {
             sks = "Ctrl";
-#ifdef Q_OS_MAC
+#ifdef Q_OS_APPLE
         } else if(ke->key() == Qt::Key_Meta) {
             sks = "Ctrl";
 #endif
@@ -85,7 +85,7 @@ bool filter::eventFilter(QObject *obj, QEvent *ev) {
             QKeySequence ks(QKeyCombination(ke->modifiers(), static_cast<Qt::Key>(ke->key())));
             sks = ks.toString();
         }
-#ifndef Q_OS_MAC
+#ifndef Q_OS_APPLE
         if(sks.contains("Alt+Tab") || sks.contains("Alt+Backtab"))
             break;
 #else
@@ -111,7 +111,7 @@ bool filter::eventFilter(QObject *obj, QEvent *ev) {
 #endif
         if(ke->key() == Qt::Key_Control) {
             sks = "Ctrl";
-#ifdef Q_OS_MAC
+#ifdef Q_OS_APPLE
         } else if(ke->key() == Qt::Key_Meta) {
             sks = "Ctrl";
 #endif
@@ -119,7 +119,7 @@ bool filter::eventFilter(QObject *obj, QEvent *ev) {
             QKeySequence ks(QKeyCombination(ke->modifiers(), static_cast<Qt::Key>(ke->key())));
             sks = ks.toString();
         }
-#ifndef Q_OS_MAC
+#ifndef Q_OS_APPLE
         if(sks.contains("Alt+Tab") || sks.contains("Alt+Backtab"))
             break;
 #else

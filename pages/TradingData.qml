@@ -68,15 +68,38 @@ Rectangle {
         { key: "MAX", days: 0,   fetch: 365, file: "" }
     ]
     readonly property var downloads: [1, 90, 365]
-    readonly property int refreshMs: 15 * 60 * 1000   // every series is downloaded again after 15 minutes
+
+    // where the price series come from (tabs above the chart). CoinGecko is the default and the only one
+    // refreshed in the background (the title bar price and the alerts use it); the others are asked when
+    // shown. Their cache keys carry the source: "kraken:eur/90"; CoinGecko keeps the plain "eur/90"
+    readonly property var sources: [
+        { key: "coingecko", name: "CoinGecko" },
+        { key: "kraken", name: "Kraken" },
+        { key: "kucoin", name: "KuCoin" },
+        { key: "coinmarketcap", name: "CoinMarketCap" }
+    ]
+    property int sourceIndex: 0
+    onSourceIndexChanged: select()
+    function keyFor(src, pair, fetch) {
+        return src === "coingecko" ? pair + "/" + fetch : src + ":" + pair + "/" + fetch;
+    }
+    function splitKey(key) {
+        var src = "coingecko", rest = key;
+        if (key.indexOf(":") >= 0) { src = key.split(":")[0]; rest = key.split(":")[1]; }
+        return { src: src, pair: rest.split("/")[0], days: parseInt(rest.split("/")[1]) };
+    }
+    function refreshInterval(key) {
+        var days = splitKey(key).days;
+        return (days >= 365 ? 24 * 60 : days >= 90 ? 6 * 60 : 15) * 60 * 1000;
+    }
     readonly property int retryMs: 2 * 60 * 1000      // after a failure (usually CoinGecko's rate limit)
 
     // every download is saved as CSV, one file per currency and range:
-    // ~/Monero/xmr-wallet-plus/trading/xmr-eur-24h.csv … xmr-btc-1a.csv
+    // ~/Monero/xmr-wallet-plus/markets/<source>/xmr-eur-24h.csv … xmr-btc-1a.csv
     readonly property string dataDir: {
         if (typeof oshelper === "undefined" || !oshelper.swapsLogPath) return "";
         var p = oshelper.swapsLogPath();
-        return p.substring(0, p.lastIndexOf("/")) + "/trading";
+        return p.substring(0, p.lastIndexOf("/")) + "/markets";
     }
 
     property int pairIndex: 0
@@ -115,8 +138,9 @@ Rectangle {
         return Qt.formatDate(d, "dd/MM/yyyy");
     }
 
-    function csvPath(pair, file) {
-        return dataDir + "/xmr-" + pair + "-" + file + ".csv";
+    function csvPath(pair, file, src) {
+        // one folder per source: markets/coingecko/, markets/kraken/ …
+        return dataDir + "/" + (src || "coingecko") + "/xmr-" + pair + "-" + file + ".csv";
     }
 
     function readCsv(path) {
@@ -141,14 +165,14 @@ Rectangle {
 
     // after a download: one CSV per range served by it. The 1-year file keeps its older rows,
     // so it keeps growing past CoinGecko's 365 days
-    function saveSeries(pair, days, prices) {
+    function saveSeries(pair, days, prices, src) {
         if (dataDir === "" || prices.length === 0)
             return;
         var now = Date.now() / 1000;
         for (var i = 0; i < ranges.length; i++) {
             var r = ranges[i];
             if (r.fetch !== days || r.file === "") continue;
-            var path = csvPath(pair, r.file);
+            var path = csvPath(pair, r.file, src);
             var rows = prices.filter(function(p) { return p[0] >= now - r.days * 24 * 3600; });
             if (r.file === "1a") {
                 var first = prices[0][0];
@@ -163,13 +187,16 @@ Rectangle {
         if (dataDir === "")
             return;
         var c = Object.assign({}, cache);
+        for (var s = 0; s < sources.length; s++)
         for (var i = 0; i < pairs.length; i++) {
             for (var d = 0; d < downloads.length; d++) {
                 var file = downloads[d] === 1 ? "24h" : downloads[d] === 90 ? "90d" : "1a";
-                var prices = readCsv(csvPath(pairs[i].pair, file));
+                var prices = readCsv(csvPath(pairs[i].pair, file, sources[s].key));
                 if (prices.length > 1)
-                    // the last point is the download time (CoinGecko's newest price is "now")
-                    c[pairs[i].pair + "/" + downloads[d]] = { time: prices[prices.length - 1][0] * 1000, prices: prices };
+                    // the last point is about the download time (the newest price is "now"); the
+                    // exchanges' last candle starts a bit earlier, so they are simply asked again
+                    c[keyFor(sources[s].key, pairs[i].pair, downloads[d])] =
+                        { time: s === 0 ? prices[prices.length - 1][0] * 1000 : 0, prices: prices };
             }
         }
         cache = c;
@@ -177,7 +204,7 @@ Rectangle {
 
     function isStale(key) {
         var c = cache[key];
-        if (c && Date.now() - c.time < refreshMs) return false;
+        if (c && Date.now() - c.time < refreshInterval(key)) return false;
         var f = failed[key];
         if (f && Date.now() - f.time < retryMs) return false;
         return true;
@@ -187,7 +214,7 @@ Rectangle {
     // asks for it first if it is missing or older than 15 minutes
     function select() {
         var pi = pairs[pairIndex], ri = ranges[rangeIndex];
-        selKey = pi.pair + "/" + ri.fetch;
+        selKey = keyFor(sources[sourceIndex].key, pi.pair, ri.fetch);
         var c = cache[selKey];
         if (c) {
             var from = ri.days > 0 ? Date.now() / 1000 - ri.days * 24 * 3600 : 0;
@@ -198,7 +225,7 @@ Rectangle {
         hoverIndex = -1;
         chart.requestPaint();
         updateValue();
-        if (!c || Date.now() - c.time > refreshMs)
+        if (isStale(selKey))
             enqueue(selKey, true);
     }
 
@@ -221,23 +248,20 @@ Rectangle {
         var key = queue[0];
         queue = queue.slice(1);
         busyKey = key;
-        var pair = key.split("/")[0], days = parseInt(key.split("/")[1]);
+        var k = splitKey(key);
+        var src = k.src, pair = k.pair, days = k.days;
+        var req = sourceRequest(src, pair, days);
 
-        network.getJSON("https://api.coingecko.com/api/v3/coins/monero/market_chart?vs_currency=" + pair + "&days=" + days,
-                        function(url, resp, err) {
+        network.getJSON(req.url, function(url, resp, err) {
             var failure = err;
             if (!failure) {
                 try {
-                    var j = JSON.parse(resp);
-                    // errors come as {"error": "..."} or {"status": {"error_code": 429, ...}} (rate limit)
-                    if (!j.prices) {
-                        failure = j.error ? String(j.error)
-                                : (j.status && j.status.error_code === 429) ? qsTr("too many requests, try again in a minute") + translationManager.emptyString
-                                : (j.status && j.status.error_message) ? j.status.error_message : "no prices";
+                    var parsed = req.parse(JSON.parse(resp));
+                    if (typeof parsed === "string") {
+                        failure = parsed;
                     } else {
-                        // prices: [[time ms, price], ...]
-                        var prices = j.prices.map(function(r) { return [Math.round(r[0] / 1000), r[1]]; })
-                                             .filter(function(p) { return p[1] > 0; });
+                        var prices = parsed.filter(function(p) { return p[1] > 0; })
+                                           .sort(function(a, b) { return a[0] - b[0]; });
                         // the 1-year series keeps the older rows already recorded (for MAX.)
                         if (days === 365 && cache[key] && prices.length > 0) {
                             var first = prices[0][0];
@@ -247,8 +271,8 @@ Rectangle {
                         c[key] = { time: Date.now(), prices: prices };
                         cache = c;
                         var f = Object.assign({}, failed); delete f[key]; failed = f;
-                        saveSeries(pair, days, prices);
-                        if (prices.length > 0)
+                        saveSeries(pair, days, prices, src);
+                        if (src === "coingecko" && prices.length > 0)
                             checkAlerts(pair, prices[prices.length - 1][1]);
                     }
                 } catch (ex) {
@@ -266,6 +290,76 @@ Rectangle {
         });
     }
 
+    // one request per source, pair and download ("days": 1, 90 or 365, see ranges). parse(json) returns
+    // [[time s, price], ...] in the pair's currency, or a string with the error
+    function sourceRequest(src, pair, days) {
+        var now = Math.floor(Date.now() / 1000);
+        if (src === "kraken") {
+            // OHLC: at most 720 candles -> 5 min (2.5 days), 4 h (120 days), 1 day (about 2 years)
+            var kp = pair === "btc" ? "XMRXBT" : pair === "eur" ? "XMREUR" : "XMRUSD";
+            var iv = days === 1 ? 5 : days === 90 ? 240 : 1440;
+            return { url: "https://api.kraken.com/0/public/OHLC?pair=" + kp + "&interval=" + iv,
+                     parse: function(j) {
+                         if (j.error && j.error.length > 0) return String(j.error[0]);
+                         for (var name in j.result)
+                             if (name !== "last")
+                                 return j.result[name].map(function(r) { return [parseInt(r[0]), parseFloat(r[4])]; });
+                         return "no prices";
+                     } };
+        }
+        if (src === "kucoin") {
+            // candles newest first, at most 1500 per answer; no XMR/EUR market: USDT x today's EUR rate
+            var sym = pair === "btc" ? "XMR-BTC" : "XMR-USDT";
+            var type = days === 1 ? "5min" : days === 90 ? "4hour" : "1day";
+            var span = days === 1 ? 86400 : days === 90 ? 90 * 86400 : 1500 * 86400;
+            var eur = pair === "eur" ? (appWindow.fiatRates && appWindow.fiatRates["EUR"] > 0 ? appWindow.fiatRates["EUR"] : 0) : 1;
+            return { url: "https://api.kucoin.com/api/v1/market/candles?type=" + type + "&symbol=" + sym
+                          + "&startAt=" + (now - span) + "&endAt=" + now,
+                     parse: function(j) {
+                         if (String(j.code) !== "200000") return j.msg ? String(j.msg) : "error " + j.code;
+                         if (!(eur > 0)) return qsTr("no EUR rate yet") + translationManager.emptyString;
+                         return (j.data || []).map(function(r) { return [parseInt(r[0]), parseFloat(r[2]) * eur]; });
+                     } };
+        }
+        if (src === "coinmarketcap") {
+            // the chart behind coinmarketcap.com (no key); Monero id 328; USD 2781, EUR 2790, BTC 1
+            var conv = pair === "btc" ? 1 : pair === "eur" ? 2790 : 2781;
+            var range = days === 1 ? "1D" : days === 90 ? "3M" : "1Y";
+            return { url: "https://api.coinmarketcap.com/data-api/v3/cryptocurrency/detail/chart?id=328&range=" + range
+                          + "&convertId=" + conv,
+                     parse: function(j) {
+                         var pts = j.data && j.data.points;
+                         if (!pts) return j.status && j.status.error_message ? String(j.status.error_message) : "no prices";
+                         var out = [];
+                         if (Array.isArray(pts)) {
+                             // newer shape: [{ s: "time", v: [price, ...] }, ...]
+                             for (var i = 0; i < pts.length; i++)
+                                 if (pts[i].v) out.push([parseInt(pts[i].s), parseFloat(pts[i].v[0])]);
+                         } else {
+                             // older shape: { "time": { v: [price, ...], c: [price in the converted currency] } }
+                             for (var t in pts) {
+                                 var row = pts[t];
+                                 var v = row.c && row.c.length > 0 ? row.c[0] : (row.v ? row.v[0] : 0);
+                                 out.push([parseInt(t), parseFloat(v)]);
+                             }
+                         }
+                         // times in seconds (some answers use milliseconds)
+                         return out.map(function(p) { return [p[0] > 1e12 ? Math.round(p[0] / 1000) : p[0], p[1]]; });
+                     } };
+        }
+        // CoinGecko public market_chart: 5 min for 1 day, hourly up to 90 days, daily beyond
+        return { url: "https://api.coingecko.com/api/v3/coins/monero/market_chart?vs_currency=" + pair + "&days=" + days,
+                 parse: function(j) {
+                     // errors come as {"error": "..."} or {"status": {"error_code": 429, ...}} (rate limit)
+                     if (!j.prices)
+                         return j.error ? String(j.error)
+                              : (j.status && j.status.error_code === 429) ? qsTr("too many requests, try again in a minute") + translationManager.emptyString
+                              : (j.status && j.status.error_message) ? j.status.error_message : "no prices";
+                     // prices: [[time ms, price], ...]
+                     return j.prices.map(function(r) { return [Math.round(r[0] / 1000), r[1]]; });
+                 } };
+    }
+
     // a few seconds between requests: CoinGecko's free API allows only a few a minute
     Timer {
         id: gapTimer
@@ -273,7 +367,7 @@ Rectangle {
         onTriggered: pageTrading.pump()
     }
 
-    // every minute, queue the series older than 15 minutes (all currencies and ranges),
+    // Check expiry each minute: intraday 15 min, 90-day 6 h, annual 24 h.
     // also when the page is not open. Nothing runs with "Price conversion" off
     Timer {
         interval: 60 * 1000
@@ -298,6 +392,11 @@ Rectangle {
         loadBalanceEvents();
         loadSwapSnapshot();
         select();
+    }
+
+    // the wallet's network just came up: forget the failures so the next minute asks again
+    function retryFailed() {
+        failed = ({});
     }
 
     // Refresh: the series on screen, now (after the request in progress, if any)
@@ -734,6 +833,25 @@ Rectangle {
                 anchors.top: parent.top
                 anchors.margins: 18
                 spacing: 16
+
+                // where the series comes from
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 10
+                    Segments {
+                        labels: pageTrading.sources.map(function(s) { return s.name; })
+                        current: pageTrading.sourceIndex
+                        onPicked: (i) => pageTrading.sourceIndex = i
+                    }
+                    Item { Layout.fillWidth: true }
+                    MoneroComponents.TextPlain {
+                        visible: pageTrading.sources[pageTrading.sourceIndex].key === "kucoin" && pageTrading.pairs[pageTrading.pairIndex].pair === "eur"
+                        text: qsTr("KuCoin has no XMR/EUR: XMR/USDT at today's EUR rate") + translationManager.emptyString
+                        font.pixelSize: 11
+                        color: MoneroComponents.Style.dimmedFontColor
+                        themeTransition: false
+                    }
+                }
 
                 RowLayout {
                     Layout.fillWidth: true
@@ -1307,7 +1425,7 @@ Rectangle {
         MoneroComponents.TextPlain {
             Layout.fillWidth: true
             wrapMode: Text.WordWrap
-            text: qsTr("Prices from CoinGecko (public data, no account). Every currency and range is saved as CSV in ~/Monero/xmr-wallet-plus/trading and downloaded again every 15 minutes, one request at a time, also with this page closed. With NymVPN on, the requests go through Nym.") + translationManager.emptyString
+            text: qsTr("Prices from CoinGecko (public data, no account). Every currency and range is saved as CSV in ~/Monero/xmr-wallet-plus/markets/<source> and downloaded again every 15 minutes, one request at a time, also with this page closed. With NymVPN on, the requests go through Nym.") + translationManager.emptyString
             font.pixelSize: 12
             color: MoneroComponents.Style.dimmedFontColor
             themeTransition: false

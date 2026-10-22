@@ -466,11 +466,18 @@ Rectangle {
         var subaddressLookahead = wizardController.walletOptionsSubaddressLookahead;
         var deviceName = wizardController.walletOptionsDeviceName;
 
-        connect();
-        wizardController.deviceWalletCreationInProgress = true;
-        wizardController.enabled = false;
-        walletManager.createWalletFromDeviceAsync('', oshelper.randomPassword(), nettype, deviceName, restoreHeight, subaddressLookahead, kdfRounds);
-        creatingWalletDeviceSplash();
+        var create = function() {
+            connect();
+            wizardController.deviceWalletCreationInProgress = true;
+            wizardController.enabled = false;
+            walletManager.createWalletFromDeviceAsync('', oshelper.randomPassword(), nettype, deviceName, restoreHeight, subaddressLookahead, kdfRounds);
+            creatingWalletDeviceSplash();
+        };
+        // with several Trezors connected, the user picks the one to create the wallet from
+        if (deviceName === "Trezor")
+            appWindow.chooseTrezor("", create, null);
+        else
+            create();
     }
 
     function onWalletCreated(wallet) {

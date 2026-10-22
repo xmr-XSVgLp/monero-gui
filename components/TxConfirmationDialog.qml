@@ -458,7 +458,7 @@ Rectangle {
                     id: confirmButton
                     accent: root.darkTheme ? "#5FD08F" : "#1E8E4E"
                     text: qsTr("Confirm") + translationManager.emptyString;
-                    rightIcon: "qrc:///images/rightArrow.png"
+                    rightIcon: "qrc:///images/icons/rightArrow.png"
                     width: 200
                     KeyNavigation.tab: backButton
                     onClicked: {

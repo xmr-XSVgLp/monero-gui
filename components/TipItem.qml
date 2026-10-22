@@ -57,7 +57,7 @@ Window {
             anchors.top: parent.bottom
             anchors.left: parent.left
             anchors.leftMargin: 5
-            source: "qrc:///images/tip.png"
+            source: "qrc:///images/icons/tip.png"
         }
 
         MoneroComponents.TextPlain {

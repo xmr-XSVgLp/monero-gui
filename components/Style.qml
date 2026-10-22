@@ -17,9 +17,11 @@ QtObject {
         "monero":       { name: "Monero",       hue: 0.068, k: 1.0,  color: "#FF6600" },
         "hielo":        { name: "Hielo",        hue: 0.585, k: 1.3,  color: "#4DA6FF" },
         "ultravioleta": { name: "Ultravioleta", hue: 0.76,  k: 1.3,  color: "#B04DFF" },
-        "acido":        { name: "Ácido",        hue: 0.17,  k: 1.0,  color: "#E8FF00" }
+        "acido":        { name: "Ácido",        hue: 0.17,  k: 1.0,  color: "#E8FF00" },
+        // no colour: greens become greys, accents white on dark and black on light
+        "mono":         { name: "Blanco y negro", hue: 0, k: 1.0, color: "#FFFFFF", mono: true }
     })
-    readonly property var paletteOrder: ["matrix", "cyberpunk", "tron", "ambar", "monero", "hielo", "ultravioleta", "acido"]
+    readonly property var paletteOrder: ["matrix", "cyberpunk", "tron", "ambar", "monero", "hielo", "ultravioleta", "acido", "mono"]
 
     function _hex2(v) {
         var x = Math.max(0, Math.min(255, Math.round(v * 255))).toString(16);
@@ -55,7 +57,13 @@ QtObject {
         var isGreen = s >= 0.04 && h >= 0.18 && h <= 0.48;
         if (!pastel && !isGreen)
             return hex;
-        if (shift && isGreen) {
+        if (shift && isGreen && p.mono) {
+            if (blackTheme && s > 0.3 && l > 0.25 && l < 0.9)   // accents near white on dark
+                l = Math.min(0.94, 0.55 + l * 0.7);
+            else if (!blackTheme && s > 0.8 && l > 0.25 && l < 0.9)   // vivid accents near black on light
+                l = Math.max(0.08, l * 0.35);
+            s = 0;
+        } else if (shift && isGreen) {
             h = p.hue;
             if (s > 0.3 && l > 0.25 && l < 0.9)   // accents only, not the tinted greys
                 l = Math.min(0.9, l * p.k);
@@ -182,10 +190,10 @@ QtObject {
     property string _b_titleBarBackgroundGradientStart: c("#1B1F1C")
     property string _b_titleBarBackgroundGradientStop: c("#151816")
     property string _b_titleBarBackgroundBorderColor: c("#003B00")
-    property string _b_titleBarLogoSource: "qrc:///images/titlebarLogo.png"
-    property string _b_titleBarMinimizeSource: "qrc:///images/minimize.svg"
-    property string _b_titleBarFullscreenSource: "qrc:///images/fullscreen.svg"
-    property string _b_titleBarCloseSource: "qrc:///images/close.svg"
+    property string _b_titleBarLogoSource: "qrc:///images/logos/titlebarLogo.png"
+    property string _b_titleBarMinimizeSource: "qrc:///images/window/minimize.svg"
+    property string _b_titleBarFullscreenSource: "qrc:///images/window/fullscreen.svg"
+    property string _b_titleBarCloseSource: "qrc:///images/window/close.svg"
     property string _b_titleBarButtonHoverColor: c("#2000FF41")
 
     property string _b_wizardBackgroundGradientStart: c("#000000")
@@ -198,8 +206,8 @@ QtObject {
     property string _b_menuButtonTextColor: c("#ECECEC")
     property string _b_menuButtonImageRightColorActive: c("#00FF41")
     property string _b_menuButtonImageRightColor: c("#008F11")
-    property string _b_menuButtonImageRightSource: "qrc:///images/right.svg"
-    property string _b_menuButtonImageDotArrowSource: "qrc:///images/arrow-right-medium-white.png"
+    property string _b_menuButtonImageRightSource: "qrc:///images/icons/right.svg"
+    property string _b_menuButtonImageDotArrowSource: "qrc:///images/icons/arrow-right-medium-white.png"
     property string _b_inlineButtonTextColor: c("#ECECEC")
     property string _b_inlineButtonBorderColor: c("#003B00")
     property string _b_appWindowBackgroundColor: c("#000000")
@@ -298,13 +306,13 @@ property string _w_menuButtonGradientStop: c("#10FFFFFF")
     
 property string _w_menuButtonTextColor: c("#2E6B3A")
     
-property string _w_menuButtonImageRightSource: "qrc:///images/right.svg"
+property string _w_menuButtonImageRightSource: "qrc:///images/icons/right.svg"
     
 property string _w_menuButtonImageRightColorActive: c("#00A82D")
     
 property string _w_menuButtonImageRightColor: c("#5E8A66")
     
-property string _w_menuButtonImageDotArrowSource: "qrc:///images/arrow-right-medium-white.png"
+property string _w_menuButtonImageDotArrowSource: "qrc:///images/icons/arrow-right-medium-white.png"
     
 property string _w_inlineButtonTextColor: c("#003B00")
     

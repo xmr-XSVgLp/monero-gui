@@ -68,15 +68,16 @@ Rectangle {
         cypher: "Cypherpunk",
         circuito: qsTr("Circuit") + translationManager.emptyString,
         minimal: qsTr("Minimal") + translationManager.emptyString,
+        pico: qsTr("Pickaxe") + translationManager.emptyString,
         azul: qsTr("Blue") + translationManager.emptyString,
         espacio: qsTr("Space") + translationManager.emptyString
     })
-    readonly property var builtInOrder: ["fuego", "matrix", "morado", "cypher", "circuito", "minimal", "azul", "espacio"]
+    readonly property var builtInOrder: ["fuego", "matrix", "morado", "cypher", "circuito", "minimal", "azul", "espacio", "pico"]
 
-    // every image in images/trezor-wallpapers (Safe 7) or its safe5 subfolder (Safe 5), built into the app:
+    // every image in images/trezor-wallpapers (Safe 7) or its safe5 (Safe 5) / safe3 (Safe 3) subfolder, built into the app:
     // the app's own wallpapers first, then the rest by name
     readonly property var gallery: {
-        var urls = oshelper.resourceImages(squareScreen ? "images/trezor-wallpapers/safe5" : "images/trezor-wallpapers");
+        var urls = oshelper.resourceImages(galleryFolder);
         var list = urls.map(function(url) {
             var file = url.substring(url.lastIndexOf("/") + 1);
             var base = file.replace(/\.[^.]+$/, "");
@@ -98,12 +99,17 @@ Rectangle {
     readonly property int screenHeight: features && features.homescreenHeight ? features.homescreenHeight : 520
     // square screen (Safe 5, 240×240): its own gallery and a 16 KB limit instead of 64 KB
     readonly property bool squareScreen: screenWidth === screenHeight
-    readonly property int maxBytes: squareScreen ? 16384 : 65536
-    // preview size on this page: the device screen at half size, 240 px wide for the square one
-    readonly property int previewWidth: squareScreen ? 240 : 190
-    readonly property int previewHeight: squareScreen ? 240 : 260
-    readonly property int thumbWidth: squareScreen ? 112 : 96
-    readonly property int thumbHeight: squareScreen ? 112 : 131
+    // small black and white screen (Safe 3, 128×64): sent as TOIF (TOIG), dithered to 1 bit
+    // (homescreenFormat 3 = ToiG in the Trezor protocol)
+    readonly property bool monoScreen: (features && features.homescreenFormat === 3) || (screenWidth <= 128 && screenHeight <= 64)
+    readonly property string galleryFolder: monoScreen ? "images/trezor-wallpapers/safe3"
+                                          : squareScreen ? "images/trezor-wallpapers/safe5" : "images/trezor-wallpapers"
+    readonly property int maxBytes: monoScreen ? 16384 : squareScreen ? 16384 : 65536
+    // preview size on this page: the device screen at half size, 240 px wide for the square one, 2× for the Safe 3
+    readonly property int previewWidth: monoScreen ? 256 : squareScreen ? 240 : 190
+    readonly property int previewHeight: monoScreen ? 128 : squareScreen ? 240 : 260
+    readonly property int thumbWidth: monoScreen ? 128 : squareScreen ? 112 : 96
+    readonly property int thumbHeight: monoScreen ? 64 : squareScreen ? 112 : 131
 
     function modelName(f) {
         if (f.internalModel === "T3W1")
@@ -186,7 +192,7 @@ Rectangle {
             appWindow.walletDeviceLabel = pageTrezor.features.label || pageTrezor.modelName(pageTrezor.features);
             // a picked gallery image from the other model's gallery no longer fits
             var pending = pageTrezor.pendingWallpaper;
-            if (pending.indexOf("qrc:") === 0 && (pending.indexOf("/safe5/") >= 0) !== pageTrezor.squareScreen) {
+            if (pending.indexOf("qrc:") === 0 && !pending.substring(0, pending.lastIndexOf("/")).endsWith(pageTrezor.galleryFolder)) {
                 pageTrezor.pendingWallpaper = "";
                 pageTrezor.pendingName = "";
             }
@@ -394,7 +400,10 @@ Rectangle {
             // ---- homescreen ----
             SettingRow {
                 title: qsTr("Homescreen") + translationManager.emptyString
-                body: qsTr("Upload your own image or pick one from the XMR Wallet+ gallery. It is cropped to %1×%2 pixels and sent as a JPEG of %3 KB at most.").arg(pageTrezor.screenWidth).arg(pageTrezor.screenHeight).arg(pageTrezor.maxBytes / 1024) + translationManager.emptyString
+                body: (pageTrezor.monoScreen
+                       ? qsTr("Upload your own image or pick one from the XMR Wallet+ gallery. It is cropped to %1×%2 pixels and turned into black and white dots, because this screen has no grey or colour.").arg(pageTrezor.screenWidth).arg(pageTrezor.screenHeight)
+                       : qsTr("Upload your own image or pick one from the XMR Wallet+ gallery. It is cropped to %1×%2 pixels and sent as a JPEG of %3 KB at most.").arg(pageTrezor.screenWidth).arg(pageTrezor.screenHeight).arg(pageTrezor.maxBytes / 1024))
+                      + translationManager.emptyString
 
                 MoneroComponents.StandardButton {
                     small: true
@@ -445,8 +454,8 @@ Rectangle {
                                     anchors.margins: 3
                                     source: thumb.url
                                     fillMode: Image.PreserveAspectCrop
-                                    sourceSize.width: 190
-                                    smooth: true
+                                    sourceSize.width: pageTrezor.monoScreen ? 0 : 190
+                                    smooth: !pageTrezor.monoScreen
                                     asynchronous: true
                                 }
                             }
@@ -501,8 +510,8 @@ Rectangle {
                                 visible: pageTrezor.pendingWallpaper !== ""
                                 source: pageTrezor.pendingWallpaper
                                 fillMode: Image.PreserveAspectCrop
-                                sourceSize.width: pageTrezor.previewWidth * 2
-                                smooth: true
+                                sourceSize.width: pageTrezor.monoScreen ? 0 : pageTrezor.previewWidth * 2
+                                smooth: !pageTrezor.monoScreen
                                 asynchronous: true
                             }
                             MoneroComponents.TextPlain {

@@ -61,8 +61,10 @@ Rectangle {
     property Keys keysView: Keys { }
     property Account accountView: Account { }
     property Swaps swapsView: Swaps { }
+    property SwapsNoKyc swapsNoKycView: SwapsNoKyc { }
     property TradingData tradingView: TradingData { }
     property Notes notesView: Notes { }
+    property CustomAddresses customAddressesView: CustomAddresses { }
     property WalletPlus walletPlusView: WalletPlus { }
     property Security securityView: Security { }
     property TrezorDevice trezorView: TrezorDevice { }
@@ -184,6 +186,10 @@ Rectangle {
                 PropertyChanges { target: root; currentView: swapsView }
                 PropertyChanges { target: mainFlickable; contentHeight: swapsView.swapsHeight + 80 }
             }, State {
+                name: "SwapsNoKyc"
+                PropertyChanges { target: root; currentView: swapsNoKycView }
+                PropertyChanges { target: mainFlickable; contentHeight: swapsNoKycView.swapsNoKycHeight + 80 }
+            }, State {
                 name: "Trading"
                 PropertyChanges { target: root; currentView: tradingView }
                 PropertyChanges { target: mainFlickable; contentHeight: tradingView.tradingHeight + 80 }
@@ -191,6 +197,10 @@ Rectangle {
                 name: "Notes"
                 PropertyChanges { target: root; currentView: notesView }
                 PropertyChanges { target: mainFlickable; contentHeight: notesView.notesHeight + 80 }
+            }, State {
+                name: "CustomAddresses"
+                PropertyChanges { target: root; currentView: customAddressesView }
+                PropertyChanges { target: mainFlickable; contentHeight: customAddressesView.customAddressesHeight + 80 }
             }, State {
                 name: "WalletPlus"
                 PropertyChanges { target: root; currentView: walletPlusView }
@@ -281,7 +291,7 @@ Rectangle {
 
     // border shadow
     Image {
-        source: "qrc:///images/middlePanelShadow.png"
+        source: "qrc:///images/window/middlePanelShadow.png"
         width: 12
         anchors.top: parent.top
         anchors.bottom: parent.bottom

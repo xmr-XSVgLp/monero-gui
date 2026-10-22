@@ -27,6 +27,7 @@
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import QtQuick
+import FontAwesome
 import QtQuick.Dialogs
 import QtQuick.Layouts
 import QtQuick.Controls
@@ -86,7 +87,7 @@ Rectangle {
                                                                                         : "") + translationManager.emptyString
                 }
                 bodyText: qsTr("Choose this option if this is your first time using Monero.") + translationManager.emptyString
-                imageIcon: "qrc:///images/create-wallet.png"
+                imageIcon: "qrc:///images/wallet-icons/create-wallet.png"
 
                 onMenuClicked: {
                     wizardController.restart();
@@ -104,7 +105,7 @@ Rectangle {
                                                                                         : "") + translationManager.emptyString
                 }
                 bodyText: qsTr("Connect your hardware wallet to create a new Monero wallet.") + translationManager.emptyString
-                imageIcon: "qrc:///images/restore-wallet-from-hardware.png"
+                imageIcon: "qrc:///images/wallet-icons/restore-wallet-from-hardware.png"
 
                 onMenuClicked: {
                     wizardController.restart();
@@ -116,7 +117,7 @@ Rectangle {
                 id: openWalletButton
                 headerText: qsTr("Open a wallet from file") + translationManager.emptyString
                 bodyText: qsTr("Import an existing .keys wallet file from your computer.") + translationManager.emptyString
-                imageIcon: "qrc:///images/open-wallet-from-file.png"
+                imageIcon: "qrc:///images/wallet-icons/open-wallet-from-file.png"
 
                 onMenuClicked: {
                     wizardStateView.state = "wizardOpenWallet1"
@@ -128,7 +129,7 @@ Rectangle {
                 id: restoreWalletButton
                 headerText: qsTr("Restore wallet from keys or mnemonic seed") + translationManager.emptyString
                 bodyText: qsTr("Enter your private keys or 25-word mnemonic seed to restore your wallet.") + translationManager.emptyString
-                imageIcon: "qrc:///images/restore-wallet.png"
+                imageIcon: "qrc:///images/wallet-icons/restore-wallet.png"
 
                 onMenuClicked: {
                     wizardController.restart();
@@ -338,11 +339,60 @@ Rectangle {
                 }
             }
 
+            // which anonymous network each connection uses (same card as Settings → Node / Network)
+            MoneroComponents.NetworkConfigCard {
+                Layout.topMargin: 12
+                Layout.fillWidth: true
+            }
+
             // NymVPN: route the app through the Nym mixnet
             MoneroComponents.NymVpnPanel {
                 id: nymVpnPanel
-                Layout.topMargin: 12
+                Layout.topMargin: 14
                 Layout.fillWidth: true
+            }
+
+            // bundled Tor and I2P, below Nym (same panels as Settings → Node / Network)
+            MoneroComponents.TorPanel {
+                Layout.topMargin: 14
+                Layout.fillWidth: true
+            }
+            MoneroComponents.I2pPanel {
+                Layout.topMargin: 14
+                Layout.fillWidth: true
+            }
+
+            // connection check, one per network
+            MoneroComponents.CollapsibleCard {
+                Layout.topMargin: 14
+                Layout.fillWidth: true
+                icon: FontAwesome.checkCircle
+                title: qsTr("Connection check") + translationManager.emptyString
+                summary: appWindow.connTestingNet !== "" ? qsTr("checking %1…").arg(appWindow.netDisplayName(appWindow.connTestingNet)) + translationManager.emptyString
+                                                         : qsTr("Nym · Tor · I2P") + translationManager.emptyString
+                checked: persistentSettings.connCardOpen
+                onCheckedChanged: persistentSettings.connCardOpen = checked
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    Layout.topMargin: 4
+                    Layout.bottomMargin: 16
+                    spacing: 18
+
+                    MoneroComponents.TextPlain {
+                        Layout.fillWidth: true
+                        wrapMode: Text.WordWrap
+                        text: qsTr("Runs only when requested, one network at a time, and shares bandwidth with synchronization. Through Nym or I2P it can take a few minutes.") + translationManager.emptyString
+                        font.pixelSize: 12
+                        color: MoneroComponents.Style.dimmedFontColor
+                        themeTransition: false
+                    }
+                    MoneroComponents.ConnectionCheck { Layout.fillWidth: true; net: "nym" }
+                    Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: MoneroComponents.Style.blackTheme ? "#E8ECE9" : "#2B3A30"; opacity: 0.15 }
+                    MoneroComponents.ConnectionCheck { Layout.fillWidth: true; net: "tor" }
+                    Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: MoneroComponents.Style.blackTheme ? "#E8ECE9" : "#2B3A30"; opacity: 0.15 }
+                    MoneroComponents.ConnectionCheck { Layout.fillWidth: true; net: "i2p" }
+                }
             }
         }
     }

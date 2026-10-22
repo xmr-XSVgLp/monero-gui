@@ -10,6 +10,7 @@ import "../../js/Utils.js" as Utils
 ColumnLayout {
     id: tab
     spacing: 16
+    property alias backupsHeading: backupsHeading
 
     property int refreshTick: 0
     property var nodeInfo: null
@@ -112,7 +113,7 @@ ColumnLayout {
     readonly property bool nodeOk: persistentSettings.useRemoteNode
                                    ? securityPage.route.kind !== "direct" || remoteLocal
                                    : appWindow.daemonRunning && nodeInfo !== null && (nodeInfo.outgoing_connections_count || 0) > 0
-    readonly property bool privacyOk: persistentSettings.extremePrivacy || persistentSettings.nymVpnRequired || securityPage.route.kind !== "direct"
+    readonly property bool privacyOk: true   // Network configuration: always Tor or Nym, never direct
     readonly property bool sessionOk: persistentSettings.lockOnUserInActivity && persistentSettings.askPasswordBeforeSending
 
     readonly property int passed: (permissionsOk ? 1 : 0) + (password.level >= 3 || hardware ? 1 : 0) + (backupOk ? 1 : 0)
@@ -286,6 +287,7 @@ ColumnLayout {
 
     // ---- 3. backups ----
     MoneroComponents.SectionTitle {
+        id: backupsHeading
         Layout.fillWidth: true
         Layout.topMargin: 8
         text: qsTr("Backups") + translationManager.emptyString
@@ -405,7 +407,7 @@ ColumnLayout {
         SecRow {
             dot: tab.privacyOk ? securityPage.goodColor : securityPage.warnColor
             title: qsTr("Network privacy") + translationManager.emptyString
-            tag: persistentSettings.extremePrivacy ? qsTr("extreme") : persistentSettings.nymVpnRequired ? qsTr("Nym required") : ""
+            tag: persistentSettings.extremePrivacy ? qsTr("extreme") : (persistentSettings.netWallet === "nym" ? "Nym" : "Tor")
             detail: (persistentSettings.extremePrivacy ? qsTr("Extreme privacy on. Requests leave through: %1").arg(securityPage.route.text)
                      : qsTr("The app's requests leave through: %1").arg(securityPage.route.text)) + translationManager.emptyString
             MoneroComponents.StandardButton {

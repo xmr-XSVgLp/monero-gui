@@ -87,6 +87,7 @@ ApplicationWindow {
     // localDaemonAlive (checked with daemonManager) keeps the node shown as running meanwhile
     property bool localDaemonAlive: false
     property bool daemonRunning: !persistentSettings.useRemoteNode && (!disconnected || localDaemonAlive)
+    onDaemonRunningChanged: if (daemonRunning) daemonRouteTimer.restart()
     property int daemonStartStopInProgress: 0
     property alias toolTip: toolTip
     property string walletName
@@ -105,6 +106,86 @@ ApplicationWindow {
         try { return JSON.parse(persistentSettings.trezorLabels || "{}")[path] || ""; } catch (e) { return ""; }
     }
     property string deviceShowAddress: ""   // address sent to the Trezor screen, shown in the splash to compare
+
+    // ---- several Trezors connected: the user picks one (TrezorPicker) ----
+    // persistentSettings.trezorDevices: JSON transport path -> {label, model}, so the list shows names it saw before
+    // persistentSettings.trezorWallets: JSON wallet path -> transport path of the Trezor it was opened with
+    function jsonSetting(name) {
+        try { return JSON.parse(persistentSettings[name] || "{}") || {}; } catch (e) { return {}; }
+    }
+    function rememberTrezorDevices(list) {
+        var m = jsonSetting("trezorDevices"), changed = false;
+        list.forEach(function(d) {
+            if (!d.label) return;
+            if (m[d.path] && m[d.path].label === d.label && m[d.path].model === d.model) return;
+            m[d.path] = { label: d.label, model: d.model };
+            changed = true;
+        });
+        if (changed) persistentSettings.trezorDevices = JSON.stringify(m);
+    }
+    function withKnownTrezorNames(list) {
+        var m = jsonSetting("trezorDevices");
+        return list.map(function(d) {
+            var known = m[d.path] || {};
+            return { path: d.path, name: d.name, label: d.label || known.label || "",
+                     model: d.model || known.model || "", lastUsed: d.lastUsed };
+        });
+    }
+    function rememberTrezorWallet(walletPath, devicePath) {
+        if (!walletPath) return;
+        var m = jsonSetting("trezorWallets");
+        if (m.hasOwnProperty(walletPath) && (devicePath === undefined || m[walletPath] === devicePath)) return;
+        m[walletPath] = devicePath || m[walletPath] || "";
+        persistentSettings.trezorWallets = JSON.stringify(m);
+    }
+    function isTrezorWallet(path) {
+        if (jsonSetting("trezorWallets").hasOwnProperty(path) || knownTrezorLabel(path) !== "") return true;
+        return unlockedWallets.some(function(w) { return w.path === path && w.hw; });
+    }
+    // a wallet was renamed (newPath) or moved to the Trash (newPath ""): carry or drop what the app keeps per wallet path
+    function moveWalletSettings(oldPath, newPath) {
+        var key = function(p) { return String(p).replace(/\.keys$/, ""); };
+        ["trezorWallets", "trezorLabels", "securityBackups"].forEach(function(name) {
+            var m = {};
+            try { m = JSON.parse(persistentSettings[name] || "{}") || {}; } catch (e) { m = {}; }
+            var changed = false;
+            Object.keys(m).forEach(function(k) {
+                if (key(k) !== key(oldPath)) return;
+                if (newPath !== "") m[newPath + (/\.keys$/.test(k) ? ".keys" : "")] = m[k];
+                delete m[k];
+                changed = true;
+            });
+            if (changed) persistentSettings[name] = JSON.stringify(m);
+        });
+        if (key(persistentSettings.wallet_path) === key(oldPath))
+            persistentSettings.wallet_path = newPath === "" ? "" : newPath + (/\.keys$/.test(persistentSettings.wallet_path) ? ".keys" : "");
+    }
+    function isParkedWallet(path) {
+        var key = String(path).replace(/\.keys$/, "");
+        return walletManager.parkedWallets().some(function(w) { return String(w.path).replace(/\.keys$/, "") === key; });
+    }
+    // calls onChosen(devicePath) once the Trezor to use is set; with more than one connected the user picks it
+    function chooseTrezor(walletPath, onChosen, onCancelled) {
+        walletManager.trezorDevicesAsync(false, function(json) {
+            var list = [];
+            try { list = JSON.parse(json); } catch (e) {}
+            rememberTrezorDevices(list);
+            if (list.length <= 1) {
+                walletManager.setTrezorDevicePath("");
+                if (list.length === 1) rememberTrezorWallet(walletPath, list[0].path);
+                onChosen(list.length === 1 ? list[0].path : "");
+                return;
+            }
+            hideProcessingSplash();
+            trezorPicker.open(withKnownTrezorNames(list), jsonSetting("trezorWallets")[walletPath] || "", function(path) {
+                walletManager.setTrezorDevicePath(path);
+                rememberTrezorWallet(walletPath, path);
+                onChosen(path);
+            }, function() {
+                if (onCancelled) onCancelled();
+            });
+        });
+    }
 
     // true when the path lives on a USB stick / SD card (oshelper.removableVolumes)
     function isRemovablePath(path) {
@@ -157,6 +238,8 @@ ApplicationWindow {
     property real fiatChange24h: NaN
     property real priceBtc: 0             // BTC received for 1 XMR (Wagyu swap quote, fee included)
     property double priceBtcTimestamp: 0
+    property real priceBtcLive: 0            // XMR/BTC last trade (Kraken ticker, every minute)
+    property double priceBtcLiveTime: 0
 
     // Nym SDK: a bundled process owns the wallet's independent mixnet session. States: off, missing, working, ready, connected, error
     property string nymVpnState: "off"
@@ -171,37 +254,105 @@ ApplicationWindow {
     property bool nymVpnInfoLoading: false
     // kill switch: while restarting, every proxied request goes to a dead address (see getProxyAddress)
     property bool nymVpnRestarting: false
-    // Connection diagnostics are manual: never compete with initial blockchain sync.
-    property var connTest: ({})
-    property bool connTesting: false
+    // Connection diagnostics are manual: never compete with initial blockchain sync. One check per
+    // anonymous network (Settings > Node / Network > Connection check), one running at a time.
+    property var connTests: ({ nym: {}, tor: {}, i2p: {} })     // net -> { key: result }
+    property var connTestTimes: ({})                             // net -> Date of the last finished check
+    property string connTestingNet: ""                           // "" = none running
     property int connTestGen: 0
+    // kept for older callers: true while any check runs
+    readonly property bool connTesting: connTestingNet !== ""
+    function netDisplayName(net) { return net === "nym" ? "Nym" : net === "i2p" ? "I2P" : "Tor"; }
+    function netSocks(net) {
+        return net === "nym" ? persistentSettings.nymVpnSocksAddress : net === "i2p" ? oshelper.i2pClient.address : oshelper.torClient.address;
+    }
+    function netUp(net) { return net === "nym" ? nymVpnProxyUp() : net === "i2p" ? i2pProxyUp() : torProxyUp(); }
+    // the node a network's check looks at: the remote node when the wallet reaches it through this
+    // network, the local node when this network syncs it; { address, socks } or null
+    function connTestNode(net) {
+        if (persistentSettings.useRemoteNode) {
+            var a = remoteNodesModel.currentRemoteNode().address;
+            var via = isI2pNode(a) ? "i2p" : isOnionNode(a) ? "tor" : persistentSettings.netWallet;
+            return via === net ? { address: a, socks: netSocks(net) } : null;
+        }
+        return persistentSettings.netSync === net ? { address: localDaemonAddress, socks: "" } : null;
+    }
+    function setConnResult(net, r) {
+        var all = Object.assign({}, connTests);
+        var t = Object.assign({}, all[net] || {});
+        t[r.key] = r;
+        all[net] = t;
+        connTests = all;
+    }
+    function finishConnTest(net) {
+        var times = Object.assign({}, connTestTimes);
+        times[net] = new Date();
+        connTestTimes = times;
+        connTestingNet = "";
+    }
     function cancelConnectionTest() {
         connTestGen++;
-        connTesting = false;
-        connTest = ({});
+        connTestingNet = "";
         oshelper.cancelConnectionTest();
     }
-    property string connTestVia: ""     // "nym", "proxy" or "direct"
-    property date connTestTime
-    function runConnectionTest() {
-        if (connTesting)
-            return;
-        var proxy = persistentSettings.getProxyAddress().replace(/^socks5:\/\//, "");
-        connTestVia = proxy === "" ? "direct" : (proxy === persistentSettings.nymVpnSocksAddress && nymVpnProxyUp() ? "nym" : "proxy");
-        connTesting = true;
+    // net: "nym" | "tor" | "i2p"; without it, the wallet's network
+    function runConnectionTest(net) {
+        if (net === undefined || net === "") net = persistentSettings.netWallet;
+        if (connTestingNet !== "") return;
+        var all = Object.assign({}, connTests);
+        all[net] = {};
+        connTests = all;
+        connTestingNet = net;
         var gen = ++connTestGen;
-        connTest = ({});
-        oshelper.nymVpnTest(proxy, localDaemonAddress, function(json) {
+        var node = connTestNode(net);
+        if (net === "i2p") {
+            runI2pConnectionTest(gen, node);
+            return;
+        }
+        oshelper.nymVpnTest(netSocks(net), node ? node.address : "", function(json) {
             if (gen !== connTestGen) return;
             var r = JSON.parse(json);
-            if (r.key === "done") {
-                connTesting = false;
-                connTestTime = new Date();
-                return;
-            }
-            var t = Object.assign({}, connTest);
-            t[r.key] = r;
-            connTest = t;
+            if (r.key === "done") { finishConnTest(net); return; }
+            setConnResult(net, r);
+        }, node ? node.socks : "");
+    }
+    // I2P has no exit to the internet: router state, monerod's built-in I2P seed nodes (P2P handshake,
+    // the peers --tx-proxy i2p uses) and the .i2p remote node or the local node
+    readonly property var i2pSeedNodes: ["uqj3aphckqtjsitz7kxx5flqpwjlq5ppr3chazfued7xucv3nheq.b32.i2p",
+                                         "vdmnehdjkpkg57nthgnjfuaqgku673r5bpbqg56ix6fyqoywgqrq.b32.i2p",
+                                         "ugnlcdciyhghh2zert7c3kl4biwkirc43ke33jiy5slnd3mv2trq.b32.i2p"]
+    function runI2pConnectionTest(gen, node) {
+        var c = oshelper.i2pClient;
+        setConnResult("i2p", { key: "router", ok: c.state === "connected", state: c.state, routers: c.routers,
+                               tunnels: c.clientTunnels, rate: c.successRate, status: c.networkStatus });
+        if (c.state !== "connected") { finishConnTest("i2p"); return; }
+        var peers = [], left = i2pSeedNodes.length;
+        i2pSeedNodes.forEach(function(host) {
+            var t0 = Date.now();
+            oshelper.nodeP2pProbe(host, c.address, [18080, 18085, 18083, 18084], 90000, function(json) {
+                if (gen !== connTestGen) return;
+                var r = {};
+                try { r = JSON.parse(json); } catch (e) {}
+                peers.push({ ok: r.ok === true, pingMs: Date.now() - t0, error: r.error || "" });
+                if (--left > 0) return;
+                setConnResult("i2p", { key: "p2p", ok: peers.some(function(x) { return x.ok; }),
+                                       reached: peers.filter(function(x) { return x.ok; }).length, total: peers.length, peers: peers });
+                if (!node) { finishConnTest("i2p"); return; }
+                oshelper.nodeRpc(node.address, node.socks, "/get_info", "", 120000, function(ok, ms, body, error) {
+                    if (gen !== connTestGen) return;
+                    var o = { key: "node", ok: false, error: error || "" };
+                    if (ok) {
+                        try {
+                            var j = JSON.parse(body);
+                            o = { key: "node", ok: true, height: j.height, target_height: j.target_height,
+                                  outgoing_connections_count: j.outgoing_connections_count,
+                                  incoming_connections_count: j.incoming_connections_count, ms: ms };
+                        } catch (e) { o.error = "bad answer"; }
+                    }
+                    setConnResult("i2p", o);
+                    finishConnTest("i2p");
+                });
+            });
         });
     }
     readonly property bool nymClientAvailable: oshelper.nymClient.available()
@@ -368,13 +519,17 @@ ApplicationWindow {
             var client = oshelper.nymClient;
             if (client.state === "error") {
                 nymVpnFail(client.message);
+                scheduleNymRetry();
             } else if (client.state === "connected") {
+                nymAutoRetries = 0;
+                nymWatchFails = 0;
+                nymRetryTimer.stop();
                 var justConnected = nymVpnState !== "connected";
                 nymVpnState = "connected";
                 // new route (connect or reconnect): test it right away
                 if (justConnected) {
                     if (connTesting) cancelConnectionTest();
-                    Qt.callLater(runConnectionTest);
+                    Qt.callLater(runConnectionTest, "nym");
                 }
                 nymVpnRestarting = false;
                 nymVpnMessage = qsTr("Independent Nym client · SOCKS5 %1").arg(client.address) + translationManager.emptyString
@@ -387,17 +542,407 @@ ApplicationWindow {
                 nymVpnMessage = qsTr("Connecting the independent Nym client…") + translationManager.emptyString;
             } else {
                 nymVpnFail(qsTr("The independent Nym client stopped.") + translationManager.emptyString);
+                scheduleNymRetry();
             }
         }
     }
 
-    // extreme privacy: the SOCKS5 address of an approved route (NymVPN up, or the SOCKS5 proxy turned on), "" if none
+    // ---- Nym watchdog: the mixnet route can hang while the client still says "connected". Every 90 s a
+    // tiny HTTPS request goes through Nym (two hosts); two failed rounds in a row -> reconnect on its own.
+    // A client that stopped or failed to connect is started again with a growing pause (20 s … 5 min).
+    property int nymWatchFails: 0
+    property bool nymProbeBusy: false
+    property int nymAutoRetries: 0
+    property double nymLastAutoReconnect: 0
+    readonly property var nymProbeTargets: [["https://api.kraken.com:443", "/0/public/Time"], ["https://ipwho.is:443", "/"]]
+    function nymWatchProbe() {
+        if (nymProbeBusy || !nymVpnProxyUp() || connTestingNet === "nym") return;
+        nymProbeBusy = true;
+        var socks = persistentSettings.nymVpnSocksAddress;
+        var tryOne = function(i) {
+            var t = nymProbeTargets[i];
+            oshelper.nodeRpc(t[0], socks, t[1], "", 45000, function(ok, ms, body, error) {
+                if (!nymVpnProxyUp()) { nymProbeBusy = false; return; }      // reconnecting meanwhile
+                if (ok || body !== "") { nymProbeBusy = false; nymWatchFails = 0; return; }
+                if (i + 1 < nymProbeTargets.length) { tryOne(i + 1); return; }
+                nymProbeBusy = false;
+                nymWatchFails++;
+                console.warn("Nym watchdog: no answer through Nym (" + error + "), " + nymWatchFails + "/2");
+                if (nymWatchFails >= 2) {
+                    nymWatchFails = 0;
+                    nymAutoReconnect(qsTr("Nym stopped answering: reconnecting…") + translationManager.emptyString);
+                } else {
+                    nymWatchSoon.start();       // second round sooner than the next 90 s
+                }
+            });
+        };
+        tryOne(0);
+    }
+    function nymAutoReconnect(message) {
+        if (!persistentSettings.nymVpnEnabled || nymVpnState === "working") return;
+        if (Date.now() - nymLastAutoReconnect < 120000) return;
+        nymLastAutoReconnect = Date.now();
+        console.warn("Nym watchdog: " + message);
+        showStatusMessage(message, 6);
+        nymVpnRestart();
+    }
+    Timer {
+        interval: 90000
+        repeat: true
+        running: persistentSettings.nymVpnEnabled && appWindow.nymVpnState === "connected" && !appWindow.nymVpnRestarting
+        onTriggered: appWindow.nymWatchProbe()
+    }
+    Timer {
+        id: nymWatchSoon
+        interval: 20000
+        onTriggered: appWindow.nymWatchProbe()
+    }
+    Timer {
+        id: nymRetryTimer
+        onTriggered: {
+            if (!persistentSettings.nymVpnEnabled || appWindow.nymVpnState !== "error") return;
+            appWindow.nymAutoRetries++;
+            appWindow.nymAutoReconnect(qsTr("Nym was down: connecting again…") + translationManager.emptyString);
+        }
+    }
+    function scheduleNymRetry() {
+        // only with a saved account (a wrong or missing phrase needs the user) and not forever
+        if (!persistentSettings.nymVpnEnabled || !oshelper.nymClient.accountSaved || nymAutoRetries >= 8) return;
+        nymRetryTimer.interval = Math.min(300000, 20000 * Math.pow(2, nymAutoRetries));
+        nymLastAutoReconnect = 0;
+        nymRetryTimer.restart();
+    }
+
+    // ---- bundled Tor (Settings > Node / Network > TOR NETWORK). Tor, Nym and I2P can run together:
+    // "Network configuration" (netWallet / netSync / netTx) says which one each kind of traffic uses.
+    property string torState: oshelper.torClient.state   // off | starting | connected | error
+    property bool torNewIdentityBusy: false
+
+    function torProxyUp() {
+        return persistentSettings.torEnabled && oshelper.torClient.state === "connected";
+    }
+
+    function torConnect() {
+        persistentSettings.torEnabled = true;
+        oshelper.torClient.start();
+    }
+
+    function torDisconnect() {
+        persistentSettings.torEnabled = false;
+        oshelper.torClient.stop();
+    }
+
+    // ---- Network configuration (Settings > Node / Network, top). Anonymous by default: there is no
+    // "normal network" choice; while the chosen network is not connected, that traffic is blocked.
+    //   netWallet: wallet requests (prices, swaps, updates, remote nodes): "tor" | "nym"
+    //   netSync:   local node peers and block sync (monerod --proxy):     "tor" | "nym" | "i2p"
+    //              (i2p: no exits to clearnet peers and monerod takes no blocks from .i2p peers, so it does not sync)
+    //   netTx:     local node's own transactions (monerod --tx-proxy):     "tor" | "i2p" | "both" (one --tx-proxy each)
+    readonly property bool torNeeded: persistentSettings.netWallet === "tor" || persistentSettings.netSync === "tor" || txUses("tor")
+    readonly property bool nymNeeded: persistentSettings.netWallet === "nym" || persistentSettings.netSync === "nym"
+    readonly property bool i2pNeeded: txUses("i2p") || persistentSettings.netSync === "i2p"
+    // Send transactions uses this network ("both" = Tor and I2P)
+    function txUses(net) { return persistentSettings.netTx === net || persistentSettings.netTx === "both"; }
+    // what a network is used for, for the TOR / NYM / I2P panels
+    function netUses(net) {
+        var u = [];
+        if (persistentSettings.netWallet === net) u.push(qsTr("wallet") + translationManager.emptyString);
+        if (persistentSettings.netSync === net) u.push(qsTr("node sync") + translationManager.emptyString);
+        if (txUses(net)) u.push(qsTr("node transactions") + translationManager.emptyString);
+        return u;
+    }
+    // start the networks the configuration needs (they are never stopped here: the user can disconnect one)
+    function ensureNetworks() {
+        if (isQuitting) return;
+        if (torNeeded && !persistentSettings.torEnabled) torConnect();
+        if (nymNeeded && !persistentSettings.nymVpnEnabled) nymVpnConnect();
+        if (i2pNeeded && !persistentSettings.i2pEnabled) i2pConnect();
+    }
+    function setNetwork(kind, net) {
+        if (kind === "wallet") persistentSettings.netWallet = net;
+        else if (kind === "sync") persistentSettings.netSync = net === "i2p" ? "tor" : net;   // the local node cannot sync over I2P
+        else if (kind === "tx") persistentSettings.netTx = net;
+        ensureNetworks();
+        daemonRouteTimer.restart();
+        if (connTesting) cancelConnectionTest();
+        if (kind === "wallet") Qt.callLater(runConnectionTest);
+    }
+
+    function torNewIdentity() {
+        if (!torProxyUp() || torNewIdentityBusy) return;
+        torNewIdentityBusy = true;
+        oshelper.torClient.newIdentity();
+    }
+
+    // ---- bundled I2P (Settings > Node / Network > I2P NETWORK). I2P has no exits to the normal
+    // internet, so it works next to Tor or Nym: .b32.i2p remote nodes and monerod --tx-proxy i2p.
+    property string i2pState: oshelper.i2pClient.state
+    property bool i2pWaitingTor: false   // Tor on but not up yet: the reseed waits for it
+
+    function i2pOn() {
+        return persistentSettings.i2pEnabled || i2pNeeded;
+    }
+    function i2pProxyUp() {
+        return persistentSettings.i2pEnabled && oshelper.i2pClient.state === "connected";
+    }
+    function i2pConnect() {
+        persistentSettings.i2pEnabled = true;
+        // the first routers come by HTTPS from the reseed servers: through Tor or Nym when they are on
+        if (torNeeded && !torProxyUp()) {
+            i2pWaitingTor = true;
+            return;
+        }
+        i2pWaitingTor = false;
+        var route = approvedRoute();
+        oshelper.i2pClient.start(route !== "" ? "socks://" + route : "");
+    }
+    function i2pDisconnect() {
+        i2pWaitingTor = false;
+        persistentSettings.i2pEnabled = false;
+        oshelper.i2pClient.stop();
+    }
+
+    Connections {
+        target: oshelper.i2pClient
+        property bool wasConnected: false
+        function onChanged() {
+            var up = oshelper.i2pClient.state === "connected";
+            if (up && !wasConnected) daemonRouteTimer.restart();
+            wasConnected = up;
+        }
+    }
+
+    Connections {
+        target: oshelper.torClient
+        property bool wasConnected: false
+        function onChanged() {
+            var up = oshelper.torClient.state === "connected";
+            if (up && i2pWaitingTor && persistentSettings.i2pEnabled) Qt.callLater(i2pConnect);
+            // new route: test it right away, like Nym
+            if (up && !wasConnected && persistentSettings.torEnabled && !isQuitting) {
+                if (connTesting) cancelConnectionTest();
+                Qt.callLater(runConnectionTest, "tor");
+            }
+            if (up && !wasConnected) daemonRouteTimer.restart();
+            wasConnected = up;
+        }
+        function onNewIdentityDone(ok, error) {
+            torNewIdentityBusy = false;
+            if (ok) {
+                if (connTesting) cancelConnectionTest();
+                Qt.callLater(runConnectionTest, "tor");
+            } else {
+                console.warn("Tor NEWNYM failed: " + error);
+            }
+        }
+    }
+
+    // the SOCKS5 address of the wallet's network when it is up, "" if not (extreme privacy, I2P reseed)
     function approvedRoute() {
-        if (nymVpnProxyUp())
-            return persistentSettings.nymVpnSocksAddress;
-        if (!persistentSettings.nymVpnRequired && persistentSettings.proxyEnabled && persistentSettings.proxyAddress !== "")
-            return persistentSettings.proxyAddress;
+        if (persistentSettings.netWallet === "nym")
+            return nymVpnProxyUp() ? persistentSettings.nymVpnSocksAddress : (torProxyUp() ? oshelper.torClient.address : "");
+        return torProxyUp() ? oshelper.torClient.address : (nymVpnProxyUp() ? persistentSettings.nymVpnSocksAddress : "");
+    }
+
+    // wallet through Tor: remote nodes must be hidden services (.onion / .i2p): no clearnet node sees the wallet's requests
+    function torOnionOnly() {
+        return persistentSettings.netWallet === "tor";
+    }
+    function isOnionNode(address) {
+        return /^(?:https?:\/\/)?[a-z2-7]{16,56}\.onion(?::\d+)?\/?$/i.test((address || "").trim());
+    }
+    function isI2pNode(address) {
+        return /^(?:https?:\/\/)?[a-z2-7]{52,}\.b32\.i2p(?::\d+)?\/?$/i.test((address || "").trim());
+    }
+    // .i2p nodes need I2P, .onion ones Tor; with the wallet through Tor clearnet nodes are not used
+    // (through Nym they are: the node only sees a Nym exit)
+    function remoteNodeAllowed(address) {
+        if (isI2pNode(address)) return i2pOn();
+        if (isOnionNode(address)) return torNeeded || persistentSettings.torEnabled;
+        return !torOnionOnly();
+    }
+    // why a node of the list cannot be used now ("" = it can)
+    function remoteNodeBlockedText(address) {
+        if (remoteNodeAllowed(address)) return "";
+        if (isI2pNode(address)) return qsTr(".i2p: connect I2P to use it") + translationManager.emptyString;
+        if (isOnionNode(address)) return qsTr(".onion: connect Tor to use it") + translationManager.emptyString;
+        return (i2pOn() ? qsTr("not .onion or .i2p: blocked") : qsTr("not .onion: blocked while Tor is on")) + translationManager.emptyString;
+    }
+    // index of the first node of the list that can be used now, -1 if none
+    function firstAllowedNode() {
+        for (var i = 0; i < remoteNodesModel.count; i++)
+            if (remoteNodeAllowed(remoteNodesModel.get(i).address)) return i;
+        return -1;
+    }
+    function showNodeNotAllowed(address) {
+        if (isI2pNode(address)) {
+            informationPopup.title = qsTr("I2P is off") + translationManager.emptyString;
+            informationPopup.text = qsTr("This is an I2P node (.b32.i2p). Connect I2P in Settings > Node / Network > I2P NETWORK to use it.") + translationManager.emptyString;
+        } else if (isOnionNode(address)) {
+            informationPopup.title = qsTr("Tor is off") + translationManager.emptyString;
+            informationPopup.text = qsTr("This is a Tor node (.onion). Connect Tor in Settings > Node / Network > TOR NETWORK to use it.") + translationManager.emptyString;
+        } else {
+            informationPopup.title = qsTr("Tor: .onion nodes only") + translationManager.emptyString;
+            informationPopup.text = qsTr("While the wallet's connections go through Tor, it only connects to remote nodes that are hidden services (.onion). Pick one in Settings > Node / Network > TOR NETWORK > Remote .onion nodes, or choose Nym for the wallet in Network configuration.") + translationManager.emptyString
+                                    + (i2pOn() ? " " + qsTr("With I2P on, .i2p nodes can be used too.") + translationManager.emptyString : "");
+        }
+        informationPopup.onCloseCallback = null;
+        informationPopup.open();
+    }
+    // Tor / I2P changed with a remote node selected that cannot be used now: move to one that can
+    function remoteRouteCheck() {
+        if (!persistentSettings.useRemoteNode || !currentWallet || isQuitting)
+            return;
+        var address = remoteNodesModel.currentRemoteNode().address;
+        if (remoteNodeAllowed(address))
+            return;
+        var i = firstAllowedNode();
+        if (i >= 0) {
+            remoteNodesModel.applyRemoteNode(i);
+        } else {
+            disconnectRemoteNode();
+            showNodeNotAllowed(address);
+        }
+    }
+
+    // .onion / .b32.i2p P2P peers the user added to the local node (TOR / I2P panels): "host:port"
+    readonly property var anonPeers: {
+        try { var l = JSON.parse(persistentSettings.anonPeers || "[]"); return Array.isArray(l) ? l : []; }
+        catch (e) { return []; }
+    }
+    function anonPeerNet(address) {
+        return /\.onion:\d+$/i.test(address) ? "tor" : /\.b32\.i2p:\d+$/i.test(address) ? "i2p" : "clear";
+    }
+    // address lists of Network configuration > Node addresses (monerod --add-exclusive-node / --add-peer;
+    // --add-priority-node is anonPeers, shared with the TOR / I2P panels)
+    function jsonList(text) {
+        try { var l = JSON.parse(text || "[]"); return Array.isArray(l) ? l : []; }
+        catch (e) { return []; }
+    }
+    readonly property var exclusiveNodes: jsonList(persistentSettings.exclusiveNodes)
+    readonly property var extraPeers: jsonList(persistentSettings.extraPeers)
+    function nodeList(kind) {
+        return kind === "exclusive" ? exclusiveNodes : kind === "peer" ? extraPeers : anonPeers;
+    }
+    function setNodeList(kind, list) {
+        var t = JSON.stringify(list);
+        if (kind === "exclusive") persistentSettings.exclusiveNodes = t;
+        else if (kind === "peer") persistentSettings.extraPeers = t;
+        else persistentSettings.anonPeers = t;
+        daemonRouteTimer.restart();
+    }
+    // "" when added, else the reason
+    function addNodeAddress(kind, address) {
+        address = (address || "").trim().replace(/^[a-z]+:\/\//i, "").replace(/\/+$/, "");
+        if (!/^(?:[A-Za-z0-9.-]+|\[[0-9A-Fa-f:]+\]):\d{1,5}$/.test(address))
+            return qsTr("Write host:port, for example abc…xyz.onion:18083 or 1.2.3.4:18080") + translationManager.emptyString;
+        var l = nodeList(kind);
+        if (l.indexOf(address) >= 0)
+            return qsTr("Already in the list") + translationManager.emptyString;
+        setNodeList(kind, l.concat([address]));
         return "";
+    }
+    function removeNodeAddress(kind, address) {
+        setNodeList(kind, nodeList(kind).filter(function(a) { return a !== address; }));
+    }
+    // a .onion / .i2p address only works while its network's --tx-proxy is on
+    function nodeAddressActive(address) {
+        var net = anonPeerNet(address);
+        return net === "clear" || txUses(net);
+    }
+    function addAnonPeer(address) {
+        if (anonPeers.indexOf(address) >= 0) return;
+        persistentSettings.anonPeers = JSON.stringify(anonPeers.concat([address]));
+        daemonRouteTimer.restart();
+    }
+    function removeAnonPeer(address) {
+        persistentSettings.anonPeers = JSON.stringify(anonPeers.filter(function(a) { return a !== address; }));
+        daemonRouteTimer.restart();
+    }
+    // the peers monerod can reach now: their network's --tx-proxy is on
+    function activeAnonPeers() {
+        return anonPeers.filter(function(a) {
+            return nodeAddressActive(a);
+        });
+    }
+
+    // SOCKS5 route the local node must use right now ("" = direct)
+    function daemonRoute() {
+        // monerod reads a bare ip:port as SOCKS4a: say socks5:// explicitly
+        return "socks5://" + (persistentSettings.netSync === "nym" ? persistentSettings.nymVpnSocksAddress
+                            : persistentSettings.netSync === "i2p" ? oshelper.i2pClient.address : oshelper.torClient.address);
+    }
+    // monerod --tx-proxy for the node's own transactions (Network configuration > Send transactions)
+    function daemonTxProxies() {
+        var l = [];
+        if (txUses("tor")) l.push("tor,socks5://" + oshelper.torClient.address + ",10");
+        if (txUses("i2p")) l.push("i2p,socks5://" + oshelper.i2pClient.address + ",10");
+        return l;
+    }
+    function daemonBaseFlags() {
+        return persistentSettings.walletMode < 2 ? "--enable-dns-blocklist --out-peers 16 --no-igd" : persistentSettings.daemonFlags;
+    }
+    // the flags the app manages, in a fixed order: compared between the running monerod and the configuration
+    function managedDaemonFlags(command) {
+        var out = [];
+        var re = /(?:^|\s)(--proxy|--tx-proxy|--bootstrap-daemon-proxy|--add-priority-node|--add-exclusive-node|--add-peer)(?:=|\s+)(\S+)|(?:^|\s)(--hide-my-port|--pad-transactions)(?=\s|$)/g;
+        var m;
+        while ((m = re.exec(command || "")) !== null) {
+            if (m[3]) out.push(m[3]);
+            else out.push(m[1] + " " + m[2]);
+        }
+        return out.sort().join(" ");
+    }
+    // true while the running monerod still has flags of an older Network configuration (a restart is due)
+    property bool daemonCommandStale: false
+
+    // the route changed (Tor <-> Nym) while monerod keeps running with the old --proxy:
+    // restart it so it does not wait on a SOCKS5 port nobody listens to anymore
+    function daemonRouteCheck() {
+        if (persistentSettings.useRemoteNode || !daemonRunning || isQuitting) {
+            daemonCommandStale = false;
+            return;
+        }
+        // starting or stopping: look again a bit later instead of losing the change
+        if (daemonStartStopInProgress !== 0) {
+            daemonRouteTimer.restart();
+            return;
+        }
+        // no monerod process found: nothing to compare, so do not restart (that loop left the node on "Starting...")
+        var runningCommand = daemonManager.command(true);
+        if (runningCommand === "") {
+            daemonCommandStale = false;
+            return;
+        }
+        var base = daemonBaseFlags();
+        var running = managedDaemonFlags(runningCommand);
+        var wanted = managedDaemonFlags(daemonFlagsFor(base));
+        daemonCommandStale = running !== wanted;
+        if (!daemonCommandStale)
+            return;
+        console.log("local node configuration changed (" + running + " -> " + wanted + "), restarting monerod");
+        stopDaemon(function() { startDaemon(base); });
+    }
+
+    Timer {
+        id: daemonRouteTimer
+        interval: 3000
+        onTriggered: { appWindow.daemonRouteCheck(); appWindow.remoteRouteCheck(); }
+    }
+
+    Connections {
+        target: persistentSettings
+        function onTorEnabledChanged() { daemonRouteTimer.restart(); }
+        function onNymVpnEnabledChanged() { daemonRouteTimer.restart(); }
+        function onI2pEnabledChanged() { daemonRouteTimer.restart(); }
+        function onI2pRequiredChanged() { daemonRouteTimer.restart(); }
+        function onNetSyncChanged() { daemonRouteTimer.restart(); }
+        function onNetTxChanged() { daemonRouteTimer.restart(); }
+        function onAnonPeersChanged() { daemonRouteTimer.restart(); }
+        function onExclusiveNodesChanged() { daemonRouteTimer.restart(); }
+        function onExtraPeersChanged() { daemonRouteTimer.restart(); }
+        function onExtremePrivacyChanged() { daemonRouteTimer.restart(); }
+        function onBootstrapNodeAddressChanged() { daemonRouteTimer.restart(); }
     }
 
     function setExtremePrivacy(on) {
@@ -707,15 +1252,23 @@ ApplicationWindow {
         var wallet_path = persistentSettings.wallet_path;
         if(isIOS)
             wallet_path = appWindow.accountsDir + wallet_path;
-        // console.log("opening wallet at: ", wallet_path, "with password: ", appWindow.walletPassword);
         console.log("opening wallet at: ", wallet_path, ", network type: ", persistentSettings.nettype == NetworkType.MAINNET ? "mainnet" : persistentSettings.nettype == NetworkType.TESTNET ? "testnet" : "stagenet");
 
+        // the splash shows at once, also while the connected Trezors are listed
         this.onWalletOpening();
-        walletManager.openWalletAsync(
-            wallet_path,
-            walletPassword,
-            persistentSettings.nettype,
-            persistentSettings.kdfRounds);
+        var openNow = function() {
+            appWindow.onWalletOpening();
+            walletManager.openWalletAsync(
+                wallet_path,
+                walletPassword,
+                persistentSettings.nettype,
+                persistentSettings.kdfRounds);
+        };
+        // a Trezor wallet asks which Trezor to use when several are connected (a parked one keeps its own)
+        if (isTrezorWallet(persistentSettings.wallet_path) && !isParkedWallet(wallet_path))
+            chooseTrezor(persistentSettings.wallet_path, openNow, function() { appWindow.showWizard(); });
+        else
+            openNow();
     }
 
     // ---- quick wallet switch: wallets unlocked in this session, password kept only in memory ----
@@ -827,7 +1380,7 @@ ApplicationWindow {
                 appWindow.showStatusMessage(qsTr("Could not create the account: %1").arg(error), 8);
                 return;
             }
-            console.log("seed account", n, "created:", address);
+            console.log("Seed account created");
             rememberUnlockedWallet(path, password, nettype);
             openSeedAccount(path);
         });
@@ -853,9 +1406,6 @@ ApplicationWindow {
         if (!currentWallet || path === persistentSettings.wallet_path) return;
         var w = unlockedWallets.filter(function(x) { return x.path === path; })[0];
         if (!w) return;
-        // the device can only serve one hardware wallet: free it before reopening another one
-        if (w.hw && !walletManager.parkedWallets().some(function(p) { return String(p.path).replace(/\.keys$/, "") === String(w.path).replace(/\.keys$/, ""); }))
-            walletManager.closeParkedHwWallets();
         if (!walletManager.walletExists(w.path)) {
             forgetUnlockedWallet(w.path);
             appWindow.showStatusMessage(qsTr("Wallet not found: %1").arg(w.name), 5);
@@ -889,6 +1439,7 @@ ApplicationWindow {
     }
 
     function gracefulQuit() {
+        if (!requestScheduledExit(function() { gracefulQuit(); })) return;
         if (isQuitting)
             return;
         isQuitting = true;
@@ -905,6 +1456,11 @@ ApplicationWindow {
     // background: the wallet saves and closes on its own thread (quick switch, back to the wizard),
     // so the UI does not wait for a refresh in progress
     function closeWallet(callback, background) {
+        if (scheduledRunningId !== "" || scheduledSaving) {
+            isQuitting = false;
+            showStatusMessage(qsTr("Wait for the payment or save to finish before closing or switching wallets."), 5);
+            return;
+        }
 
         // Disconnect all listeners
         if (typeof currentWallet === "undefined" || currentWallet === null) {
@@ -931,6 +1487,11 @@ ApplicationWindow {
         currentWallet.walletPassphraseNeeded.disconnect(onWalletPassphraseNeededWallet);
         currentWallet.walletPairingCodeNeeded.disconnect(onWalletPairingCodeNeededWallet);
         currentWallet.transactionCommitted.disconnect(onTransactionCommitted);
+        scheduledRunningId = "";
+        scheduledRequestId = 0;
+        scheduledCommitting = false;
+        minedSpend = null;
+        minedAccountActive = false;
         middlePanel.paymentClicked.disconnect(handlePayment);
         middlePanel.sweepUnmixableClicked.disconnect(handleSweepUnmixable);
         middlePanel.getProofClicked.disconnect(handleGetProof);
@@ -968,6 +1529,7 @@ ApplicationWindow {
 
     function connectWallet(wallet) {
         currentWallet = wallet
+        loadScheduledSends(wallet);
 
         walletName = usefulName(wallet.path)
         walletDeviceLabel = wallet.isTrezor() ? wallet.deviceLabel() : ""
@@ -1011,8 +1573,13 @@ ApplicationWindow {
         console.log("restore Height", persistentSettings.restore_height)
 
         if (persistentSettings.useRemoteNode) {
+            // Tor on / I2P required: never open against a node that cannot be used; take the first one that can, else nothing reachable
+            if (!remoteNodeAllowed(remoteNodesModel.currentRemoteNode().address) && firstAllowedNode() >= 0)
+                remoteNodesModel.selected = firstAllowedNode();
             const remoteNode = remoteNodesModel.currentRemoteNode();
-            currentDaemonAddress = remoteNode.address;
+            currentDaemonAddress = remoteNodeAllowed(remoteNode.address) ? remoteNode.address : "127.0.0.1:1";
+            if (!remoteNodeAllowed(remoteNode.address))
+                Qt.callLater(function() { showNodeNotAllowed(remoteNode.address); });
             currentWallet.setDaemonLogin(remoteNode.username, remoteNode.password);
         } else {
             currentDaemonAddress = localDaemonAddress;
@@ -1183,8 +1750,97 @@ ApplicationWindow {
         appWindow.showProcessingSplash(qsTr("Opening wallet ..."));
     }
 
+    // ---- mined addresses (Wallet+ > Mine addresses): watched one by one, kept in the wallet cache ----
+    property int minedAddressesTick: 0     // bumps when the list changes, for bindings
+    // a mined address being spent from the Send page ({account, index, address, label}); while set, the wallet
+    // takes inputs only from it and its balance is the one shown and checked
+    property var minedSpend: null
+    // the mined addresses account is the selected account (Accounts page)
+    property bool minedAccountActive: false
+    function selectMinedAccount(on) {
+        if (scheduledRunningId !== "") return;
+        on = on && !!currentWallet && minedAddresses().length > 0;
+        if (currentWallet) currentWallet.setMinedAccountActive(on);
+        if (minedAccountActive === on) return;
+        minedAccountActive = on;
+        updateBalance();
+    }
+    function spendFromMined(m) {
+        if (!currentWallet || scheduledRunningId !== "") return;
+        currentWallet.setSpendSource(m.account, m.index);
+        minedSpend = m;
+        updateBalance();
+        showPageRequest("Transfer");
+    }
+    function stopMinedSpend() {
+        if (currentWallet) currentWallet.setSpendSource(-1, -1);
+        if (!minedSpend) return;
+        minedSpend = null;
+        updateBalance();
+    }
+    // leaving the Send page ends spending from the mined address
+    Connections {
+        target: middlePanel
+        function onStateChanged() {
+            if (middlePanel.state !== "Transfer" && appWindow.minedSpend)
+                appWindow.stopMinedSpend();
+        }
+    }
+    readonly property string minedAddressesKey: "walletplus.mined"
+    function minedAddresses(wallet) {
+        var w = wallet || currentWallet;
+        if (!w) return [];
+        try {
+            var l = JSON.parse(w.getCacheAttribute(minedAddressesKey) || "[]");
+            return Array.isArray(l) ? l : [];
+        } catch (e) { return []; }
+    }
+    function setMinedAddresses(list) {
+        if (!currentWallet) return;
+        // the ones taken out stop counting in the totals
+        var before = minedAddresses();
+        for (var i = 0; i < before.length; ++i)
+            if (!list.some(function(x) { return x.account === before[i].account && x.index === before[i].index; }))
+                currentWallet.forgetMinedAddress(before[i].account, before[i].index);
+        currentWallet.setCacheAttribute(minedAddressesKey, JSON.stringify(list));
+        if (list.length === 0) selectMinedAccount(false);
+        currentWallet.storeAsync(function(ok) {});
+        ++minedAddressesTick;
+    }
+    // Wallet+ address groups ("Create addresses in bulk", Receive page): consecutive addresses shown as one row,
+    // kept in the wallet cache as [{account, from, count, label}]
+    property int addressGroupsTick: 0
+    readonly property string addressGroupsKey: "walletplus.groups"
+    function addressGroups(wallet) {
+        var w = wallet || currentWallet;
+        if (!w) return [];
+        try {
+            var l = JSON.parse(w.getCacheAttribute(addressGroupsKey) || "[]");
+            return Array.isArray(l) ? l : [];
+        } catch (e) { return []; }
+    }
+    function setAddressGroups(list) {
+        if (!currentWallet) return;
+        currentWallet.setCacheAttribute(addressGroupsKey, JSON.stringify(list));
+        currentWallet.storeAsync(function(ok) {});
+        ++addressGroupsTick;
+    }
+
+    // the scanning table is rebuilt with the cache (rescan, restore): watch them again on every open
+    function rewatchMinedAddresses(wallet) {
+        var list = minedAddresses(wallet);
+        for (var i = 0; i < list.length; ++i)
+            if (!wallet.watchMinedAddress(list[i].account, list[i].index))
+                console.warn("mined address " + list[i].account + "/" + list[i].index + ": could not be watched");
+        ++minedAddressesTick;
+    }
+
     function onWalletOpened(wallet) {
         hideProcessingSplash();
+        if (wallet.status === Wallet.Status_Ok)
+            rewatchMinedAddresses(wallet);
+        if (wallet.status === Wallet.Status_Ok && wallet.isHwBacked())
+            rememberTrezorWallet(persistentSettings.wallet_path);
         walletName = usefulName(wallet.path)
         console.log(">>> wallet opened: " + wallet)
         if (wallet.status !== Wallet.Status_Ok) {
@@ -1208,7 +1864,7 @@ ApplicationWindow {
                         errorMessage += "\n" + qsTr("Make sure your Trezor is connected and unlocked.");
                     }
                     passwordDialog.showError(errorMessage);
-                    console.log("closing wallet async : " + wallet.address)
+                    console.log("Closing wallet asynchronously")
                     closeWallet();
                     return;
             }
@@ -1243,6 +1899,10 @@ ApplicationWindow {
     }
 
     function onWalletPassphraseNeededManager(on_device){
+        // the wizard answers it itself while creating a wallet from the device (opening the dialog twice
+        // left an invisible dialog counted and the window blurred)
+        if (wizard.deviceWalletCreationInProgress)
+            return;
         onWalletPassphraseNeeded(walletManager, on_device)
     }
 
@@ -1271,6 +1931,8 @@ ApplicationWindow {
     }
 
     function onWalletPairingCodeNeededManager(){
+        if (wizard.deviceWalletCreationInProgress)   // the wizard asks for the code itself
+            return;
         onWalletPairingCodeNeeded(walletManager)
     }
 
@@ -1374,6 +2036,11 @@ ApplicationWindow {
         p2poolManager.exit();
         p2poolManager.getStatus();
 
+        if (!remoteNodeAllowed(remoteNodesModel.currentRemoteNode().address)) {
+            showNodeNotAllowed(remoteNodesModel.currentRemoteNode().address);
+            return;
+        }
+
         const callback = function() {
             persistentSettings.useRemoteNode = true;
             const remoteNode = remoteNodesModel.currentRemoteNode();
@@ -1476,43 +2143,70 @@ ApplicationWindow {
             currentWallet.refreshHeightAsync();
     }
 
+    // extreme privacy: no bootstrap node (it would answer for the wallet while monerod syncs)
+    function daemonBootstrapAddress() {
+        return persistentSettings.extremePrivacy ? "" : persistentSettings.walletMode < 2 ? "auto" : persistentSettings.bootstrapNodeAddress;
+    }
+    // monerod flags for the current Network configuration (startDaemon, the restart check and the command preview)
+    function daemonFlagsFor(flags) {
+        // with NymVPN on (or "Nym required") monerod also reaches its peers through the Nym SOCKS5 proxy
+        flags = (flags || "").trim();
+        // a saved --proxy / --tx-proxy to the wallet's own Tor or Nym port may be stale: the current route is added below
+        flags = flags.replace(/(^|\s)--proxy(?:=|\s+)(?:socks5:\/\/)?127\.0\.0\.1:(?:17890|17899|17950|17960)(?=\s|$)/g, " ")
+                     .replace(/(^|\s)--tx-proxy(?:=|\s+)tor,(?:socks5:\/\/)?127\.0\.0\.1:17950\S*(?=\s|$)/g, " ")
+                     .replace(/(^|\s)--tx-proxy(?:=|\s+)i2p,(?:socks5:\/\/)?127\.0\.0\.1:17960\S*(?=\s|$)/g, " ")
+                     .replace(/\s+/g, " ").trim();
+        // MRL recommendation: block spy nodes also through the DNS blocklist (the packaged ban list
+        // goes in DaemonManager). monerod itself skips the DNS lookup when it runs behind --proxy.
+        if (!/(^|\s)--enable-dns-blocklist(\s|$)/.test(flags))
+            flags = (flags !== "" ? flags + " " : "") + "--enable-dns-blocklist";
+        // Network configuration: always anonymous. Sync (peers, blocks) through Tor or Nym, no P2P
+        // listening on the network (docs/ANONYMITY_NETWORKS.md); own transactions through Tor or I2P
+        // hidden services only (monerod has built-in onion and I2P seed nodes). While the chosen network
+        // is not connected monerod simply waits on its SOCKS5 port.
+        const viaTor = persistentSettings.netSync !== "nym";   // Tor or I2P: more peers
+        if (flags.indexOf("--proxy") < 0)
+            flags = (flags !== "" ? flags + " " : "") + "--proxy " + daemonRoute();
+        if (!/(^|\s)--p2p-bind-ip(?:=|\s)/.test(flags)) flags += " --p2p-bind-ip 127.0.0.1";
+        if (!/(^|\s)--tx-proxy(?:=|\s)/.test(flags))
+            daemonTxProxies().forEach(function(p) { flags += " --tx-proxy " + p; });
+        // more outgoing peers through Tor because many exits are slow or refused
+        if (!/(^|\s)--out-peers(?:=|\s)/.test(flags)) flags += viaTor ? " --out-peers 8" : " --out-peers 4";
+        if (!/(^|\s)--block-sync-size(?:=|\s)/.test(flags)) flags += " --block-sync-size 5";
+        if (flags.indexOf("--no-igd") < 0) flags += " --no-igd";
+        // do not announce our P2P port, and pad our transactions against traffic volume analysis
+        if (!/(^|\s)--hide-my-port(\s|$)/.test(flags)) flags += " --hide-my-port";
+        if (!/(^|\s)--pad-transactions(\s|$)/.test(flags)) flags += " --pad-transactions";
+        // .onion / .i2p peers chosen in the panels (only with their network's --tx-proxy)
+        activeAnonPeers().forEach(function(a) {
+            if (flags.indexOf(a) < 0) flags += " --add-priority-node " + a;
+        });
+        exclusiveNodes.filter(nodeAddressActive).forEach(function(a) {
+            if (flags.indexOf(a) < 0) flags += " --add-exclusive-node " + a;
+        });
+        extraPeers.filter(nodeAddressActive).forEach(function(a) {
+            if (flags.indexOf(a) < 0) flags += " --add-peer " + a;
+        });
+
+        // the bootstrap node (answers for the wallet while monerod syncs) also through the sync network
+        if (daemonBootstrapAddress() !== "" && !/(^|\s)--bootstrap-daemon-proxy(?:=|\s)/.test(flags))
+            // monerod only accepts a bare ip:port here (bootstrap_daemon::set_proxy uses get_tcp_endpoint):
+            // with socks5:// in front it throws "invalid proxy address format" and does not start
+            flags += " --bootstrap-daemon-proxy " + daemonRoute().replace(/^socks5:\/\//, "");
+        return flags;
+    }
+
     function startDaemon(flags){
         daemonStartStopInProgress = 1;
 
         // Pause refresh while starting daemon
         currentWallet.pauseRefresh();
 
-        // with NymVPN on (or "Nym required") monerod also reaches its peers through the Nym SOCKS5 proxy
-        flags = (flags || "").trim();
-        if (persistentSettings.extremePrivacy) {
-            // extreme privacy: no sync without an approved route, peers only through it, no UPnP, port hidden
-            var route = approvedRoute();
-            if (route === "") {
-                daemonStartStopInProgress = 0;
-                currentWallet.startRefresh();
-                informationPopup.title = qsTr("Extreme privacy") + translationManager.emptyString;
-                informationPopup.text = qsTr("The local node does not start until NymVPN is connected or the SOCKS5 proxy is turned on.") + translationManager.emptyString;
-                informationPopup.onCloseCallback = null;
-                informationPopup.open();
-                return;
-            }
-            if (flags.indexOf("--proxy") < 0)
-                flags = (flags !== "" ? flags + " " : "") + "--proxy " + route;
-            if (flags.indexOf("--no-igd") < 0)
-                flags += " --no-igd";
-            if (flags.indexOf("--hide-my-port") < 0)
-                flags += " --hide-my-port";
-        } else if ((persistentSettings.nymVpnEnabled || persistentSettings.nymVpnRequired) && flags.indexOf("--proxy") < 0)
-            flags = (flags !== "" ? flags + " " : "") + "--proxy " + persistentSettings.nymVpnSocksAddress;
-
-        if ((persistentSettings.nymVpnEnabled || persistentSettings.nymVpnRequired) && flags.indexOf("--proxy") >= 0) {
-            if (!/(^|\s)--out-peers(?:=|\s)/.test(flags)) flags += " --out-peers 4";
-            if (!/(^|\s)--block-sync-size(?:=|\s)/.test(flags)) flags += " --block-sync-size 5";
-        }
-
+        flags = daemonFlagsFor(flags);
         const noSync = appWindow.walletMode === 0;
-        // extreme privacy: no bootstrap node (it would answer for the wallet while monerod syncs)
-        const bootstrapNodeAddress = persistentSettings.extremePrivacy ? "" : persistentSettings.walletMode < 2 ? "auto" : persistentSettings.bootstrapNodeAddress
+        const bootstrapNodeAddress = daemonBootstrapAddress();
+        console.log("starting monerod: " + flags + " | data-dir: " + persistentSettings.blockchainDataDir
+                    + " | bootstrap: " + bootstrapNodeAddress + " | no-sync: " + noSync + " | prune: " + persistentSettings.pruneBlockchain);
         daemonManager.start(flags, persistentSettings.nettype, persistentSettings.blockchainDataDir, bootstrapNodeAddress, noSync, persistentSettings.pruneBlockchain);
     }
 
@@ -1622,6 +2316,10 @@ ApplicationWindow {
 
     function onTransactionCreated(pendingTransaction, addresses, paymentId, mixinCount, requestId) {
         console.log("Transaction created");
+        if (scheduledRequestId !== 0 && requestId === scheduledRequestId) {
+            onScheduledCreated(pendingTransaction);
+            return;
+        }
         if (requestId !== activeTransactionRequestId) {
             console.log("Discarding stale transaction");
             currentWallet.disposeTransaction(pendingTransaction);
@@ -1667,20 +2365,310 @@ ApplicationWindow {
         return Utils.removeTrailingZeros(walletManager.displayAmount(total));
     }
 
+    // ---- scheduled sends (Send page, "Schedule the send") ----
+    // Encrypted wallet cache: [{ id, wallet, account, when (ms), recipients [{address, amount}], paymentId,
+    //   mixin, priority, description, error }]. The transaction is created and sent at that moment (not before:
+    //   fees, ring members and spendable outputs change), only while the app is open with that wallet.
+    function scheduledPaymentsAllowed() {
+        return !!currentWallet && !currentWallet.isHwBacked();
+    }
+    property var scheduledSends: []
+    property var scheduledWalletCounts: ({})
+    property var scheduledLatePrompted: ({})
+    property bool scheduledExitApproved: false
+    property int activeTransactionSourceAccount: -1
+    readonly property int scheduledReserveMs: 25 * 60 * 1000
+
+    function rememberScheduledCount() {
+        var counts = Object.assign({}, scheduledWalletCounts);
+        counts[persistentSettings.wallet_path] = scheduledPaymentsAllowed() ? scheduledSends.length : 0;
+        scheduledWalletCounts = counts;
+    }
+    function requestScheduledExit(callback) {
+        if (scheduledRunningId !== "" || scheduledSaving) {
+            showStatusMessage(qsTr("Wait for the payment or save to finish before closing or switching wallets."), 5);
+            return false;
+        }
+        var pending = Object.keys(scheduledWalletCounts).some(function(k) { return scheduledWalletCounts[k] > 0; })
+                      || jsonList(persistentSettings.scheduledSends).some(function(s) { return scheduledWalletCounts[s.wallet] !== 0; });
+        if (scheduledExitApproved || !pending) return true;
+        scheduledExitDialog.open(qsTr("Scheduled payments pending"),
+            qsTr("Payments cannot be sent while the app is closed. Your schedules will be kept. Any payment that becomes due while the app or its wallet is closed will require your confirmation when you reopen the wallet."),
+            qsTr("Keep open"), qsTr("Close anyway"), function() { scheduledExitApproved = true; callback(); });
+        return false;
+    }
+    function scheduledReservation(account, exceptId) {
+        if (!scheduledPaymentsAllowed()) return undefined;
+        var now = Date.now();
+        return walletScheduledSends.find(function(s) {
+            return s.id !== exceptId && !s.error && s.state !== "broadcasting"
+                && (s.account === undefined || s.account === account)
+                && s.when >= now && s.when - now <= scheduledReserveMs;
+        });
+    }
+    function blockReservedSpend(account, exceptId) {
+        if (!scheduledReservation(account, exceptId)) return false;
+        showStatusMessage(qsTr("This source account is reserved for a scheduled payment in the next 25 minutes. Cancel that schedule before making another send."), 8);
+        return true;
+    }
+    function promptLateScheduledSend() {
+        if (!scheduledPaymentsAllowed()) return;
+        if (!currentWallet || !walletSynced || !daemonSynced || !approvedRoute() || currentWallet.isBackgroundSyncing() || scheduledSaving || scheduledRunningId !== "" || passwordDialog.visible || modalDialogs > 0 || isQuitting) return;
+        var entry = walletScheduledSends.find(function(s) { return s.error === "late" && !scheduledLatePrompted[s.id]; });
+        if (!entry) return;
+        var seen = Object.assign({}, scheduledLatePrompted); seen[entry.id] = true; scheduledLatePrompted = seen;
+        var owner = currentWallet;
+        scheduledLateDialog.open(qsTr("Confirm overdue payment"),
+            qsTr("This payment became due while the wallet was closed. Send %1 now? It will not be sent without your confirmation.").arg(scheduledAmountText(entry)),
+            qsTr("Keep pending"), qsTr("Send now"), function() { if (currentWallet === owner) runScheduledSend(entry.id); });
+    }
+
+    property int scheduledSaving: 0
+    property bool scheduledLoadFailed: false
+
+    function loadScheduledSends(wallet) {
+        scheduledSends = [];
+        scheduledLoadFailed = false;
+        if (wallet.isHwBacked()) {
+            rememberScheduledCount();
+            return; // Keep old schedules on disk, but never load or execute them on hardware wallets.
+        }
+        var saved;
+        try {
+            saved = JSON.parse(wallet.getCacheAttribute("wplus.scheduledSends") || "[]");
+            if (!Array.isArray(saved) || !saved.every(function(s) {
+                return s && typeof s.id === "string" && Number.isFinite(s.when)
+                    && Array.isArray(s.recipients) && s.recipients.length > 0
+                    && s.recipients.every(function(r) { return r && typeof r.address === "string" && typeof r.amount === "string"; });
+            })) throw new Error("invalid schedule");
+        } catch (e) {
+            scheduledLoadFailed = true;
+            showStatusMessage(qsTr("Could not read scheduled payments. Automatic sends are disabled."), 8);
+            return;
+        }
+        var walletPath = persistentSettings.wallet_path;
+        saved = saved.map(function(entry) { return Object.assign({}, entry, {wallet: walletPath}); });
+        var legacy = jsonList(persistentSettings.scheduledSends).filter(function(s) { return s.wallet === walletPath; });
+        legacy.forEach(function(entry) {
+            if (!saved.some(function(s) { return s.id === entry.id; })) saved.push(entry);
+        });
+        var overdue = false;
+        saved = saved.map(function(entry) {
+            if (!entry.error && entry.state !== "broadcasting" && entry.when <= Date.now()) {
+                overdue = true;
+                return Object.assign({}, entry, {error: "late"});
+            }
+            return entry;
+        });
+        scheduledSends = saved;
+        rememberScheduledCount();
+        if (legacy.length || overdue) {
+            setScheduledSends(saved, function(ok) {
+                if (ok) {
+                    persistentSettings.scheduledSends = JSON.stringify(jsonList(persistentSettings.scheduledSends).filter(function(s) { return s.wallet !== walletPath; }));
+                    persistentSettings.sync();
+                }
+            });
+        }
+    }
+    readonly property var walletScheduledSends: scheduledSends.filter(function(s) { return s.wallet === persistentSettings.wallet_path; })
+                                                              .sort(function(a, b) { return a.when - b.when; })
+    property string scheduledRunningId: ""     // entry being created / committed
+    property int scheduledRequestId: 0
+    property bool scheduledCommitting: false
+
+    function setScheduledSends(list, callback) {
+        if (!currentWallet || scheduledLoadFailed) { if (callback) callback(false); return; }
+        var wallet = currentWallet;
+        if (!wallet.setCacheAttribute("wplus.scheduledSends", JSON.stringify(list))) {
+            scheduledLoadFailed = true;
+            if (callback) callback(false);
+            showStatusMessage(qsTr("Could not save scheduled payments."), 8);
+            return;
+        }
+        scheduledSends = list;
+        rememberScheduledCount();
+        scheduledSaving++;
+        wallet.storeAsync(function(ok) {
+            scheduledSaving--;
+            if (!ok) {
+                scheduledLoadFailed = true;
+                showStatusMessage(qsTr("Could not save scheduled payments. Automatic sends are blocked until you reopen the wallet."), 8);
+            }
+            if (callback) callback(ok);
+        });
+    }
+    function scheduledEntry(id) {
+        return scheduledSends.find(function(s) { return s.id === id; }) || null;
+    }
+    function updateScheduledSend(id, changes, callback) {
+        setScheduledSends(scheduledSends.map(function(s) {
+            if (s.id !== id) return s;
+            var c = Object.assign({}, s);
+            for (var k in changes) c[k] = changes[k];
+            return c;
+        }), callback);
+    }
+    function removeScheduledSend(id) {
+        setScheduledSends(scheduledSends.filter(function(s) { return s.id !== id; }));
+    }
+    function scheduledAmountText(entry) {
+        var all = entry.recipients.some(function(r) { return r.amount === "(all)"; });
+        return all ? qsTr("All") + translationManager.emptyString : getDisplayAmountTotal(entry.recipients) + " XMR";
+    }
+
+    // "Schedule" on the Send page: same password check as a normal send, then the entry is stored
+    function scheduleSend(recipients, paymentId, mixinCount, priority, description, when) {
+        if (!scheduledPaymentsAllowed()) return;
+        if (scheduledLoadFailed || scheduledSaving || scheduledRunningId !== "") return;
+        var owner = currentWallet;
+        var account = owner.currentSubaddressAccount;
+        if (walletScheduledSends.some(function(s) { return !s.error && (s.account === undefined || s.account === account) && Math.abs(s.when - when) < scheduledReserveMs; })) {
+            showStatusMessage(qsTr("Leave at least 25 minutes between scheduled payments from the same account."), 8);
+            return;
+        }
+        var add = function() {
+            if (currentWallet !== owner || scheduledLoadFailed || scheduledSaving || scheduledRunningId !== "") return;
+            var list = scheduledSends.slice();
+            list.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), wallet: persistentSettings.wallet_path,
+                        account: account, when: when, recipients: recipients, paymentId: paymentId, mixin: mixinCount, priority: priority,
+                        description: description, error: "" });
+            setScheduledSends(list, function(ok) {
+                if (!ok) return;
+                middlePanel.transferView.clearFields();
+                showStatusMessage(qsTr("Send scheduled for %1").arg(new Date(when).toLocaleString(Qt.locale(), "dd/MM/yyyy HH:mm")) + translationManager.emptyString, 5);
+            });
+        };
+        if (!persistentSettings.askPasswordBeforeSending) {
+            add();
+            return;
+        }
+        passwordDialog.onAcceptedCallback = function() {
+            if (walletPassword === passwordDialog.password) {
+                add();
+            } else {
+                passwordDialog.showError(qsTr("Wrong password") + translationManager.emptyString);
+            }
+        };
+        passwordDialog.onRejectedCallback = null;
+        passwordDialog.open("", "", qsTr("Schedule the send") + translationManager.emptyString, FontAwesome.clockO);
+    }
+
+    function runScheduledSend(id) {
+        if (!scheduledPaymentsAllowed()) return;
+        var s = scheduledEntry(id);
+        if (!s || !currentWallet || scheduledRunningId !== "" || scheduledSaving || scheduledLoadFailed
+                || s.wallet !== persistentSettings.wallet_path || s.state === "broadcasting"
+                || viewOnly || currentWallet.isBackgroundSyncing() || !walletSynced || !daemonSynced || !approvedRoute()
+                || activeTransactionRequestId !== 0 || transaction || minedSpend || minedAccountActive)
+            return;
+        if (s.account !== undefined && s.account !== currentWallet.currentSubaddressAccount) {
+            updateScheduledSend(id, {error: qsTr("Select the payment source account before sending.")});
+            return;
+        }
+        if (blockReservedSpend(currentWallet.currentSubaddressAccount, id)) return;
+        console.log("Creating scheduled transaction");
+        scheduledRunningId = id;
+        updateScheduledSend(id, { error: "" });
+        var requestId = ++transactionRequestId;
+        scheduledRequestId = requestId;
+        var all = s.recipients.find(function(r) { return r.amount === "(all)"; });
+        if (all) {
+            currentWallet.createTransactionAllAsync(all.address, s.paymentId, s.mixin, s.priority, requestId);
+        } else {
+            currentWallet.createTransactionAsync(s.recipients.map(function(r) { return r.address; }), s.paymentId,
+                                                 s.recipients.map(function(r) { return r.amount; }), s.mixin, s.priority, requestId);
+        }
+    }
+
+    function onScheduledCreated(pendingTransaction) {
+        var id = scheduledRunningId;
+        scheduledRequestId = 0;
+        if (pendingTransaction.status !== PendingTransaction.Status_Ok || pendingTransaction.txCount == 0) {
+            var err = pendingTransaction.status !== PendingTransaction.Status_Ok ? pendingTransaction.errorString : qsTr("No outputs to send") + translationManager.emptyString;
+            console.error("Scheduled transaction creation failed");
+            updateScheduledSend(id, { error: err });
+            currentWallet.disposeTransaction(pendingTransaction);
+            scheduledRunningId = "";
+            showStatusMessage(qsTr("The scheduled send could not be made: %1").arg(err) + translationManager.emptyString, 8);
+            return;
+        }
+        // Persist the uncertainty BEFORE broadcasting. A crash must never auto-send again.
+        updateScheduledSend(id, { state: "broadcasting", txids: pendingTransaction.txid, error: qsTr("Broadcast result unverified. Check transaction history before creating another payment.") }, function(ok) {
+            if (!ok || !approvedRoute()) {
+                currentWallet.disposeTransaction(pendingTransaction);
+                scheduledRunningId = "";
+                return;
+            }
+            scheduledCommitting = true;
+            currentWallet.commitTransactionAsync(pendingTransaction);
+        });
+    }
+
+    function onScheduledCommitted(success, pendingTransaction, txid) {
+        var id = scheduledRunningId;
+        var s = scheduledEntry(id);
+        scheduledCommitting = false;
+        scheduledRunningId = "";
+        if (!success) {
+            console.error("Scheduled transaction broadcast failed");
+            updateScheduledSend(id, { error: pendingTransaction.errorString });
+            showStatusMessage(qsTr("The scheduled send could not be made: %1").arg(pendingTransaction.errorString) + translationManager.emptyString, 8);
+        } else {
+            if (s && s.description)
+                for (var i = 0; i < txid.length; ++i)
+                    currentWallet.setUserNote(txid[i], s.description);
+            removeScheduledSend(id);
+            txBroadcastFx.play(function() { successfulTxPopup.open(txid) });
+        }
+        currentWallet.refresh();
+        currentWallet.disposeTransaction(pendingTransaction);
+        currentWallet.storeAsync(function(ok) {
+            if (!ok) appWindow.showStatusMessage(qsTr("Failed to store the wallet"), 3);
+        });
+    }
+
+    function scheduledCheck() {
+        if (!scheduledPaymentsAllowed()) return;
+        promptLateScheduledSend();
+        if (modalDialogs > 0) return;
+        // a mined address is being spent on the Send page: the wallet's spend source is set to it
+        if (!currentWallet || viewOnly || scheduledSaving || scheduledLoadFailed || scheduledRunningId !== "" || walletScheduledSends.length === 0 || minedSpend || minedAccountActive)
+            return;
+        var now = Date.now();
+        var due = walletScheduledSends.filter(function(s) { return !s.error && s.state !== "broadcasting" && s.when <= now; });
+        if (due.length === 0)
+            return;
+        var s = due[0];
+        // wait for the wallet to be synced and for no send of the user in progress
+        if (!walletSynced || !daemonSynced || activeTransactionRequestId !== 0 || transaction)
+            return;
+        runScheduledSend(s.id);
+    }
+
+    Timer {
+        interval: 10000
+        running: !!appWindow.currentWallet && appWindow.walletScheduledSends.length > 0
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: appWindow.scheduledCheck()
+    }
+
     // called on "transfer"
     function handlePayment(recipients, paymentId, mixinCount, priority, description, createFile) {
-        console.log("Creating transaction: ")
-        console.log("\trecipients: ", recipients,
-                    ", payment_id: ", paymentId,
-                    ", mixins: ", mixinCount,
-                    ", priority: ", priority,
-                    ", description: ", description);
-
+        var sourceAccount = minedSpend ? minedSpend.account : currentWallet.currentSubaddressAccount;
+        if (blockReservedSpend(sourceAccount, "")) return;
+        activeTransactionSourceAccount = sourceAccount;
         const recipientAll = recipients.find(function (recipient) {
             return recipient.amount == "(all)";
         });
         if (recipientAll && recipients.length > 1) {
             throw "Sending all requires one destination address";
+        }
+        // a scheduled send is being made right now: both would share the confirmation flow
+        if (scheduledRunningId !== "") {
+            showStatusMessage(qsTr("A scheduled send is being made, try again in a few seconds") + translationManager.emptyString, 5);
+            return;
         }
 
         txConfirmationPopup.clearFields();
@@ -1736,6 +2724,8 @@ ApplicationWindow {
 
 
     function handleSweepUnmixable() {
+        if (scheduledRunningId !== "" || blockReservedSpend(currentWallet.currentSubaddressAccount, "")) return;
+        activeTransactionSourceAccount = currentWallet.currentSubaddressAccount;
         console.log("Creating transaction: ")
 
         txConfirmationPopup.clearFields();
@@ -1766,6 +2756,10 @@ ApplicationWindow {
 
     // called after user confirms transaction
     function handleTransactionConfirmed(fileName) {
+        if (blockReservedSpend(activeTransactionSourceAccount, "")) {
+            rejectPendingTransaction();
+            return;
+        }
         // View only wallet - we save the tx
         if(viewOnly){
             // No file specified - abort
@@ -1786,6 +2780,10 @@ ApplicationWindow {
     }
 
     function onTransactionCommitted(success, transaction, txid) {
+        if (scheduledCommitting) {
+            onScheduledCommitted(success, transaction, txid);
+            return;
+        }
         hideProcessingSplash();
         if (!success) {
             console.log("Error committing transaction: " + transaction.errorString);
@@ -1794,14 +2792,19 @@ ApplicationWindow {
             informationPopup.onCloseCallback = null;
             informationPopup.open();
         } else {
-            if (txConfirmationPopup.transactionDescription.length > 0) {
+            // sent from a mined address: its change went to 0:1, the note says so
+            var note = txConfirmationPopup.transactionDescription;
+            if (minedSpend || minedAccountActive)
+                note = (note.length > 0 ? note + " " : "") + qsTr("(mined address change)") + translationManager.emptyString;
+            if (note.length > 0) {
                 for (var i = 0; i < txid.length; ++i)
-                    currentWallet.setUserNote(txid[i], txConfirmationPopup.transactionDescription);
+                    currentWallet.setUserNote(txid[i], note);
             }
 
             // Clear tx fields
             middlePanel.transferView.clearFields()
             txConfirmationPopup.clearFields()
+            stopMinedSpend()
             txBroadcastFx.play(function() { successfulTxPopup.open(txid) })
         }
         currentWallet.refresh()
@@ -1990,7 +2993,8 @@ ApplicationWindow {
 
     Timer {
         id: fiatPriceTimer
-        interval: 1000 * 60 * 5;
+        // only the ticker is asked every minute: FX rates, history and the Wagyu quote keep their own ages
+        interval: 1000 * 60;
         running: persistentSettings.fiatPriceEnabled && currentWallet !== undefined
         repeat: true
         onTriggered: appWindow.fiatApiRefresh()
@@ -2277,6 +3281,22 @@ ApplicationWindow {
         }
 
         network.getJSON(appWindow.fiatPriceAPIs[userProvider], fiatApiJsonReceived);
+        // XMR/BTC last trade for the title bar chip, every minute too (its own request: if Kraken stops
+        // listing the pair, the USD price above is not affected)
+        network.getJSON("https://api.kraken.com/0/public/Ticker?pair=XMRXBT", function(url, resp, error) {
+            if (error) return;
+            try {
+                var j = JSON.parse(resp);
+                for (var k in j.result) {
+                    var btc = parseFloat(j.result[k]["c"][0]);
+                    if (btc > 0) {
+                        appWindow.priceBtcLive = btc;
+                        appWindow.priceBtcLiveTime = Date.now();
+                    }
+                    break;
+                }
+            } catch (e) {}
+        });
         // XMR -> BTC quote for 1 XMR from Wagyu (no API key), at most every 5 minutes
         if (Date.now() - appWindow.priceBtcTimestamp > 5 * 60 * 1000)
             network.postJSON("https://api-beta.wagyu.xyz/v2/swaps/quote",
@@ -2359,6 +3379,25 @@ ApplicationWindow {
 
     function fiatApiError(msg){
         console.log("fiatPriceError: " + msg);
+        // try again soon instead of waiting for the next minute (the route may have just come up)
+        if (persistentSettings.fiatPriceEnabled && currentWallet !== undefined && !fiatRetryTimer.running)
+            fiatRetryTimer.start();
+        // through Nym, a failed request is a hint that the mixnet route may be stuck
+        if (persistentSettings.netWallet === "nym" && nymVpnProxyUp())
+            nymWatchProbe();
+    }
+    Timer {
+        id: fiatRetryTimer
+        interval: 20000
+        onTriggered: appWindow.fiatApiRefresh()
+    }
+
+    // the wallet's network (Nym or Tor) just came up: ask for prices and retry the failed market series now
+    readonly property bool walletRouteUp: persistentSettings.netWallet === "nym" ? nymVpnProxyUp() : torProxyUp()
+    onWalletRouteUpChanged: {
+        if (!walletRouteUp || !persistentSettings.fiatPriceEnabled) return;
+        if (currentWallet !== undefined) Qt.callLater(fiatApiRefresh);
+        if (middlePanel && middlePanel.tradingView) middlePanel.tradingView.retryFailed();
     }
 
     Component.onCompleted: {
@@ -2383,9 +3422,13 @@ ApplicationWindow {
         if (persistentSettings.fiatPriceEnabled)
             fiatCacheLoad();
 
-        // NymVPN was on last time, or is required: make sure its SOCKS5 proxy is running again
-        if (persistentSettings.nymVpnEnabled || persistentSettings.nymVpnRequired)
+        // the networks the Network configuration uses (and any other one that was on last time)
+        if (torNeeded || persistentSettings.torEnabled)
+            torConnect();
+        if (nymNeeded || persistentSettings.nymVpnEnabled)
             nymVpnConnect();
+        if (i2pNeeded || persistentSettings.i2pEnabled)
+            i2pConnect();
 
         //
         walletManager.walletOpened.connect(onWalletOpened);
@@ -2510,6 +3553,7 @@ ApplicationWindow {
         property int kdfRounds: 1
         property bool displayWalletNameInTitleBar: true
         property bool hideBalance: false
+        property bool priceTicker: true
 
         // Matrix FX
         property bool fxMatrixRain: true
@@ -2547,6 +3591,8 @@ ApplicationWindow {
         property string themePalette: "matrix"   // colour palette (Style.palettes), chosen from the title bar
         property bool themePastel: false         // pastel (soft) colours instead of neon
         property string trezorLabels: "{}"       // JSON wallet path -> Trezor name, for the device prompt before the wallet opens
+        property string trezorDevices: "{}"      // JSON Trezor transport path -> {label, model}, for the Trezor list
+        property string trezorWallets: "{}"      // JSON wallet path -> transport path of its Trezor (marks Trezor wallets)
         property bool checkForUpdates: true
         property bool autosave: true
         property int autosaveMinutes: 10
@@ -2567,39 +3613,39 @@ ApplicationWindow {
         property bool nymVpnRequired: false   // "Nym required": nothing leaves the app outside NymVPN
         readonly property string nymVpnSocksAddress: oshelper.nymClient.address
         property bool nymVpnPrevProxyEnabled: false
+        property bool torEnabled: false
+        property bool i2pEnabled: false
+        property string scheduledSends: "[]"      // JSON: sends scheduled on the Send page (see scheduleSend)
+        property string exclusiveNodes: "[]"      // JSON "host:port" list: monerod --add-exclusive-node
+        property string extraPeers: "[]"          // JSON "host:port" list: monerod --add-peer
+        property bool netCardOpen: true            // Network configuration card unfolded
+        property bool nodeCardOpen: true           // Node card unfolded
+        property bool connCardOpen: false          // Connection check card unfolded
+        property bool nodeAddrOpen: false          // Network configuration > Node addresses unfolded
+        property string anonPeers: "[]"           // JSON list of "host:port" .onion / .b32.i2p P2P peers
+        property bool i2pRequired: false      // "I2P required": .i2p remote nodes only, I2P connects at startup
+        property bool torRequired: false      // unused since the Network configuration (kept so old settings load)
+        property string netWallet: "tor"      // Network configuration: wallet connections "tor" | "nym"
+        property string netSync: "tor"        //   local node sync (--proxy) "tor" | "nym" | "i2p"
+        property string netTx: "both"         //   local node transactions (--tx-proxy) "tor" | "i2p" | "both"
+        property bool torPrevProxyEnabled: false
+        property string torPrevProxyAddress: "127.0.0.1:9050"
         property string nymVpnPrevProxyAddress: "127.0.0.1:9050"
         // Security page
         property bool extremePrivacy: false        // only through an approved route (NymVPN or the SOCKS5 proxy)
         property string extremePrivacyPrev: "{}"   // settings to restore when it is turned off
         property string securityNodes: "[]"        // node manager: [{ address, favorite, mine, samples: [{ t, ok, ms, height, version }] }]
         property string securityBackups: "{}"
+        property bool hideEmptyAccounts: false     // Accounts: hide accounts with no balance (the first and the selected one stay)
         property bool hideUsedAddresses: false     // Receive: hide subaddresses that already received a transaction      // per wallet path: { seed, keys } (dates of the confirmations / copies)
         function getProxyAddress() {
-            if (extremePrivacy) {
-                // extreme privacy: an approved route or nothing at all
-                var route = appWindow.approvedRoute();
-                return route !== "" ? "socks5://" + route : "socks5://127.0.0.1:0";
-            }
-            if (nymVpnRequired) {
-                // only through NymVPN; while it is not up every proxied request fails
+            // Network configuration: wallet connections only through the chosen network; while it is not
+            // connected every proxied request fails (there is no "normal network" choice)
+            if (netWallet === "nym") {
+                if (appWindow.nymVpnRestarting) return "socks5://127.0.0.1:0";
                 return appWindow.nymVpnProxyUp() ? "socks5://" + nymVpnSocksAddress : "socks5://127.0.0.1:0";
             }
-            if (appWindow.nymVpnRestarting) {
-                return "socks5://127.0.0.1:0";   // NymVPN restarting: block everything
-            }
-            if (nymVpnEnabled) {
-                return appWindow.nymVpnProxyUp() ? "socks5://" + nymVpnSocksAddress : "socks5://127.0.0.1:0";
-            }
-            if (socksProxyFlagSet) {
-                return socksProxyFlag == "" ? "" : "socks5://" + socksProxyFlag;
-            }
-            if (!proxyEnabled) {
-                return "";
-            }
-            if (proxyAddress == "") {
-                return "socks5://127.0.0.1:0";
-            }
-            return "socks5://" + proxyAddress;
+            return appWindow.torProxyUp() ? "socks5://" + oshelper.torClient.address : "socks5://127.0.0.1:0";
         }
         function getWalletProxyAddress() {
             if (!useRemoteNode) {
@@ -2609,6 +3655,12 @@ ApplicationWindow {
                 // skip proxy when using localhost remote node
                 if (/^(127\.0\.0\.1|localhost):[0-9]+$/i.test(remoteAddress)) {
                     return "";
+                } else if (appWindow.isI2pNode(remoteAddress)) {
+                    // .b32.i2p nodes only through the bundled I2P router
+                    return appWindow.i2pProxyUp() ? "socks5://" + oshelper.i2pClient.address : "socks5://127.0.0.1:0";
+                } else if (appWindow.isOnionNode(remoteAddress)) {
+                    // .onion nodes through Tor, also when the wallet's other connections go through Nym
+                    return appWindow.torProxyUp() ? "socks5://" + oshelper.torClient.address : "socks5://127.0.0.1:0";
                 } else {
                     return getProxyAddress();
                 }
@@ -2619,6 +3671,11 @@ ApplicationWindow {
             MoneroComponents.Style.blackTheme = persistentSettings.blackTheme
             MoneroComponents.Style.themePalette = persistentSettings.themePalette
             MoneroComponents.Style.pastel = persistentSettings.themePastel
+            // the custom title bar holds the theme, wallet switch and lock buttons: always on
+            customDecorations = true
+            // I2P is no longer offered for the local node sync (it never synced): back to Tor
+            if (netSync === "i2p")
+                netSync = "tor"
 
             if (!appWindow.fiatPriceAPIs.hasOwnProperty(fiatPriceProvider)) {
                 console.warn("unsupported fiat price provider \"" + fiatPriceProvider + "\", resetting");
@@ -2633,17 +3690,27 @@ ApplicationWindow {
         id: remoteNodesModel
 
         property int selected: 0
+        // true once the saved list is loaded (the node manager waits for it before syncing)
+        property bool ready: false
 
         signal store()
 
         function initialize() {
+            var duplicates = false;
             try {
                 const remoteNodes = JSON.parse(persistentSettings.remoteNodesSerialized);
+                // one entry per address (older builds could save the same node several times)
+                var seenAddress = {};
+                var selectedAddress = remoteNodes.nodes[remoteNodes.selected] ? remoteNodes.nodes[remoteNodes.selected].address : "";
                 for (var index = 0; index < remoteNodes.nodes.length; ++index) {
                     const remoteNode = remoteNodes.nodes[index];
+                    if (seenAddress[remoteNode.address]) { duplicates = true; continue; }
+                    seenAddress[remoteNode.address] = true;
                     remoteNodesModel.append(remoteNode);
                 }
-                selected = remoteNodes.selected % remoteNodesModel.count || 0;
+                selected = 0;
+                for (var s = 0; s < remoteNodesModel.count; ++s)
+                    if (remoteNodesModel.get(s).address === selectedAddress) selected = s;
             } catch (e) {
                 console.error('failed to parse remoteNodesSerialized', e);
             }
@@ -2658,6 +3725,8 @@ ApplicationWindow {
                     nodes: remoteNodes
                 });
             });
+            if (duplicates) store();
+            ready = true;
         }
 
         function appendIfNotExists(newRemoteNode) {
@@ -2675,6 +3744,10 @@ ApplicationWindow {
         }
 
         function applyRemoteNode(index) {
+            if (index < count && !appWindow.remoteNodeAllowed(get(index).address)) {
+                appWindow.showNodeNotAllowed(get(index).address);
+                return;
+            }
             selected = index;
             persistentSettings.useRemoteNode = true;
             if (currentWallet) {
@@ -2729,7 +3802,7 @@ ApplicationWindow {
         id: txConfirmationPopup
         z: parent.z + 1
         confirmButton.text: (viewOnly ? qsTr("Save as file") : qsTr("Confirm")) + translationManager.emptyString
-        confirmButton.rightIcon: viewOnly ? "" : "qrc:///images/rightArrow.png"
+        confirmButton.rightIcon: viewOnly ? "" : "qrc:///images/icons/rightArrow.png"
         onAccepted: {
             var handleAccepted = function() {
                 // Save transaction to file if view only wallet
@@ -2881,8 +3954,17 @@ ApplicationWindow {
         anchors.fill: parent
     }
 
+    ScheduledPaymentDialog { id: scheduledExitDialog; anchors.fill: parent; z: 30 }
+    ScheduledPaymentDialog { id: scheduledLateDialog; anchors.fill: parent; z: 30 }
+
     NymAccountDialog {
         id: nymAccountDialog
+        anchors.fill: parent
+        z: 20
+    }
+
+    TrezorPicker {
+        id: trezorPicker
         anchors.fill: parent
         z: 20
     }
@@ -2915,8 +3997,8 @@ ApplicationWindow {
 
     ProcessingSplash {
         id: splash
-        width: appWindow.width / 2
-        height: deviceMode ? Math.max(appWindow.height / 2.66, contentHeight + 70) : appWindow.height / 2.66
+        width: Math.min(deviceMode ? 540 : 460, appWindow.width - 40)
+        height: contentHeight + 56
         x: (appWindow.width - width) / 2
         y: (appWindow.height - height) / 2
         messageText: qsTr("Please wait...") + translationManager.emptyString
@@ -2962,10 +4044,13 @@ ApplicationWindow {
                 id: leftPanel
                 anchors.top: parent.top
                 anchors.left: parent.left
-                anchors.bottom: parent.bottom
+                anchors.bottom: priceTicker.top
                 visible: rootItem.state == "normal" && middlePanel.state != "Merchant"
                 currentAccountIndex: currentWallet ? currentWallet.currentSubaddressAccount : 0
+                minedActive: appWindow.minedAccountActive
                 currentAccountLabel: {
+                    if (appWindow.minedAccountActive)
+                        return qsTr("Mined addresses") + translationManager.emptyString;
                     if (currentWallet) {
                         return currentWallet.getSubaddressLabel(currentWallet.currentSubaddressAccount, 0);
                     }
@@ -2979,7 +4064,8 @@ ApplicationWindow {
                 }
 
                 onReceiveClicked: {
-                    middlePanel.state = "Receive";
+                    // the mined account's addresses are on its own page
+                    middlePanel.state = appWindow.minedAccountActive ? "CustomAddresses" : "Receive";
                     middlePanel.flickable.contentY = 0;
                     updateBalance();
                 }
@@ -3033,6 +4119,11 @@ ApplicationWindow {
                     middlePanel.flickable.contentY = 0;
                 }
 
+                onCustomAddressesClicked: {
+                    middlePanel.state = "CustomAddresses";
+                    middlePanel.flickable.contentY = 0;
+                }
+
                 onWalletPlusClicked: {
                     middlePanel.state = "WalletPlus";
                     middlePanel.flickable.contentY = 0;
@@ -3053,10 +4144,23 @@ ApplicationWindow {
                 id: middlePanel
                 accountView.currentAccountIndex: currentWallet ? currentWallet.currentSubaddressAccount : 0
                 anchors.top: parent.top
-                anchors.bottom: parent.bottom
+                anchors.bottom: priceTicker.top
                 anchors.left: leftPanel.visible ? leftPanel.right : parent.left
                 anchors.right: parent.right
                 state: "Transfer"
+            }
+
+            // scrolling XMR quotes at the bottom (Settings > Interface)
+            MoneroComponents.PriceTicker {
+                id: priceTicker
+                readonly property bool shown: persistentSettings.priceTicker && persistentSettings.fiatPriceEnabled
+                                              && rootItem.state == "normal" && middlePanel.state != "Merchant"
+                                              && quotes.length > 0
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                visible: shown
+                height: shown ? 28 : 0
             }
 
             WizardController {
@@ -3098,7 +4202,7 @@ ApplicationWindow {
             MoneroEffects.ImageMask {
                 anchors.centerIn: parent
                 visible: persistentSettings.customDecorations
-                image: "qrc:///images/resize.png"
+                image: "qrc:///images/window/resize.png"
                 color: MoneroComponents.Style.defaultFontColor
                 width: 12
                 height: 12
@@ -3171,7 +4275,7 @@ ApplicationWindow {
                 anchors.top: parent.bottom
                 anchors.right: parent.right
                 anchors.rightMargin: 5
-                source: "qrc:///images/tip.png"
+                source: "qrc:///images/icons/tip.png"
             }
 
             MoneroComponents.TextPlain {
@@ -3328,6 +4432,12 @@ ApplicationWindow {
 
         }
 
+        if (!requestScheduledExit(function() { continueApplicationClose(); })) return;
+        continueApplicationClose();
+    }
+
+    function continueApplicationClose() {
+        scheduledExitApproved = false;
         // If daemon is running - prompt user before exiting
         if(daemonManager == undefined || persistentSettings.useRemoteNode) {
             closeAccepted();
@@ -3353,6 +4463,10 @@ ApplicationWindow {
     }
 
     function closeAccepted(){
+        if (scheduledRunningId !== "" || scheduledSaving) {
+            showStatusMessage(qsTr("Wait for the payment or save to finish before closing or switching wallets."), 5);
+            return;
+        }
         if (isQuitting)
             return;
         isQuitting = true;
@@ -3361,6 +4475,8 @@ ApplicationWindow {
         oshelper.armShutdownWatchdog(20);
         // Stop only the wallet-owned helper, never the official VPN service.
         oshelper.nymClient.stop();
+        oshelper.torClient.stop();
+        oshelper.i2pClient.stop();
         cancelConnectionTest();
         daemonManager.exit();
         p2poolManager.exit();

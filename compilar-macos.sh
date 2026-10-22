@@ -95,6 +95,9 @@ if [ "${1:-}" = "rapido" ]; then
   fi
   pkill -x monero-wallet-gui || true
   cmake --build build/release --target bundle_nym_client
+  bash "$WORK/actualizar-banlist.sh" "$APP"
+bash "$WORK/actualizar-tor.sh" "$APP"
+bash "$WORK/actualizar-i2pd.sh" "$APP"
   source "$WORK/firmar-macos.sh"; firmar_app "$APP"
   open "$APP"
   exit 0
@@ -188,6 +191,9 @@ if [ "${EMPAQUETAR:-0}" = "1" ]; then
   cmake --build build/release --target deploy || echo "WARNING: packaging (deploy) failed; the app in build/release/bin still runs on this Mac"
 fi
 
+bash "$WORK/actualizar-banlist.sh" "$APP"
+bash "$WORK/actualizar-tor.sh" "$APP"
+bash "$WORK/actualizar-i2pd.sh" "$APP"
 source "$WORK/firmar-macos.sh"; firmar_app "$APP"
 
 echo

@@ -57,7 +57,7 @@ Item {
                     id: imageChecked
                     visible: root.checked
                     anchors.centerIn: parent
-                    source: "qrc:///images/uncheckedIcon.png"
+                    source: "qrc:///images/icons/uncheckedIcon.png"
                 }
             }
             MultiEffect {

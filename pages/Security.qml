@@ -49,7 +49,7 @@ ColumnLayout {
     readonly property color offColor: MoneroComponents.Style.dimmedFontColor
     readonly property color blue: dark ? "#6CB8FF" : "#1565C0"
 
-    // how the app's own requests leave right now: { kind: nym | proxy | direct | blocked, text, color }
+    // how the app's own requests leave right now: { kind: tor | nym | proxy | direct | blocked, text, color }
     readonly property var route: {
         var p = persistentSettings.getProxyAddress();
         if (p === "socks5://127.0.0.1:0")
@@ -57,6 +57,8 @@ ColumnLayout {
         if (p === "")
             return { kind: "direct", text: qsTr("Direct: your real IP") + translationManager.emptyString, color: warnColor };
         var a = p.replace(/^socks5:\/\//, "");
+        if (appWindow.torProxyUp() && a === oshelper.torClient.address)
+            return { kind: "tor", text: qsTr("Tor network (%1)").arg(a) + translationManager.emptyString, color: goodColor };
         if (appWindow.nymVpnProxyUp() && a === persistentSettings.nymVpnSocksAddress)
             return { kind: "nym", text: qsTr("NymVPN mixnet (%1)").arg(a) + translationManager.emptyString, color: goodColor };
         return { kind: "proxy", text: qsTr("SOCKS5 proxy %1").arg(a) + translationManager.emptyString, color: goodColor };
@@ -73,6 +75,16 @@ ColumnLayout {
         middlePanel.settingsView.settingsStateViewState = tab;
         appWindow.showPageRequest("Settings");
         middlePanel.flickable.contentY = 0;
+    }
+
+    function scrollToBackups() {
+        Qt.callLater(function() {
+            if (middlePanel.currentView !== securityPage || securityPage.tab !== "Center")
+                return;
+            var flick = middlePanel.flickable;
+            var y = centerTab.backupsHeading.mapToItem(flick.contentItem, 0, 0).y - 16;
+            flick.contentY = Math.max(0, Math.min(y, flick.contentHeight - flick.height));
+        });
     }
 
     function onPageCompleted() {

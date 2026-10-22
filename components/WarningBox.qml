@@ -34,7 +34,7 @@ Rectangle {
             Layout.leftMargin: 18
             Layout.topMargin: 12
             Layout.bottomMargin: 12
-            source: "qrc:///images/warning.png"
+            source: "qrc:///images/icons/warning.png"
         }
 
         Text {

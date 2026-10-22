@@ -55,7 +55,7 @@ void TailsOS::showDataPersistenceDisabledWarning()
 
     msgBox.setStandardButtons(QMessageBox::Ok);
     msgBox.setDefaultButton(QMessageBox::Ok);
-    msgBox.setIconPixmap(QPixmap(":/images/tails-grey.png"));
+    msgBox.setIconPixmap(QPixmap(":/images/logos/tails-grey.png"));
     msgBox.exec();
 }
 
@@ -72,7 +72,7 @@ void TailsOS::askPersistence()
 
     msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
     msgBox.setDefaultButton(QMessageBox::Yes);
-    msgBox.setIconPixmap(QPixmap(":/images/tails-grey.png"));
+    msgBox.setIconPixmap(QPixmap(":/images/logos/tails-grey.png"));
     TailsOS::usePersistence = (msgBox.exec() == QMessageBox::Yes);
 }
 

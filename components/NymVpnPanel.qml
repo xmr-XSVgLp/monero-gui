@@ -131,6 +131,8 @@ Item {
                     }
                 }
 
+                MoneroComponents.NetIcon { net: "nym" }
+
                 MoneroComponents.TextPlain {
                     text: "NYM MIXNET"
                     font.family: MoneroComponents.Style.fontMonoMedium.name
@@ -216,47 +218,15 @@ Item {
                 Layout.fillWidth: true
                 spacing: 16
 
-                // "Nym required": saved; blocks every connection outside NymVPN and connects at startup
-                RowLayout {
+                // what the Network configuration uses this network for (replaces the old "required" option)
+                MoneroComponents.TextPlain {
                     Layout.alignment: Qt.AlignVCenter
-                    Layout.rightMargin: 8
-                    spacing: 10
-
-                    MoneroComponents.CheckBox {
-                        id: nymRequiredBox
-                        accent: nymPanel.requiredColor
-                        // while Nym is connected it is shown on and locked (the setting itself is not changed)
-                        checked: persistentSettings.nymVpnRequired || nymPanel.active
-                        enabled: !nymPanel.active
-                        toggleOnClick: false
-                        onClicked: persistentSettings.nymVpnRequired = !persistentSettings.nymVpnRequired
-                        text: ""
-                    }
-
-                    // own label: CheckBox's label colour is reset by the theme transition
-                    MoneroComponents.TextPlain {
-                        id: nymRequiredLabel
-                        // the "?" icon is drawn outside the text: keep room for it and keep it above the next items
-                        Layout.rightMargin: 20
-                        z: 2
-                        opacity: nymRequiredBox.enabled ? 1 : 0.7
-                        text: qsTr("Nym required") + translationManager.emptyString
-                        tooltipIconVisible: true
-                        tooltip: qsTr("When checked, the app waits for its independent Nym client before connecting. A local node must be started with this proxy. The option is saved and Nym connects at startup.") + translationManager.emptyString
-                        font.pixelSize: 14
-                        font.bold: true
-                        color: nymPanel.requiredTextColor
-                        themeTransition: false
-
-                        MouseArea {
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onEntered: nymRequiredLabel.tooltipPopup.open()
-                            onExited: nymRequiredLabel.tooltipPopup.close()
-                            onClicked: persistentSettings.nymVpnRequired = !persistentSettings.nymVpnRequired
-                        }
-                    }
+                    readonly property var uses: appWindow.netUses("nym")
+                    text: (uses.length > 0 ? qsTr("Used for: %1").arg(uses.join(" · ")) : qsTr("Not used by the Network configuration")) + translationManager.emptyString
+                    font.pixelSize: 13
+                    font.bold: uses.length > 0
+                    color: uses.length > 0 ? MoneroComponents.Style.defaultFontColor : MoneroComponents.Style.dimmedFontColor
+                    themeTransition: false
                 }
 
                 Item { Layout.fillWidth: true }

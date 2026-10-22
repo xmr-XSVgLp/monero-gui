@@ -46,6 +46,7 @@ if(QML_TESTS)
 endif()
 if(APPLE)
     list(APPEND SOURCE_FILES "qt/macoshelper.mm")
+    list(APPEND SOURCE_FILES "main/NymAccountStoreMac.mm")
 endif()
 
 set(monero_wallet_gui_sources
@@ -139,5 +140,5 @@ endif()
 include(Deploy)
 
 if(APPLE)
-    target_link_libraries(monero-wallet-gui PRIVATE "-framework Security")
+    target_link_libraries(monero-wallet-gui PRIVATE "-framework Security" "-framework LocalAuthentication" "-framework UserNotifications")
 endif()

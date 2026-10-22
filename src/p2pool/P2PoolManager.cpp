@@ -106,12 +106,20 @@ void P2PoolManager::download() {
                 emit p2poolDownloadFailure(HashVerificationFailed);
             }
             else {
-                file.open(QIODevice::WriteOnly);
-                file.write(data);
+                if (!file.open(QIODevice::WriteOnly)) {
+                    emit p2poolDownloadFailure(InstallationFailed);
+                    return;
+                }
+                const bool saved = file.write(data) == data.size() && file.flush();
                 file.close();
-                QProcess::execute("tar", {"-xzf", fileName, "--strip=1", "-C", m_p2poolPath});
+                if (!saved) {
+                    QFile::remove(fileName);
+                    emit p2poolDownloadFailure(InstallationFailed);
+                    return;
+                }
+                const int extraction = QProcess::execute("tar", {"-xzf", fileName, "--strip=1", "-C", m_p2poolPath});
                 QFile::remove(fileName);
-                if (isInstalled()) {
+                if (extraction == 0 && isInstalled()) {
                     emit p2poolDownloadSuccess();
                 }
                 else {
@@ -141,7 +149,10 @@ void P2PoolManager::getStatus() {
         return;
     }
     QFile statsFile(statsPath);
-    statsFile.open(QIODevice::ReadOnly);
+    if (!statsFile.open(QIODevice::ReadOnly)) {
+        emit p2poolStatus(status, 0);
+        return;
+    }
     QTextStream statsOut(&statsFile);
     QByteArray data;
     statsOut >> data;

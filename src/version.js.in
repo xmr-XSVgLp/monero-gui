@@ -1,3 +1,6 @@
 var GUI_VERSION_NUMBER = "@VERSION@"
 var GUI_VERSION_TAG = "@VERSION_TAG_GUI@";
 var GUI_VERSION = GUI_VERSION_NUMBER + "-" + GUI_VERSION_TAG
+// XMR Wallet+ release on top of the Monero GUI version (raise it with each published release)
+var WALLETPLUS_RELEASE = "wp6"
+var WALLETPLUS_VERSION = GUI_VERSION_NUMBER + "-" + WALLETPLUS_RELEASE

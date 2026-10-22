@@ -30,6 +30,8 @@
 #define WALLET_H
 
 #include <atomic>
+#include <mutex>
+#include <set>
 
 #include <QElapsedTimer>
 #include <QObject>
@@ -163,6 +165,41 @@ public:
 
     //! returns wallet's public address
     Q_INVOKABLE QString address(quint32 accountIndex, quint32 addressIndex) const;
+    // "Custom addresses" page: looks through accounts x perAccount addresses (created or not) for ones that
+    // start, end and/or contain pattern; cb(json [{account, index, address, start, end, pos}], scanned, cancelled).
+    // perAccount == 0: endless, every address index of the first `accounts` accounts (until cancelAddressSearch or 500 hits)
+    Q_INVOKABLE void findAddressesAsync(const QString &pattern, bool atStart, bool atEnd, bool anywhere, bool ignoreCase,
+                                        quint32 accounts, quint32 perAccount, const QJSValue &callback);
+    Q_INVOKABLE void cancelAddressSearch() { m_addressSearchCancel = true; }
+    // "Mined addresses" account (Wallet+): addresses watched one by one (one-off subaddresses), with no
+    // account created for them. The change of a send from a mined address goes to 0:1 (primary account).
+    // Their balance is added to balanceAll() and they are spent with setSpendSource. cb(ok, error)
+    Q_INVOKABLE void addMinedAddressAsync(quint32 account, quint32 index, const QJSValue &callback);
+    // watches a mined address again (wallet opened, cache rebuilt)
+    Q_INVOKABLE bool watchMinedAddress(quint32 account, quint32 index);
+    // no longer counted in the totals (removed from the mined list)
+    Q_INVOKABLE void forgetMinedAddress(quint32 account, quint32 index);
+    // balance received at one address (any index, existing account or not)
+    Q_INVOKABLE quint64 addressBalance(quint32 account, quint32 index, bool unlocked) const;
+    // the address ever received something (a mined address with history cannot leave the list)
+    Q_INVOKABLE bool addressUsed(quint32 account, quint32 index) const;
+    // sends come only from this address (account, index) until cleared with (-1, -1); balance() and
+    // unlockedBalance() then return that address's balance, so the Send page checks work as usual
+    Q_INVOKABLE void setSpendSource(int account, int index);
+    Q_INVOKABLE int spendSourceAccount() const { return m_spendAccount; }
+    // the mined addresses account is the selected one: balance() is the sum of the mined addresses and a
+    // send uses the mined address with the most unlocked funds (a transaction comes from one account)
+    Q_INVOKABLE void setMinedAccountActive(bool active) { m_minedActive = active; }
+    Q_INVOKABLE bool minedAccountActive() const { return m_minedActive; }
+    // a mined address belongs only to the mined addresses account: hidden from its numbered account
+    Q_INVOKABLE bool isMinedAddress(quint32 account, quint32 index) const;
+    // removes the trailing accounts that never received or sent anything (core fork
+    // trimUnusedSubaddressAccounts), keeping at least `keep` accounts, and stores the wallet;
+    // cb(removed, accountsLeft, error)
+    Q_INVOKABLE void trimUnusedAccountsAsync(quint32 keep, const QJSValue &callback);
+    // "Create addresses in bulk" (Receive): `count` new addresses in a row in `account`, all with `label`,
+    // created straight on the wallet (Subaddress::addRow re-reads the whole list per row); cb(first, count)
+    Q_INVOKABLE void addSubaddressesAsync(quint32 account, quint32 count, const QString &label, const QJSValue &callback);
 
     //! returns wallet file's path
     QString path() const;
@@ -220,6 +257,9 @@ public:
     Q_INVOKABLE bool isTrezor() const;
     //! name set on the hardware wallet (e.g. the Trezor label), empty for software wallets
     Q_INVOKABLE QString deviceLabel() const;
+    // this wallet's session on its Trezor (keeps the passphrase), to come back to it after another wallet
+    QString deviceSessionHandle() const;
+    bool resumeDeviceSession(const QString &handle);
 
     //! Trezor customization (Wallet+ > Trezor page); results arrive via the signals below
     Q_INVOKABLE void deviceFeaturesAsync();
@@ -416,6 +456,9 @@ public:
 
     // TODO: setListenter() when it implemented in API
 signals:
+    // findAddressesAsync progress (from the worker thread, delivered queued)
+    void addressSearchProgress(double scanned, double total) const;  // total 0: endless search
+    void addressSearchHit(const QString &json) const;  // json array of the matches found since the last tick
     // emitted on every event happened with wallet
     // (money sent/received, new block)
     void updated();
@@ -526,6 +569,23 @@ private:
     std::atomic<bool> m_initialized;
     std::atomic<bool> m_initializing;
     uint32_t m_currentSubaddressAccount;
+    std::atomic<bool> m_addressSearchCancel{false};
+    // mined addresses whose balance is outside every account (see addMinedAddressAsync)
+    quint64 minedOutsideAccounts(bool unlocked) const;
+    // balance of the mined addresses inside an existing account (taken out of that account's balance)
+    quint64 minedInAccount(quint32 account, bool unlocked) const;
+    // address indexes a normal send from `account` may use (all funded ones but the mined); empty = all
+    std::set<uint32_t> spendableIndexes(quint32 account) const;
+    // address of the primary account that takes the change of a send from a mined address (normally 0:1)
+    quint32 changeIndex() const;
+    mutable std::mutex m_minedMutex;
+    std::set<std::pair<quint32, quint32>> m_mined;
+    std::atomic<int> m_spendAccount{-1}, m_spendIndex{-1};
+    std::atomic<bool> m_minedActive{false};
+    // the mined addresses
+    std::set<std::pair<quint32, quint32>> minedEntries() const;
+    // spend source for a send: the explicit one, or (mined account selected) the richest mined address
+    std::pair<int, int> spendSourceFor() const;
     Subaddress * m_subaddress;
     mutable SubaddressModel * m_subaddressModel;
     SubaddressAccount * m_subaddressAccount;
@@ -551,6 +611,8 @@ private:
     // own thread: the shared pool can be full of slow network requests
     QThreadPool m_notesPool;
     void runNotesTask(std::function<QJSValueList()> task, const QJSValueList &fallback, const QJSValue &callback);
+    // the wallet's own threads (its sync loop holds one all the time), apart from the network requests
+    QThreadPool m_pool;
     FutureScheduler m_scheduler;
 };
 

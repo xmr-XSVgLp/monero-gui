@@ -74,8 +74,10 @@ Rectangle {
         root.z = 11
         card.kind = _autoKind();
         flickable.contentY = 0;
+        // opened twice (two listeners for the same request) must count once, or the blur never goes away
+        if (!root.visible)
+            appWindow.modalDialogs++;
         root.visible = true;
-        appWindow.modalDialogs++;
         root.forceActiveFocus();
     }
 

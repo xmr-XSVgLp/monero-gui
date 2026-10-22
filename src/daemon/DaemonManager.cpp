@@ -28,6 +28,7 @@
 
 #include "DaemonManager.h"
 #include "common/util.h"
+#include "main/oshelper.h"
 #include <QElapsedTimer>
 #include <QFile>
 #include <QMutexLocker>
@@ -96,6 +97,14 @@ bool DaemonManager::start(const QString &flags, NetworkType::Type nettype, const
         arguments << "--no-sync";
     }
 
+    // MRL spy-node ban list packaged in the app (own argument: the app path has spaces)
+    if (!flags.contains("--ban-list"))
+    {
+        const QString banList = OSHelper::banListPath();
+        if (!banList.isEmpty())
+            arguments << "--ban-list" << banList;
+    }
+
     arguments << "--check-updates" << "disabled";
     arguments << "--non-interactive";
 
@@ -108,6 +117,13 @@ bool DaemonManager::start(const QString &flags, NetworkType::Type nettype, const
 
     qDebug() << "starting monerod " + m_monerod;
     qDebug() << "With command line arguments " << arguments;
+    {
+        QStringList parts{m_monerod};
+        parts << arguments;
+        for (QString &part : parts)
+            if (part.contains(' ')) part = "\"" + part + "\"";
+        m_lastCommand = parts.join(' ');
+    }
 
     QMutexLocker locker(&m_daemonMutex);
 
@@ -412,4 +428,33 @@ DaemonManager::DaemonManager(QObject *parent)
 DaemonManager::~DaemonManager()
 {
     m_scheduler.shutdownWaitForFinished();
+}
+
+QString DaemonManager::command(bool runningOnly) const
+{
+#ifndef Q_OS_WIN
+    QProcess ps;
+    ps.start("/bin/ps", {"-axww", "-o", "command="});
+    if (ps.waitForFinished(2000))
+    {
+        const QStringList lines = QString::fromUtf8(ps.readAllStandardOutput()).split('\n', Qt::SkipEmptyParts);
+        for (const QString &line : lines)
+        {
+            const QString l = line.trimmed();
+            if (l.startsWith(m_monerod + " ") || l == m_monerod)
+            {
+                // ps loses the quotes: put the app path (it has spaces) back in quotes
+                return m_monerod.contains(' ') ? "\"" + m_monerod + "\"" + l.mid(m_monerod.size()) : l;
+            }
+        }
+        for (const QString &line : lines)
+        {
+            const QString l = line.trimmed();
+            const QString exe = l.section(" --", 0, 0);
+            if (exe.endsWith("/monerod") || exe == "monerod")
+                return l;
+        }
+    }
+#endif
+    return runningOnly ? QString() : m_lastCommand;
 }

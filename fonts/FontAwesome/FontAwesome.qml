@@ -23,6 +23,7 @@ QtObject {
     // https://fontawesome.com/v5/cheatsheet/free/solid
     // https://fontawesome.com/v5/cheatsheet/free/regular
     // https://fontawesome.com/v5/cheatsheet/free/brands
+    readonly property string heart: "\uf004"
     readonly property string addressBook: "\uf2b9"
     readonly property string arrowCircleRight: "\uf0a9"
     readonly property string arrowDown: "\uf063"
@@ -66,5 +67,14 @@ QtObject {
     readonly property string server: "\uf233"
     readonly property string shieldAlt: "\uf3ed"
     readonly property string signOutAlt: "\uf2f5"
+    readonly property string hdd: "\uf0a0"
+    readonly property string slidersH: "\uf1de"
+    readonly property string networkWired: "\uf6ff"
+    readonly property string exchangeAlt: "\uf362"
+    readonly property string wallet: "\uf555"
+    readonly property string chartLine: "\uf201"
+    readonly property string stickyNote: "\uf249"
+    readonly property string microchip: "\uf2db"
+    readonly property string palette: "\uf53f"
     readonly property string times: "\uf00d"
 }

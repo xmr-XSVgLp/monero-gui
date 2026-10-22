@@ -98,10 +98,12 @@ static bool result(OSStatus status, QString &error) {
     error = QObject::tr("Could not access the macOS keychain (error %1).").arg(status);
     return false;
 }
+// Implemented in Objective-C++ so the account store remains portable C++.
+void disableAuthenticationUI(CFMutableDictionaryRef query);
 bool legacyExists() {
     auto q = query();
     CFDictionarySetValue(q, kSecReturnAttributes, kCFBooleanTrue);
-    CFDictionarySetValue(q, kSecUseAuthenticationUI, kSecUseAuthenticationUIFail);
+    disableAuthenticationUI(q);
     CFTypeRef value = nullptr;
     const auto status = SecItemCopyMatching(q, &value);
     if (value) CFRelease(value);

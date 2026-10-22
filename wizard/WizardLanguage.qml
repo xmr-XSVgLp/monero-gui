@@ -83,7 +83,7 @@ Rectangle {
 
         Image {
             id: globe
-            source: "qrc:///images/world-flags-globe.png"
+            source: "qrc:///images/icons/world-flags-globe.png"
             opacity: 0
             property bool small: appWindow.width < 700 ? true : false
             property int size: {

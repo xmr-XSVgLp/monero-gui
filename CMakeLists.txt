@@ -1,6 +1,18 @@
 cmake_minimum_required(VERSION 3.22)
 project(monero-gui)
 
+# Apple's linker resolves archive references without repeating static libraries.
+# Let modern CMake deduplicate them while keeping the first occurrence.
+if(APPLE)
+  if(POLICY CMP0156)
+    cmake_policy(SET CMP0156 NEW)
+  endif()
+  if(POLICY CMP0179)
+    cmake_policy(SET CMP0179 NEW)
+  endif()
+endif()
+
+
 include(CMakeDependentOption)
 
 message(STATUS "Initiating compile using CMake ${CMAKE_VERSION}")
@@ -248,7 +260,6 @@ endif()
 
 # linker
 if (APPLE)
-  add_linker_flag_if_supported(-Wl,-bind_at_load LD_SECURITY_FLAGS)
   add_linker_flag_if_supported(-Wl,-dead_strip LD_SECURITY_FLAGS)
   add_linker_flag_if_supported(-Wl,-dead_strip_dylibs LD_SECURITY_FLAGS)
 endif()

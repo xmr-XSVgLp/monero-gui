@@ -29,6 +29,10 @@
 #include "Wallet.h"
 
 #include <chrono>
+#include <algorithm>
+#include <mutex>
+#include <cmath>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <thread>
@@ -52,11 +56,13 @@
 #include <QDebug>
 #include <QUrl>
 #include <QTimer>
+#include <QThread>
 #include <QtConcurrent/QtConcurrent>
 #include <QList>
 #include <QVector>
 #include <QMutexLocker>
 #include <QSaveFile>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QBuffer>
@@ -253,6 +259,269 @@ QString Wallet::address(quint32 accountIndex, quint32 addressIndex) const
     return QString::fromStdString(m_walletImpl->address(accountIndex, addressIndex));
 }
 
+void Wallet::findAddressesAsync(const QString &pattern, bool atStart, bool atEnd, bool anywhere, bool ignoreCase,
+                                quint32 accounts, quint32 perAccount, const QJSValue &callback)
+{
+    m_addressSearchCancel = false;
+    m_scheduler.run(
+        [this, pattern, atStart, atEnd, anywhere, ignoreCase, accounts, perAccount] {
+            const Qt::CaseSensitivity cs = ignoreCase ? Qt::CaseInsensitive : Qt::CaseSensitive;
+            // perAccount == 0: no end. Goes through the first `accounts` accounts side by side (address 0 of each,
+            // then 1…) so a far match never needs thousands of accounts created to receive in it
+            const bool endless = perAccount == 0;
+            const quint64 total = quint64(accounts) * (endless ? quint64(UINT32_MAX) + 1 : quint64(perAccount));
+            const int maxHits = 500;
+            std::atomic<quint64> next{0}, scanned{0};
+            std::atomic<int> hits{0}, active{0};
+            std::mutex foundMutex;
+            QList<QJsonObject> found;
+            int reported = 0;  // matches already sent to the page
+
+            // every core but one (the interface stays responsive) takes chunks of consecutive indexes;
+            // each address is derived from the keys, nothing is created in the wallet
+            auto work = [&]() {
+                const quint64 chunk = 256;
+                while (!m_addressSearchCancel && hits < maxHits)
+                {
+                    const quint64 from = next.fetch_add(chunk);
+                    if (from >= total)
+                        break;
+                    const quint64 to = std::min(total, from + chunk);
+                    for (quint64 k = from; k < to && !m_addressSearchCancel; ++k)
+                    {
+                        const quint32 major = endless ? quint32(k % accounts) : quint32(k / perAccount);
+                        const quint32 minor = endless ? quint32(k / accounts) : quint32(k % perAccount);
+                        const QString address = QString::fromStdString(m_walletImpl->address(major, minor));
+                        const bool start = atStart && address.startsWith(pattern, cs);
+                        const bool end = atEnd && address.endsWith(pattern, cs);
+                        const int pos = anywhere ? int(address.indexOf(pattern, 0, cs)) : -1;
+                        if (start || end || pos >= 0)
+                        {
+                            std::lock_guard<std::mutex> lock(foundMutex);
+                            const QJsonObject hit{{"account", double(major)}, {"index", double(minor)},
+                                                  {"address", address}, {"start", start}, {"end", end}, {"pos", pos}};
+                            found.append(hit);
+                            ++hits;
+                        }
+                    }
+                    scanned += to - from;
+                }
+                --active;
+            };
+
+            if (!pattern.isEmpty() && (atStart || atEnd || anywhere) && total > 0)
+            {
+                const int threads = std::max(1, QThread::idealThreadCount() - 1);
+                active = threads;
+                std::vector<std::thread> pool;
+                for (int t = 0; t < threads; ++t)
+                    pool.emplace_back(work);
+                // progress while the workers run
+                // new matches go out with each progress tick (from this thread, like the progress), so the page
+                // shows them while the search goes on
+                auto reportNew = [&]() {
+                    QJsonArray fresh;
+                    {
+                        std::lock_guard<std::mutex> lock(foundMutex);
+                        for (; reported < found.size(); ++reported)
+                            fresh.append(found[reported]);
+                    }
+                    if (!fresh.isEmpty())
+                        emit addressSearchHit(QString::fromUtf8(QJsonDocument(fresh).toJson(QJsonDocument::Compact)));
+                };
+                while (active > 0)
+                {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(250));
+                    reportNew();
+                    emit addressSearchProgress(double(scanned.load()), endless ? 0.0 : double(total));
+                }
+                reportNew();
+                for (auto &th : pool)
+                    th.join();
+            }
+
+            std::sort(found.begin(), found.end(), [](const QJsonObject &a, const QJsonObject &b) {
+                return a["account"].toDouble() != b["account"].toDouble() ? a["account"].toDouble() < b["account"].toDouble()
+                                                                          : a["index"].toDouble() < b["index"].toDouble();
+            });
+            QJsonArray list;
+            for (int i = 0; i < found.size() && i < maxHits; ++i)
+                list.append(found[i]);
+            const bool cancelled = m_addressSearchCancel;
+            return QJSValueList({QString::fromUtf8(QJsonDocument(list).toJson(QJsonDocument::Compact)),
+                                 double(scanned.load()), cancelled});
+        },
+        callback);
+}
+
+void Wallet::addMinedAddressAsync(quint32 account, quint32 index, const QJSValue &callback)
+{
+    pauseRefresh();
+    m_scheduler.run(
+        [this, account, index] {
+            // only this index enters the scanning table; wallet2::should_expand keeps a payment to it
+            // from creating the addresses or accounts before it
+            watchMinedAddress(account, index);
+            const bool ok = m_walletImpl->status() == Monero::Wallet::Status_Ok;
+            const QString error = ok ? QString() : QString::fromStdString(m_walletImpl->errorString());
+            if (!ok)
+                qWarning() << "one-off subaddress" << account << index << "failed:" << error;
+            m_walletImpl->store("");
+            return QJSValueList({ok, error});
+        },
+        callback);
+}
+
+void Wallet::trimUnusedAccountsAsync(quint32 keep, const QJSValue &callback)
+{
+    pauseRefresh();
+    m_scheduler.run(
+        [this, keep] {
+            const double removed = double(m_walletImpl->trimUnusedSubaddressAccounts(std::max<quint32>(keep, 1)));
+            const bool ok = m_walletImpl->status() == Monero::Wallet::Status_Ok;
+            const QString error = ok ? QString() : QString::fromStdString(m_walletImpl->errorString());
+            if (ok && removed > 0)
+                m_walletImpl->store("");
+            return QJSValueList({removed, double(m_walletImpl->numSubaddressAccounts()), error});
+        },
+        callback);
+}
+
+void Wallet::addSubaddressesAsync(quint32 account, quint32 count, const QString &label, const QJSValue &callback)
+{
+    m_scheduler.run(
+        [this, account, count, label] {
+            const quint32 first = m_walletImpl->numSubaddresses(account);
+            for (quint32 i = 0; i < count; ++i)
+                m_walletImpl->addSubaddress(account, label.toStdString());
+            m_walletImpl->store("");
+            return QJSValueList({first, count});
+        },
+        callback);
+}
+
+bool Wallet::watchMinedAddress(quint32 account, quint32 index)
+{
+    m_walletImpl->createOneOffSubaddress(account, index);
+    if (m_walletImpl->status() != Monero::Wallet::Status_Ok)
+        return false;
+    std::lock_guard<std::mutex> lock(m_minedMutex);
+    m_mined.insert({account, index});
+    return true;
+}
+
+void Wallet::forgetMinedAddress(quint32 account, quint32 index)
+{
+    std::lock_guard<std::mutex> lock(m_minedMutex);
+    m_mined.erase({account, index});
+}
+
+quint64 Wallet::addressBalance(quint32 account, quint32 index, bool unlocked) const
+{
+    return m_walletImpl->subaddressBalance(account, index, unlocked);
+}
+
+std::set<std::pair<quint32, quint32>> Wallet::minedEntries() const
+{
+    // the change of a send from a mined address goes to 0:1 (see createTransaction), so only the list itself
+    std::lock_guard<std::mutex> lock(m_minedMutex);
+    return m_mined;
+}
+
+bool Wallet::addressUsed(quint32 account, quint32 index) const
+{
+    return m_walletImpl->subaddressUsed(account, index);
+}
+
+quint64 Wallet::minedOutsideAccounts(bool unlocked) const
+{
+    // balance_all only adds the existing accounts; mined addresses of missing accounts (and the change
+    // at address 0 of those accounts) are added here, each index once
+    const quint32 accounts = m_walletImpl->numSubaddressAccounts();
+    quint64 sum = 0;
+    for (const auto &m : minedEntries())
+        if (m.first >= accounts)
+            sum += m_walletImpl->subaddressBalance(m.first, m.second, unlocked);
+    return sum;
+}
+
+std::pair<int, int> Wallet::spendSourceFor() const
+{
+    if (m_spendAccount >= 0)
+        return {m_spendAccount, m_spendIndex};
+    if (!m_minedActive)
+        return {-1, -1};
+    std::pair<int, int> best{-1, -1};
+    quint64 bestAmount = 0;
+    for (const auto &m : minedEntries())
+    {
+        const quint64 amount = m_walletImpl->subaddressBalance(m.first, m.second, true);
+        if (best.first < 0 || amount > bestAmount)
+        {
+            best = {int(m.first), int(m.second)};
+            bestAmount = amount;
+        }
+    }
+    return best;
+}
+
+quint32 Wallet::changeIndex() const
+{
+    // 0:1, or the next address of the primary account if that one is itself a mined address
+    quint32 index = 1;
+    while (isMinedAddress(0, index))
+        ++index;
+    return index;
+}
+
+bool Wallet::isMinedAddress(quint32 account, quint32 index) const
+{
+    std::lock_guard<std::mutex> lock(m_minedMutex);
+    return m_mined.count({account, index}) > 0;
+}
+
+quint64 Wallet::minedInAccount(quint32 account, bool unlocked) const
+{
+    std::vector<quint32> indexes;
+    {
+        std::lock_guard<std::mutex> lock(m_minedMutex);
+        for (const auto &m : m_mined)
+            if (m.first == account)
+                indexes.push_back(m.second);
+    }
+    quint64 sum = 0;
+    for (quint32 i : indexes)
+        sum += m_walletImpl->subaddressBalance(account, i, unlocked);
+    return sum;
+}
+
+std::set<uint32_t> Wallet::spendableIndexes(quint32 account) const
+{
+    std::set<uint32_t> indexes;
+    bool anyMined = false;
+    {
+        std::lock_guard<std::mutex> lock(m_minedMutex);
+        for (const auto &m : m_mined)
+            anyMined = anyMined || m.first == account;
+    }
+    if (!anyMined)
+        return indexes;
+    for (uint32_t i : m_walletImpl->subaddressesWithBalance(account))
+        if (!isMinedAddress(account, i))
+            indexes.insert(i);
+    // only mined funds in this account: an index with nothing, so the send fails with "not enough money"
+    // instead of an empty set (which would mean every address, the mined ones included)
+    if (indexes.empty())
+        indexes.insert(std::numeric_limits<uint32_t>::max());
+    return indexes;
+}
+
+void Wallet::setSpendSource(int account, int index)
+{
+    m_spendAccount = account >= 0 && index >= 0 ? account : -1;
+    m_spendIndex = account >= 0 && index >= 0 ? index : -1;
+}
+
 QString Wallet::path() const
 {
     return QDir::toNativeSeparators(QString::fromStdString(m_walletImpl->path()));
@@ -371,6 +640,16 @@ bool Wallet::isTrezor() const
 QString Wallet::deviceLabel() const
 {
     return QString::fromStdString(m_walletImpl->getDeviceLabel());
+}
+
+QString Wallet::deviceSessionHandle() const
+{
+    return QString::fromStdString(m_walletImpl->deviceSessionHandle());
+}
+
+bool Wallet::resumeDeviceSession(const QString &handle)
+{
+    return m_walletImpl->resumeDeviceSession(handle.toStdString());
 }
 
 //! create a view only wallet
@@ -673,32 +952,49 @@ void Wallet::notesSaveAsync(const QString &text, const QJSValue &callback)
 
 quint64 Wallet::balance() const
 {
+    if (m_spendAccount >= 0)
+        return addressBalance(m_spendAccount, m_spendIndex, false);
+    if (m_minedActive)
+    {
+        quint64 sum = 0;
+        for (const auto &m : minedEntries())
+            sum += m_walletImpl->subaddressBalance(m.first, m.second, false);
+        return sum;
+    }
     return balance(m_currentSubaddressAccount);
 }
 
 quint64 Wallet::balance(quint32 accountIndex) const
 {
-    return m_walletImpl->balance(accountIndex);
+    return m_walletImpl->balance(accountIndex) - minedInAccount(accountIndex, false);
 }
 
 quint64 Wallet::balanceAll() const
 {
-    return m_walletImpl->balanceAll();
+    return m_walletImpl->balanceAll() + minedOutsideAccounts(false);
 }
 
 quint64 Wallet::unlockedBalance() const
 {
+    if (m_spendAccount >= 0)
+        return addressBalance(m_spendAccount, m_spendIndex, true);
+    // mined account selected: what one send can use (the richest mined address)
+    if (m_minedActive)
+    {
+        const auto source = spendSourceFor();
+        return source.first >= 0 ? addressBalance(source.first, source.second, true) : 0;
+    }
     return unlockedBalance(m_currentSubaddressAccount);
 }
 
 quint64 Wallet::unlockedBalance(quint32 accountIndex) const
 {
-    return m_walletImpl->unlockedBalance(accountIndex);
+    return m_walletImpl->unlockedBalance(accountIndex) - minedInAccount(accountIndex, true);
 }
 
 quint64 Wallet::unlockedBalanceAll() const
 {
-    return m_walletImpl->unlockedBalanceAll();
+    return m_walletImpl->unlockedBalanceAll() + minedOutsideAccounts(true);
 }
 
 quint32 Wallet::currentSubaddressAccount() const
@@ -754,8 +1050,47 @@ void Wallet::deviceShowAddressAsync(quint32 accountIndex, quint32 addressIndex, 
 }
 
 namespace {
-// Trezor homescreens must be a baseline JPEG of exactly the display size and at most maxBytes
+// Trezor homescreens (Safe 5 / Safe 7) must be a baseline JPEG of exactly the display size and at most maxBytes
 // (64 KiB on the Safe 7, 16 KiB on the Safe 5).
+// Trezor Safe 3 (128x64 OLED): TOIF "TOIG" = 4-bit grayscale, two pixels per byte (right pixel in the high
+// nibble), raw deflate. Its screen is 1-bit, so the image is dithered to black and white first, like trezorctl.
+// Stored (uncompressed) deflate blocks: no window size to respect and 4 KB fits easily.
+QByteArray trezorToig(const QImage &image)
+{
+    const QImage mono = image.convertToFormat(QImage::Format_Grayscale8)
+                             .convertToFormat(QImage::Format_Mono, Qt::MonoOnly | Qt::DiffuseDither);
+    const int w = mono.width(), h = mono.height();
+    QByteArray pixels;
+    pixels.reserve((w + 1) / 2 * h);
+    for (int y = 0; y < h; ++y)
+        for (int x = 0; x < w; x += 2)
+        {
+            const int left = qGray(mono.pixel(x, y)) >= 128 ? 0x0F : 0;
+            const int right = x + 1 < w && qGray(mono.pixel(x + 1, y)) >= 128 ? 0x0F : 0;
+            pixels.append(char((right << 4) | left));
+        }
+
+    QByteArray deflate;
+    for (int pos = 0; pos < pixels.size() || pos == 0; pos += 65535)
+    {
+        const int len = qMin(65535, int(pixels.size()) - pos);
+        const bool last = pos + len >= pixels.size();
+        deflate.append(char(last ? 1 : 0));
+        deflate.append(char(len & 0xFF)).append(char(len >> 8));
+        deflate.append(char(~len & 0xFF)).append(char((~len >> 8) & 0xFF));
+        deflate.append(pixels.mid(pos, len));
+        if (last)
+            break;
+    }
+
+    QByteArray toif("TOIG");
+    toif.append(char(w & 0xFF)).append(char(w >> 8));
+    toif.append(char(h & 0xFF)).append(char(h >> 8));
+    const quint32 n = deflate.size();
+    toif.append(char(n & 0xFF)).append(char((n >> 8) & 0xFF)).append(char((n >> 16) & 0xFF)).append(char(n >> 24));
+    return toif + deflate;
+}
+
 bool prepareTrezorHomescreen(const QString &source, int width, int height, int maxBytes, QByteArray &jpeg, QString &error)
 {
     QString path = source;
@@ -776,6 +1111,13 @@ bool prepareTrezorHomescreen(const QString &source, int width, int height, int m
     image = image.scaled(width, height, Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
     image = image.copy((image.width() - width) / 2, (image.height() - height) / 2, width, height)
                  .convertToFormat(QImage::Format_RGB888);
+
+    // small monochrome screen (Safe 3): TOIG instead of JPEG
+    if (width <= 128 && height <= 64)
+    {
+        jpeg = trezorToig(image);
+        return true;
+    }
 
     for (int quality = 92; quality >= 20; quality -= 6)
     {
@@ -1055,15 +1397,23 @@ PendingTransaction *Wallet::createTransaction(
     for (const auto &amount : destinationAmounts) {
         amounts.push_back(Monero::Wallet::amountFromString(amount.toStdString()));
     }
-    std::set<uint32_t> subaddr_indices;
+    // a mined address being spent: only its outputs (change goes to address 0 of its account)
+    const auto source = spendSourceFor();
+    const int spendAccount = source.first, spendIndex = source.second;
+    std::set<uint32_t> subaddr_indices = spendAccount >= 0 ? std::set<uint32_t>{quint32(spendIndex)}
+                                                           : spendableIndexes(currentSubaddressAccount());
+    // the change of a mined address goes back to 0:1, so its account never has to exist
+    if (spendAccount >= 0)
+        m_walletImpl->setChangeSubaddress(0, changeIndex());
     Monero::PendingTransaction *ptImpl = m_walletImpl->createTransactionMultDest(
         destinations,
         payment_id.toStdString(),
         amounts,
         mixin_count,
         static_cast<Monero::PendingTransaction::Priority>(priority),
-        currentSubaddressAccount(),
+        spendAccount >= 0 ? quint32(spendAccount) : currentSubaddressAccount(),
         subaddr_indices);
+    m_walletImpl->setChangeSubaddress(-1, -1);
     PendingTransaction *result = new PendingTransaction(ptImpl, 0);
     return result;
 }
@@ -1085,10 +1435,17 @@ void Wallet::createTransactionAsync(
 PendingTransaction *Wallet::createTransactionAll(const QString &dst_addr, const QString &payment_id,
                                                  quint32 mixin_count, PendingTransaction::Priority priority)
 {
-    std::set<uint32_t> subaddr_indices;
+    const auto source = spendSourceFor();
+    const int spendAccount = source.first, spendIndex = source.second;
+    std::set<uint32_t> subaddr_indices = spendAccount >= 0 ? std::set<uint32_t>{quint32(spendIndex)}
+                                                           : spendableIndexes(currentSubaddressAccount());
+    if (spendAccount >= 0)
+        m_walletImpl->setChangeSubaddress(0, changeIndex());
     Monero::PendingTransaction * ptImpl = m_walletImpl->createTransaction(
                 dst_addr.toStdString(), payment_id.toStdString(), Monero::optional<uint64_t>(), mixin_count,
-                static_cast<Monero::PendingTransaction::Priority>(priority), currentSubaddressAccount(), subaddr_indices);
+                static_cast<Monero::PendingTransaction::Priority>(priority),
+                spendAccount >= 0 ? quint32(spendAccount) : currentSubaddressAccount(), subaddr_indices);
+    m_walletImpl->setChangeSubaddress(-1, -1);
     PendingTransaction * result = new PendingTransaction(ptImpl, this);
     return result;
 }
@@ -1597,6 +1954,7 @@ Wallet::Wallet(Monero::Wallet *w, QObject *parent)
     , m_walletImpl(w)
     , m_history(new TransactionHistory(m_walletImpl->history(), this))
     , m_historyModel(nullptr)
+    , m_historySortFilterModel(nullptr)
     , m_addressBook(new AddressBook(m_walletImpl->addressBook(), this))
     , m_addressBookModel(nullptr)
     , m_daemonBlockChainHeight(0)
@@ -1617,8 +1975,9 @@ Wallet::Wallet(Monero::Wallet *w, QObject *parent)
     , m_refreshEnabled(false)
     , m_refreshing(false)
     , m_refreshThreadStarted(false)
-    , m_scheduler(this)
+    , m_scheduler(this, &m_pool)
 {
+    m_pool.setMaxThreadCount(8);
     m_walletListener = new WalletListenerImpl(this);
     m_walletImpl->setListener(m_walletListener);
     m_currentSubaddressAccount = getCacheAttribute(ATTRIBUTE_SUBADDRESS_ACCOUNT).toUInt();
@@ -1635,6 +1994,14 @@ Wallet::Wallet(Monero::Wallet *w, QObject *parent)
 Wallet::~Wallet()
 {
     qDebug("~Wallet: Closing wallet");
+    // The wallet is usually deleted on a worker thread (closeWalletAsync, background close). Its children
+    // die in creation order, so the history model went first and its destroyed() signal was queued to the
+    // proxy on the main thread, which was deleted right after: a crash on quit (SIGSEGV in
+    // QSortFilterProxyModelPrivate::_q_sourceModelDestroyed). Deleting the proxy first drops that connection.
+    delete m_historySortFilterModel;
+    m_historySortFilterModel = nullptr;
+    delete m_historyModel;
+    m_historyModel = nullptr;
     m_notesPool.waitForDone();
     notesLock();
 

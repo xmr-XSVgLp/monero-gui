@@ -40,6 +40,7 @@ import "../../components" as MoneroComponents
 
 
 Rectangle {
+    id: infoPage
     color: "transparent"
     Layout.fillWidth: true
     property alias infoHeight: infoLayout.height
@@ -65,37 +66,172 @@ Rectangle {
         return modeStr + (portableSettings.portable ? ", %1".arg(qsTr("portable")) : "");
     }
 
+    component InfoCard: Rectangle {
+        property string heading
+        default property alias content: cardContents.data
+        Layout.fillWidth: true
+        implicitHeight: cardContents.implicitHeight + 32
+        radius: 12
+        color: MoneroComponents.Style.blackTheme ? "#111917" : "#E5E9E5"
+        border.color: MoneroComponents.Style.blackTheme ? "#2B3933" : "#BDC8C0"
+        ColumnLayout {
+            id: cardContents
+            anchors { left: parent.left; right: parent.right; top: parent.top; margins: 16 }
+            spacing: 6
+            MoneroComponents.TextPlain {
+                Layout.fillWidth: true
+                text: heading
+                font.pixelSize: 16
+                font.bold: true
+                color: MoneroComponents.Style.defaultFontColor
+                themeTransition: false
+                wrapMode: Text.WordWrap
+            }
+        }
+    }
+    component InfoRow: RowLayout {
+        id: detailRow
+        property string label
+        property string value
+        property bool mono: true
+        property string actionIcon: ""
+        property string actionTooltip: ""
+        signal actionClicked()
+        Layout.fillWidth: true
+        Layout.topMargin: 2
+        Layout.bottomMargin: 2
+        spacing: 14
+        GridLayout {
+            Layout.fillWidth: true
+            columns: detailRow.width < 480 ? 1 : 2
+            columnSpacing: 18
+            rowSpacing: 4
+            MoneroComponents.TextPlain {
+                Layout.preferredWidth: parent.columns === 2 ? 190 : -1
+                Layout.fillWidth: parent.columns === 1
+                text: label
+                color: MoneroComponents.Style.dimmedFontColor
+                font.pixelSize: 12
+                themeTransition: false
+                wrapMode: Text.WordWrap
+            }
+            MoneroComponents.TextPlain {
+                Layout.fillWidth: true
+                text: value
+                color: MoneroComponents.Style.defaultFontColor
+                font.family: mono ? MoneroComponents.Style.fontMonoRegular.name : MoneroComponents.Style.fontRegular.name
+                font.pixelSize: 13
+                themeTransition: false
+                wrapMode: Text.WrapAnywhere
+            }
+        }
+        MoneroComponents.SettingsIconButton {
+            visible: actionIcon !== ""
+            icon: actionIcon
+            tooltip: actionTooltip
+            onClicked: actionClicked()
+        }
+    }
+
     ColumnLayout {
         id: infoLayout
-        Layout.fillWidth: true
-        anchors.left: parent.left
+        width: Math.min(920, Math.max(0, infoPage.width - 40))
+        anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.top
-        anchors.right: parent.right
-        anchors.margins: 20
-        anchors.topMargin: 0
-        spacing: 12
+        spacing: 18
 
-        MoneroComponents.SectionTitle {
+        Rectangle {
             Layout.fillWidth: true
-            text: qsTr("Information") + translationManager.emptyString
+            implicitHeight: heroContents.implicitHeight + 48
+            radius: 16
+            color: "#111715"
+            border.color: "#57402A"
+            clip: true
+            Rectangle {
+                anchors { left: parent.left; right: parent.right; top: parent.top; margins: 1 }
+                height: 3
+                radius: 2
+                color: "#C58142"
+            }
+            GridLayout {
+                id: heroContents
+                anchors { left: parent.left; right: parent.right; top: parent.top; margins: 24 }
+                columns: infoLayout.width < 540 ? 1 : 2
+                columnSpacing: 28
+                rowSpacing: 20
+                Image {
+                    Layout.preferredWidth: 160
+                    Layout.preferredHeight: 160
+                    Layout.alignment: Qt.AlignHCenter
+                    source: "qrc:///images/logos/walletplus-logo.png"
+                    fillMode: Image.PreserveAspectFit
+                    mipmap: true
+                }
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 10
+                    MoneroComponents.TextPlain {
+                        Layout.fillWidth: true
+                        text: "XMR Wallet+"
+                        font.pixelSize: infoLayout.width < 540 ? 30 : 36
+                        font.bold: true
+                        color: "#F0EAE2"
+                        themeTransition: false
+                        wrapMode: Text.WordWrap
+                    }
+                    MoneroComponents.TextPlain {
+                        Layout.fillWidth: true
+                        text: qsTr("Your Monero. Your control.") + translationManager.emptyString
+                        font.pixelSize: 16
+                        color: "#D4B28D"
+                        themeTransition: false
+                        wrapMode: Text.WordWrap
+                    }
+                    MoneroComponents.TextPlain {
+                        Layout.fillWidth: true
+                        text: qsTr("An independent wallet built on Monero GUI.") + translationManager.emptyString
+                        font.pixelSize: 13
+                        color: "#A7B3AC"
+                        themeTransition: false
+                        wrapMode: Text.WordWrap
+                    }
+                    MoneroComponents.TextPlain {
+                        Layout.fillWidth: true
+                        Layout.topMargin: 6
+                        text: "v" + Version.WALLETPLUS_VERSION
+                        font.family: MoneroComponents.Style.fontMonoRegular.name
+                        font.pixelSize: 13
+                        color: "#D4B28D"
+                        themeTransition: false
+                    }
+                }
+            }
         }
 
-        MoneroComponents.SettingsCard {
-            padding: 8
-            spacing: 2
+        InfoCard {
+            heading: qsTr("Software and build") + translationManager.emptyString
 
-            MoneroComponents.SettingsInfoRow {
+            InfoRow {
+                label: qsTr("XMR Wallet+ version") + translationManager.emptyString
+                value: Version.WALLETPLUS_VERSION
+            }
+
+            InfoRow {
                 label: qsTr("GUI version: ").replace(/:\s*$/, "") + translationManager.emptyString
                 value: Version.GUI_VERSION + " (Qt " + qtRuntimeVersion + ")" + translationManager.emptyString
             }
 
-            MoneroComponents.SettingsInfoRow {
+            InfoRow {
                 id: guiMoneroVersion
                 label: qsTr("Embedded Monero version: ").replace(/:\s*$/, "") + translationManager.emptyString
                 value: moneroVersion
             }
 
-            MoneroComponents.SettingsInfoRow {
+        }
+
+        InfoCard {
+            heading: qsTr("Wallet and environment") + translationManager.emptyString
+            InfoRow {
                 id: walletLocation
                 property string walletPath: (isIOS ?  appWindow.accountsDir : "") + persistentSettings.wallet_path
                 label: qsTr("Wallet path: ").replace(/:\s*$/, "") + translationManager.emptyString
@@ -105,9 +241,9 @@ Rectangle {
                 onActionClicked: oshelper.openContainingFolder(walletPath)
             }
 
-            MoneroComponents.SettingsInfoRow {
+            InfoRow {
                 id: restoreHeight
-                visible: typeof currentWallet != "undefined"
+                visible: typeof currentWallet != "undefined" && currentWallet !== null
                 label: qsTr("Wallet restore height: ").replace(/:\s*$/, "") + translationManager.emptyString
                 value: currentWallet ? currentWallet.walletCreationHeight : ""
                 actionIcon: FontAwesome.edit
@@ -162,7 +298,7 @@ Rectangle {
                 }
             }
 
-            MoneroComponents.SettingsInfoRow {
+            InfoRow {
                 label: qsTr("Wallet log path: ").replace(/:\s*$/, "") + translationManager.emptyString
                 value: logger.logFilePath
                 actionIcon: FontAwesome.folderOpen
@@ -170,18 +306,18 @@ Rectangle {
                 onActionClicked: oshelper.openContainingFolder(logger.logFilePath)
             }
 
-            MoneroComponents.SettingsInfoRow {
+            InfoRow {
                 label: qsTr("Wallet mode: ").replace(/:\s*$/, "") + translationManager.emptyString
                 value: walletModeString
                 mono: false
             }
 
-            MoneroComponents.SettingsInfoRow {
+            InfoRow {
                 label: qsTr("Graphics mode: ").replace(/:\s*$/, "") + translationManager.emptyString
                 value: rendererName
             }
 
-            MoneroComponents.SettingsInfoRow {
+            InfoRow {
                 visible: isTails
                 label: qsTr("Tails: ").replace(/:\s*$/, "") + translationManager.emptyString
                 value: tailsUsePersistence ? qsTr("persistent") + translationManager.emptyString : qsTr("persistence disabled") + translationManager.emptyString;
@@ -189,16 +325,24 @@ Rectangle {
             }
         }
 
-        RowLayout {
-            Layout.topMargin: 6
-            spacing: 12;
+        Item {
+            id: actions
+            Layout.fillWidth: true
+            Layout.topMargin: 4
+            Layout.bottomMargin: 24
+            readonly property bool stacked: width < 2 * Math.max(donateMonero.width, donateWalletPlus.width) + copyInfo.width + 32
+            implicitHeight: stacked ? donateMonero.height + copyInfo.height + donateWalletPlus.height + 24 : 48
 
             MoneroComponents.StandardButton {
+                id: copyInfo
+                x: (actions.width - width) / 2
+                y: actions.stacked ? donateMonero.height + 12 : (actions.height - height) / 2
                 small: true
                 text: qsTr("Copy to clipboard") + translationManager.emptyString
                 onClicked: {
                     var data = "";
-                    data += "GUI version: " + Version.GUI_VERSION + " (Qt " + qtRuntimeVersion + ")";
+                    data += "XMR Wallet+ version: " + Version.WALLETPLUS_VERSION;
+                    data += "\nGUI version: " + Version.GUI_VERSION + " (Qt " + qtRuntimeVersion + ")";
                     data += "\nEmbedded Monero version: " + moneroVersion;
                     data += "\nWallet path: " + walletLocation.walletPath;
 
@@ -219,10 +363,34 @@ Rectangle {
             }
 
             MoneroComponents.StandardButton {
-                small: true
+                id: donateMonero
+                x: actions.stacked ? (actions.width - width) / 2 : 0
+                y: 0
+                height: 48
+                fontSize: 14
+                accent: MoneroComponents.Style.orange
+                textColor: MoneroComponents.Style.textAccent
+                fontAwesomeIcon: true
+                rightIcon: FontAwesome.heart
                 text: qsTr("Donate to Monero") + translationManager.emptyString
                 onClicked: {
                     middlePanel.sendTo("888tNkZrPN6JsEgekjMnABU4TBzc2Dt29EPAvkRxbANsAnjyPbb3iQ1YBRk1UXcdRsiKc9dhwMVgN5S9cQUiyoogDavup3H", "", qsTr("Donation to Monero Core Team") + translationManager.emptyString);
+                }
+            }
+
+            MoneroComponents.StandardButton {
+                id: donateWalletPlus
+                x: actions.stacked ? (actions.width - width) / 2 : actions.width - width
+                y: actions.stacked ? copyInfo.y + copyInfo.height + 12 : 0
+                height: 48
+                fontSize: 14
+                accent: MoneroComponents.Style.orange
+                textColor: MoneroComponents.Style.textAccent
+                fontAwesomeIcon: true
+                rightIcon: FontAwesome.heart
+                text: qsTr("Donate to XMR Wallet+") + translationManager.emptyString
+                onClicked: {
+                    middlePanel.sendTo("87777TxqmTc3zNbxyPC9KtEZYtATJXFMuCWzzRQUVNpshQChDa8vcC8HVquywZaJ3UbQZwHGfq9SmAFscsnrs1FM3vWP93f", "", qsTr("Donation to XMR Wallet+") + translationManager.emptyString);
                 }
             }
         }

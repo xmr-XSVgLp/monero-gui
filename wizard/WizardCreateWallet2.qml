@@ -58,7 +58,7 @@ Rectangle {
             name: "verify";
             when: typeof currentWallet != "undefined" && wizardStateView.state == "wizardCreateWallet2"
             PropertyChanges { target: header; title: qsTr("Verify your recovery phrase") + translationManager.emptyString }
-            PropertyChanges { target: header; imageIcon: wizardController.layoutScale != 4 ? (MoneroComponents.Style.blackTheme ? "qrc:///images/verify.png" : "qrc:///images/verify-white.png") : "" }
+            PropertyChanges { target: header; imageIcon: wizardController.layoutScale != 4 ? (MoneroComponents.Style.blackTheme ? "qrc:///images/icons/verify.png" : "qrc:///images/icons/verify-white.png") : "" }
             PropertyChanges { target: header; subtitle: qsTr("Please confirm that you have written down your recover phrase by filling in the five blank fields with the correct words. If you have not written down your recovery phrase on a piece of paper, click on the Previous button and write it down right now!") + translationManager.emptyString}
             PropertyChanges { target: walletCreationDate; opacity: 0; enabled: false}
             PropertyChanges { target: walletCreationDateValue; opacity: 0; enabled: false}
@@ -128,7 +128,7 @@ Rectangle {
                 id: mobileImage
                 Layout.alignment: Qt.AlignHCenter
                 fillMode: Image.PreserveAspectCrop
-                source: MoneroComponents.Style.blackTheme ? "qrc:///images/write-down@2x.png" : "qrc:///images/write-down-white@2x.png"
+                source: MoneroComponents.Style.blackTheme ? "qrc:///images/icons/write-down@2x.png" : "qrc:///images/icons/write-down-white@2x.png"
                 width: 125
                 height: 125
                 sourceSize.width: 125
@@ -199,7 +199,7 @@ Rectangle {
 
             WizardHeader {
                 id: header
-                imageIcon: wizardController.layoutScale != 4 ? (MoneroComponents.Style.blackTheme ? "qrc:///images/write-down.png" : "qrc:///images/write-down-white.png") : ""
+                imageIcon: wizardController.layoutScale != 4 ? (MoneroComponents.Style.blackTheme ? "qrc:///images/icons/write-down.png" : "qrc:///images/icons/write-down-white.png") : ""
                 title: qsTr("Write down your recovery phrase") + translationManager.emptyString
                 subtitleVisible: wizardController.layoutScale != 4
                 subtitle: qsTr("These words are a backup of your wallet. Write these words down now on a piece of paper in the same order displayed. Keep this paper in a safe place and do not disclose it to anybody! Do not store these words digitally, always use a paper!") + translationManager.emptyString

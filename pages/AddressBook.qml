@@ -285,7 +285,7 @@ Rectangle {
                                     id: editEntryButton
                                     Layout.preferredWidth: 30
                                     Layout.preferredHeight: 30
-                                    image: "qrc:///images/edit-neon.png"
+                                    image: "qrc:///images/icons/edit-neon.png"
                                     tooltip: qsTr("Edit entry") + translationManager.emptyString
                                     onClicked: {
                                         addressBookListView.currentIndex = index;
@@ -297,7 +297,7 @@ Rectangle {
                                     id: copyButton
                                     Layout.preferredWidth: 30
                                     Layout.preferredHeight: 30
-                                    image: "qrc:///images/copy-neon.png"
+                                    image: "qrc:///images/icons/copy-neon.png"
                                     tooltip: qsTr("Copy address to clipboard") + translationManager.emptyString
                                     onClicked: {
                                         console.log("Address copied to clipboard");

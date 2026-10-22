@@ -9,6 +9,8 @@ import "../js/Utils.js" as Utils
 Item {
     id: row
     property int accountIndex: 0
+    property string badge: ""            // shown instead of "#index" (Wallet+ mined addresses account)
+    property string customColor: ""      // instead of the colour of the index
     property string label: ""
     property string address: ""          // already truncated for display
     property string balance: ""          // "<amount> XMR"
@@ -23,7 +25,7 @@ Item {
     // glitch, radar, stream, topo
     readonly property var cardColorsDark:  ["#00FF42", "#00E8FF", "#FF2CD9", "#FFB200", "#9F4EFF", "#FF3C3C", "#307DFF", "#FFDA00"]
     readonly property var cardColorsLight: ["#00A82D", "#008C9E", "#B0108F", "#B87800", "#6A22C8", "#C41E1E", "#1F55C0", "#9E8600"]
-    readonly property color cardColor: (dark ? cardColorsDark : cardColorsLight)[accountIndex % 8]
+    readonly property color cardColor: customColor !== "" ? customColor : (dark ? cardColorsDark : cardColorsLight)[accountIndex % 8]
     // only the active account shows its colour; the others keep the neutral soft white
     readonly property color border: selected ? cardColor : (dark ? "#E8ECE9" : "#2B3A30")
     readonly property color accent: border
@@ -96,9 +98,9 @@ Item {
 
             MoneroComponents.TextPlain {
                 anchors.centerIn: parent
-                text: "#" + row.accountIndex
+                text: row.badge !== "" ? row.badge : "#" + row.accountIndex
                 font.family: MoneroComponents.Style.fontMonoMedium.name
-                font.pixelSize: row.accountIndex > 99 ? 10 : 12
+                font.pixelSize: row.badge !== "" ? 14 : (row.accountIndex > 99 ? 10 : 12)
                 color: row.selected ? MoneroComponents.Style.defaultFontColor : MoneroComponents.Style.dimmedFontColor
                 themeTransition: false
             }

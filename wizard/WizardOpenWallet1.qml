@@ -34,6 +34,7 @@ import QtQuick.Controls
 import Qt.labs.folderlistmodel
 import moneroComponents.NetworkType 1.0
 import moneroComponents.WalletKeysFilesModel 1.0
+import FontAwesome
 
 import "../js/Wizard.js" as Wizard
 import "../components"
@@ -203,30 +204,16 @@ Rectangle {
                             anchors.rightMargin: 12
                             spacing: 10
 
-                            Item {
+                            // chosen icon, else: mainnet wallet on the drive = purple USB stick instead of the safe
+                            MoneroComponents.WalletIcon {
                                 Layout.preferredWidth: 42
                                 Layout.preferredHeight: 42
-
-                                readonly property bool trezor: /trezor|tzr/.test(modelData.fileName.toLowerCase())
-
-                                Image {
-                                    visible: parent.trezor || modelData.networktype === 1 || modelData.networktype === 2
-                                    anchors.fill: parent
-                                    fillMode: Image.PreserveAspectFit
-                                    smooth: true
-                                    mipmap: true
-                                    source: parent.trezor ? "qrc:///images/open-wallet-from-file-trezor.png"
-                                          : modelData.networktype === 1 ? "qrc:///images/open-wallet-from-file-testnet.png"
-                                          : modelData.networktype === 2 ? "qrc:///images/open-wallet-from-file-stagenet.png"
-                                          : ""
-                                }
-
-                                // mainnet wallet on the drive: purple USB stick instead of the safe
-                                MoneroComponents.UsbIcon {
-                                    visible: !parent.trezor && modelData.networktype !== 1 && modelData.networktype !== 2
-                                    anchors.centerIn: parent
-                                    width: 34
-                                    height: 34
+                                kind: {
+                                    wizardOpenWallet1.iconRevision;
+                                    var chosen = wizardOpenWallet1.chosenIcon(modelData.path);
+                                    if (chosen !== "") return chosen;
+                                    if (/trezor|tzr/.test(modelData.fileName.toLowerCase())) return "trezor";
+                                    return modelData.networktype === 1 ? "testnet" : modelData.networktype === 2 ? "stagenet" : "usb";
                                 }
                             }
 
@@ -366,7 +353,8 @@ Rectangle {
                         readonly property bool dark: MoneroComponents.Style.blackTheme
                         readonly property color border: dark ? "#E8ECE9" : "#2B3A30"
                         readonly property color accent: dark ? "#4E9E6A" : "#2E7D4A"
-                        readonly property bool hovered: itemMouseArea.containsMouse || item.focus
+                        readonly property bool hovered: itemMouseArea.containsMouse || item.focus || editArea.containsMouse
+                        readonly property bool inUse: wizardOpenWallet1.walletInUse(path)
 
                         Accessible.role: Accessible.ListItem
                         Accessible.name: {
@@ -410,35 +398,20 @@ Rectangle {
                             anchors.rightMargin: 12
                             spacing: 10
 
-                            Item {
+                            MoneroComponents.WalletIcon {
                                 Layout.preferredWidth: 42
                                 Layout.preferredHeight: 42
-
-                                readonly property bool usb: networktype === 0 && wizardOpenWallet1.onDrive(path)
-                                                            && !/viewonly|trezor|tzr|trial|ledger/.test(fileName.toLowerCase())
-
-                                MoneroComponents.UsbIcon {
-                                    visible: parent.usb
-                                    anchors.centerIn: parent
-                                    width: 34
-                                    height: 34
-                                }
-
-                                Image {
-                                    id: icon
-                                    visible: !parent.usb
-                                    anchors.fill: parent
-                                    fillMode: Image.PreserveAspectFit
-                                    smooth: true
-                                    mipmap: true
-                                    source: {
-                                        if (networktype === 0 && fileName.toLowerCase().includes("viewonly")) return "qrc:///images/open-wallet-from-file-view-only.png";
-                                        else if (networktype === 0 && /trezor|tzr|trial/.test(fileName.toLowerCase())) return "qrc:///images/open-wallet-from-file-trezor.png";
-                                        else if (networktype === 0 && fileName.toLowerCase().includes("ledger")) return "qrc:///images/restore-wallet-from-hardware.png";
-                                        else if (networktype === 0) return "qrc:///images/open-wallet-safe.png";
-                                        else if (networktype === 1) return "qrc:///images/open-wallet-from-file-testnet.png";
-                                        else if (networktype === 2) return "qrc:///images/open-wallet-from-file-stagenet.png";
-                                    }
+                                kind: {
+                                    wizardOpenWallet1.iconRevision;
+                                    var chosen = wizardOpenWallet1.chosenIcon(path);
+                                    if (chosen !== "") return chosen;
+                                    var name = fileName.toLowerCase();
+                                    if (networktype === 1) return "testnet";
+                                    if (networktype === 2) return "stagenet";
+                                    if (name.includes("viewonly")) return "viewonly";
+                                    if (/trezor|tzr|trial/.test(name)) return "trezor";
+                                    if (name.includes("ledger")) return "ledger";
+                                    return wizardOpenWallet1.onDrive(path) ? "usb" : "safe";
                                 }
                             }
 
@@ -474,6 +447,8 @@ Rectangle {
                             // network badge (testnet/stagenet, or mainnet in advanced mode)
                             Item {
                                 visible: item.networkType !== ""
+                                // on hover the badge slides left so the 3 buttons don't cover it
+                                Layout.rightMargin: item.hovered ? 32 : 0
                                 implicitWidth: netText.implicitWidth + 12
                                 implicitHeight: netText.implicitHeight + 6
 
@@ -507,6 +482,41 @@ Rectangle {
                             cursorShape: Qt.PointingHandCursor
                             onClicked: recentList.openSelectedWalletFile(path);
                         }
+
+                        // one edit button on hover: opens the wallet editor (name, icon, delete)
+                        Rectangle {
+                            anchors.right: parent.right
+                            anchors.rightMargin: 8
+                            anchors.verticalCenter: parent.verticalCenter
+                            visible: item.hovered
+                            width: 28
+                            height: 28
+                            radius: 4
+                            color: item.dark ? "#0C130E" : "#DADFDB"
+                            border.width: 1
+                            border.color: editArea.containsMouse ? item.border : Qt.rgba(item.border.r, item.border.g, item.border.b, 0.35)
+                            Text {
+                                anchors.centerIn: parent
+                                text: "\uf044"
+                                font.family: FontAwesome.fontFamily
+                                font.styleName: "Regular"
+                                font.pixelSize: 13
+                                color: MoneroComponents.Style.defaultFontColor
+                            }
+                        }
+
+                        // declared after the tile's own MouseArea so it sits on top
+                        MouseArea {
+                            id: editArea
+                            anchors.right: parent.right
+                            anchors.rightMargin: 8
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 28
+                            height: 28
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: wizardOpenWallet1.editWallet(path, fileName, item.inUse)
+                        }
                     }
                 }
 
@@ -536,11 +546,316 @@ Rectangle {
         }
     }
 
+    // icon the user chose for a wallet, kept in "<wallet>.json" next to its files ("" = automatic, from the name)
+    property int iconRevision: 0
+    readonly property var iconChoices: [
+        { kind: "", label: qsTr("Automatic") },
+        { kind: "safe", label: qsTr("Safe") },
+        { kind: "trezor", label: "Trezor" },
+        { kind: "viewonly", label: qsTr("View only") },
+        { kind: "usb", label: "USB" },
+        { kind: "custom/safe-grey", label: qsTr("Grey safe") },
+        { kind: "custom/safe-red", label: qsTr("Red safe") },
+        { kind: "custom/wallet-leather", label: qsTr("Leather") },
+        { kind: "custom/wallet-neon", label: qsTr("Neon") },
+        { kind: "custom/purse-red", label: qsTr("Purse") },
+        { kind: "custom/coins-stack", label: qsTr("Stack") },
+        { kind: "custom/coin-gold", label: qsTr("Gold") },
+        { kind: "custom/coin-silver", label: qsTr("Silver") },
+        { kind: "custom/coins-cyan", label: qsTr("Coins") },
+        { kind: "custom/piggy-pink", label: qsTr("Piggy bank") },
+        { kind: "custom/cards-violet", label: qsTr("Cards") },
+        { kind: "custom/coin-bag-blue", label: qsTr("Coin bag") }
+    ]
+
+    function walletJson(path) {
+        var text = oshelper.readTextFile(String(path).replace(/\.keys$/, "") + ".json");
+        try { return JSON.parse(text) || {}; } catch (e) { return {}; }
+    }
+
+    function chosenIcon(path) {
+        var icon = walletJson(path).icon;
+        return typeof icon === "string" ? icon : "";
+    }
+
+    function setWalletIcon(path, kind) {
+        var data = walletJson(path);
+        if (kind === "") delete data.icon;
+        else data.icon = kind;
+        oshelper.writeTextFile(String(path).replace(/\.keys$/, "") + ".json", JSON.stringify(data, null, 2) + "\n");
+        iconRevision++;
+    }
+
+    function editWallet(path, name, inUse) {
+        walletEditor.walletPath = path;
+        walletEditor.walletName = name;
+        walletEditor.inUse = inUse;
+        walletEditor.current = chosenIcon(path);
+        nameField.text = name;
+        walletEditor.open();
+    }
+
+    // icon first (its .json is renamed together with the wallet), then the name
+    function saveWalletEdit() {
+        var path = walletEditor.walletPath;
+        if (walletEditor.current !== chosenIcon(path))
+            setWalletIcon(path, walletEditor.current);
+        var newName = nameField.text.trim();
+        if (!walletEditor.inUse && newName !== "" && newName !== walletEditor.walletName) {
+            var r = oshelper.renameWallet(path, newName);
+            if (!r.ok) {
+                showError(qsTr("Rename wallet") + translationManager.emptyString, r.error);
+                return;
+            }
+            appWindow.moveWalletSettings(path, r.path);
+        }
+        walletEditor.close();
+        reloadWallets();
+    }
+
+    function reloadWallets() {
+        walletKeysFilesModel.refresh(appWindow.accountsDir);
+        wizardOpenWallet1.walletCount = walletKeysFilesModel.rowCount();
+        flow._height = flow.calcHeight();
+    }
+
+    // the open wallet, or one kept unlocked for switching, cannot be renamed or deleted
+    function walletInUse(path) {
+        var key = String(path).replace(/\.keys$/, "");
+        return (appWindow.currentWallet && String(appWindow.currentWallet.path).replace(/\.keys$/, "") === key)
+               || appWindow.isParkedWallet(path);
+    }
+
+    function showError(title, error) {
+        informationPopup.title = title;
+        informationPopup.text = error === "exists" ? qsTr("There is already a wallet with that name.") + translationManager.emptyString
+                              : error === "invalid name" ? qsTr("That name is not valid: do not use / \\ : or start with a dot.") + translationManager.emptyString
+                              : error;
+        informationPopup.onCloseCallback = null;
+        informationPopup.open();
+    }
+
+    function deleteWallet(path, name) {
+        confirmationDialog.title = qsTr("Delete wallet") + translationManager.emptyString;
+        confirmationDialog.text = qsTr("Move the wallet \"%1\" to the Trash?\n\nIts files go to the macOS Trash, so you can still put them back from Finder until you empty it. Without its seed (or the Trezor that created it) the funds can not be recovered once the Trash is emptied.").arg(name) + translationManager.emptyString;
+        confirmationDialog.onAcceptedCallback = function() {
+            var r = oshelper.trashWallet(path);
+            if (!r.ok) {
+                showError(qsTr("Delete wallet") + translationManager.emptyString, r.error);
+                return;
+            }
+            appWindow.moveWalletSettings(path, "");
+            reloadWallets();
+        };
+        confirmationDialog.onRejectedCallback = null;
+        confirmationDialog.open();
+    }
+
     function onPageCompleted(previousView){
         if(previousView.viewName == "wizardHome"){
-            walletKeysFilesModel.refresh(appWindow.accountsDir);
-            wizardOpenWallet1.walletCount = walletKeysFilesModel.rowCount();
-            flow._height = flow.calcHeight();
+            reloadWallets();
+        }
+    }
+
+    // wallet editor: name, icon, save / cancel / delete
+    Popup {
+        id: walletEditor
+        property string walletPath: ""
+        property string walletName: ""
+        property string current: ""
+        property bool inUse: false
+        readonly property bool dark: MoneroComponents.Style.blackTheme
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+        modal: true
+        focus: true
+        padding: 22
+        width: Math.min(620, (parent ? parent.width : 620) - 40)
+
+        Overlay.modal: Rectangle { color: walletEditor.dark ? "#B3000000" : "#80000000" }
+
+        background: MoneroComponents.NeonFrame {
+            cut: 12
+            accent: walletEditor.dark ? "#E8ECE9" : "#2B3A30"
+            lineOpacity: 0.6
+            fillColor: walletEditor.dark ? "#0C130E" : "#E6EAE7"
+            fillOpacity: 0.98
+            ticks: true
+        }
+
+        contentItem: ColumnLayout {
+            spacing: 14
+
+            MoneroComponents.TextPlain {
+                Layout.fillWidth: true
+                text: qsTr("Edit wallet") + translationManager.emptyString
+                elide: Text.ElideRight
+                font.family: MoneroComponents.Style.fontMedium.name
+                font.pixelSize: 17
+                color: MoneroComponents.Style.defaultFontColor
+                themeTransition: false
+            }
+
+            MoneroComponents.TextPlain {
+                text: qsTr("Name") + translationManager.emptyString
+                font.pixelSize: 12
+                color: MoneroComponents.Style.dimmedFontColor
+                themeTransition: false
+            }
+
+            TextField {
+                id: nameField
+                Layout.fillWidth: true
+                enabled: !walletEditor.inUse
+                selectByMouse: true
+                font.family: MoneroComponents.Style.fontMonoRegular.name
+                font.pixelSize: 15
+                color: MoneroComponents.Style.defaultFontColor
+                selectionColor: walletEditor.dark ? "#4E9E6A" : "#2E7D4A"
+                leftPadding: 10
+                rightPadding: 10
+                topPadding: 8
+                bottomPadding: 8
+                background: MoneroComponents.NeonFrame {
+                    cut: 6
+                    accent: walletEditor.dark ? "#E8ECE9" : "#2B3A30"
+                    lineOpacity: nameField.activeFocus ? 0.9 : 0.35
+                    fillColor: walletEditor.dark ? "#000000" : "#FFFFFF"
+                    fillOpacity: 0.25
+                    ticks: false
+                }
+                onAccepted: wizardOpenWallet1.saveWalletEdit()
+            }
+
+            MoneroComponents.TextPlain {
+                visible: walletEditor.inUse
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+                text: qsTr("This wallet is open: close it to rename or delete it.") + translationManager.emptyString
+                font.pixelSize: 11
+                color: MoneroComponents.Style.dimmedFontColor
+                themeTransition: false
+            }
+
+            MoneroComponents.TextPlain {
+                Layout.topMargin: 4
+                text: qsTr("Icon") + translationManager.emptyString
+                font.pixelSize: 12
+                color: MoneroComponents.Style.dimmedFontColor
+                themeTransition: false
+            }
+
+            MoneroComponents.TextPlain {
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+                text: qsTr("Saved in \"%1.json\" next to the wallet, so it goes with it when you copy it.").arg(walletEditor.walletName) + translationManager.emptyString
+                font.pixelSize: 12
+                color: MoneroComponents.Style.dimmedFontColor
+                themeTransition: false
+            }
+
+            Flow {
+                Layout.fillWidth: true
+                spacing: 10
+
+                Repeater {
+                    model: wizardOpenWallet1.iconChoices
+                    delegate: Item {
+                        width: 78
+                        height: 92
+                        readonly property bool selected: walletEditor.current === modelData.kind
+                        readonly property bool over: choiceArea.containsMouse
+
+                        MoneroComponents.NeonFrame {
+                            anchors.fill: parent
+                            cut: 7
+                            accent: parent.selected ? (walletEditor.dark ? "#4E9E6A" : "#2E7D4A") : (walletEditor.dark ? "#E8ECE9" : "#2B3A30")
+                            lineOpacity: parent.selected ? 1 : (parent.over ? 0.8 : 0.25)
+                            fillColor: accent
+                            fillOpacity: parent.selected ? 0.12 : (parent.over ? 0.06 : 0)
+                            ticks: parent.selected
+                        }
+
+                        Column {
+                            anchors.centerIn: parent
+                            spacing: 6
+
+                            Item {
+                                width: 44
+                                height: 44
+                                anchors.horizontalCenter: parent.horizontalCenter
+
+                                MoneroComponents.WalletIcon {
+                                    visible: modelData.kind !== ""
+                                    anchors.fill: parent
+                                    kind: modelData.kind
+                                }
+                                // automatic: decided from the file name, as before
+                                MoneroComponents.TextPlain {
+                                    visible: modelData.kind === ""
+                                    anchors.centerIn: parent
+                                    text: "A"
+                                    font.family: MoneroComponents.Style.fontMonoMedium.name
+                                    font.pixelSize: 26
+                                    color: MoneroComponents.Style.dimmedFontColor
+                                    themeTransition: false
+                                }
+                            }
+
+                            MoneroComponents.TextPlain {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                text: modelData.label + translationManager.emptyString
+                                font.pixelSize: 11
+                                color: MoneroComponents.Style.defaultFontColor
+                                themeTransition: false
+                            }
+                        }
+
+                        MouseArea {
+                            id: choiceArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: walletEditor.current = modelData.kind
+                        }
+                    }
+                }
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.topMargin: 8
+                spacing: 10
+
+                MoneroComponents.StandardButton {
+                    visible: !walletEditor.inUse
+                    small: true
+                    accent: walletEditor.dark ? "#FF4D4D" : "#C62828"
+                    textColor: walletEditor.dark ? "#FFD6D6" : "#C62828"
+                    text: qsTr("Delete wallet") + translationManager.emptyString
+                    onClicked: {
+                        walletEditor.close();
+                        wizardOpenWallet1.deleteWallet(walletEditor.walletPath, walletEditor.walletName);
+                    }
+                }
+
+                Item { Layout.fillWidth: true }
+
+                MoneroComponents.StandardButton {
+                    small: true
+                    accent: walletEditor.dark ? "#8C8C8C" : "#6B6B6B"
+                    textColor: walletEditor.dark ? "#D0D0D0" : "#4A4A4A"
+                    text: qsTr("Cancel") + translationManager.emptyString
+                    onClicked: walletEditor.close()
+                }
+
+                MoneroComponents.StandardButton {
+                    small: true
+                    accent: walletEditor.dark ? "#5FD08F" : "#1E8E4E"
+                    text: qsTr("Save") + translationManager.emptyString
+                    onClicked: wizardOpenWallet1.saveWalletEdit()
+                }
+            }
         }
     }
 }

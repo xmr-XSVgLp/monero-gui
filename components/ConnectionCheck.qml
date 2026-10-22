@@ -27,9 +27,11 @@
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-// Connection check of Settings > Node / Network: the proxy in use (NymVPN, another SOCKS5 or none), web latency
-// and speed, Monero P2P ping and the local node. Results live in main.qml (runConnectionTest), which runs it
-// only when requested, so diagnostics do not compete with initial synchronization.
+// One connection check of Settings > Node / Network > Connection check, for one anonymous network
+// (net: nym | tor | i2p): what the network is used for, then its checks. Nym and Tor: exit IP, proxy,
+// web latency and speed, Monero P2P ping and the node they carry. I2P (no exit to the internet): router
+// state, monerod's built-in I2P seed nodes and the .i2p remote node or the local node. Results live in
+// main.qml (runConnectionTest(net)); only one check runs at a time and only when requested.
 
 import QtQuick
 import QtQuick.Layouts
@@ -38,12 +40,18 @@ import "../components" as MoneroComponents
 
 ColumnLayout {
     id: check
+    property string net: "tor"
     spacing: 8
 
     readonly property bool dark: MoneroComponents.Style.blackTheme
-    readonly property var test: appWindow.connTest
-    readonly property bool testing: appWindow.connTesting
-    readonly property string via: appWindow.connTestVia
+    readonly property var test: appWindow.connTests[net] || ({})
+    readonly property bool testing: appWindow.connTestingNet === net
+    readonly property bool busy: appWindow.connTestingNet !== ""
+    readonly property bool up: appWindow.netUp(net)
+    readonly property var uses: appWindow.netUses(net)
+    readonly property var node: (persistentSettings.useRemoteNode, persistentSettings.netSync, persistentSettings.netWallet,
+                                 remoteNodesModel.selected, appWindow.connTestNode(net))
+    readonly property bool hasResults: Object.keys(test).length > 0
     readonly property color goodColor: dark ? "#5FD08F" : "#1E8E4E"
     readonly property color warnColor: dark ? "#FFC23D" : "#A86F00"
     readonly property color badColor: dark ? "#FF5C5C" : "#C62828"
@@ -58,8 +66,13 @@ ColumnLayout {
         if (!r)
             return [testing ? "…" : "—", MoneroComponents.Style.dimmedFontColor];
         switch (key) {
+        case "router":
+            if (!r.ok)
+                return [qsTr("Not connected (%1)").arg(r.state) + translationManager.emptyString, badColor];
+            return [qsTr("%1 routers · %2 tunnels · %3 % tunnel success").arg(r.routers).arg(r.tunnels).arg(r.rate)
+                    + (r.status ? " · " + r.status : "") + translationManager.emptyString, goodColor];
         case "ip":
-            return r.ok ? [r.ip + (r.place ? " · " + r.place : ""), check.via === "direct" ? MoneroComponents.Style.defaultFontColor : goodColor]
+            return r.ok ? [r.ip + (r.place ? " · " + r.place : ""), goodColor]
                         : [qsTr("Unknown: %1").arg(r.error) + translationManager.emptyString, warnColor];
         case "socks":
             if (r.direct)
@@ -99,7 +112,11 @@ ColumnLayout {
                     r.reached === 0 ? badColor : r.reached < r.total ? warnColor : goodColor];
         case "node":
             if (!r.ok)
-                return [qsTr("Not running (%1)").arg(r.error) + translationManager.emptyString, MoneroComponents.Style.dimmedFontColor];
+                return persistentSettings.useRemoteNode
+                       ? [qsTr("No answer (%1)").arg(r.error) + translationManager.emptyString, badColor]
+                       : [qsTr("Not running (%1)").arg(r.error) + translationManager.emptyString, MoneroComponents.Style.dimmedFontColor];
+            if (r.states === undefined && r.outgoing_connections_count === undefined)
+                return [qsTr("Block %1").arg(r.height) + translationManager.emptyString, goodColor];
             var behind = r.target_height > r.height ? r.target_height - r.height : 0;
             var states = [];
             for (var st in r.states)
@@ -115,45 +132,56 @@ ColumnLayout {
 
     // one-line conclusion once every check has finished
     readonly property string verdict: {
-        if (testing || !test.socks)
+        if (testing || !hasResults)
             return "";
-        var nym = via === "nym";
+        if (net === "i2p") {
+            if (!test.router || !test.router.ok)
+                return qsTr("I2P is not connected: connect it in the I2P NETWORK panel.") + translationManager.emptyString;
+            if (test.p2p && test.p2p.reached === 0)
+                return qsTr("None of monerod's I2P seed nodes answered. Fresh I2P routers need some minutes to build tunnels: try again later.") + translationManager.emptyString;
+            return qsTr("I2P works: Monero nodes answer through it.") + translationManager.emptyString;
+        }
+        var name = appWindow.netDisplayName(net);
+        if (!test.socks)
+            return "";
         if (!test.socks.ok)
-            return (nym ? qsTr("The independent Nym client is not answering. Press Reconnect in the wallet.")
-                        : qsTr("The SOCKS5 proxy is not answering: nothing can go out until it is back.")) + translationManager.emptyString;
+            return qsTr("%1 is not answering: what goes through it waits until it is back.").arg(name) + translationManager.emptyString;
         if (test.p2p && test.p2p.reached === 0 && !(test.node && test.node.ok && test.node.outgoing_connections_count > 0))
-            return (nym ? qsTr("The test peers did not reply through Nym. This alone does not prove that port 18080 is blocked; check the local node connections below.")
-                        : qsTr("No Monero node answers on port 18080: check the internet connection or the firewall.")) + translationManager.emptyString;
+            return qsTr("The test peers did not reply through %1. This alone does not prove that port 18080 is blocked; check the node below.").arg(name) + translationManager.emptyString;
         if (test.node && test.node.ok && test.node.target_height > test.node.height + 30)
-            return (nym ? qsTr("The local node is still syncing through the mixnet. Web download speed is not blockchain speed. Reconnect to try another exit.")
-                        : qsTr("Monero nodes answer but the local node is behind: it is still syncing.")) + translationManager.emptyString;
+            return qsTr("The node is still syncing through %1. Web download speed is not blockchain speed.").arg(name) + translationManager.emptyString;
         if (test.latency && test.latency.ok && test.speed && test.speed.ok)
-            return (nym ? qsTr("Nym works. Expect a few seconds per request: that is normal for a mixnet.")
-                        : qsTr("The connection works.")) + translationManager.emptyString;
+            return (net === "nym" ? qsTr("Nym works. Expect a few seconds per request: that is normal for a mixnet.")
+                                  : qsTr("Tor works.")) + translationManager.emptyString;
         return qsTr("Some checks failed: try again in a while.") + translationManager.emptyString;
     }
 
     RowLayout {
         Layout.fillWidth: true
         spacing: 12
+        MoneroComponents.NetIcon {
+            Layout.alignment: Qt.AlignTop
+            Layout.topMargin: 2
+            net: check.net
+        }
         ColumnLayout {
             Layout.fillWidth: true
             spacing: 2
             MoneroComponents.TextPlain {
-                text: qsTr("Connection check") + translationManager.emptyString
-                font.pixelSize: 11
+                text: appWindow.netDisplayName(check.net) + "  ·  " + (check.up ? qsTr("connected") : qsTr("not connected")) + translationManager.emptyString
+                font.family: MoneroComponents.Style.fontMonoMedium.name
+                font.pixelSize: 13
                 font.bold: true
-                font.letterSpacing: 0.8
-                font.capitalization: Font.AllUppercase
-                color: MoneroComponents.Style.dimmedFontColor
+                color: MoneroComponents.Style.defaultFontColor
                 themeTransition: false
             }
             MoneroComponents.TextPlain {
-                visible: text !== ""
                 Layout.fillWidth: true
                 wrapMode: Text.WordWrap
-                text: [check.via === "nym" ? qsTr("Through Nym mixnet") : check.via === "proxy" ? qsTr("Through the SOCKS5 proxy") : check.via === "direct" ? qsTr("Direct connection") : "",
-                       !check.testing && check.test.socks ? qsTr("checked at %1").arg(Qt.formatTime(appWindow.connTestTime, "HH:mm")) : ""].filter(function(t) { return t !== ""; }).join(" · ") + translationManager.emptyString
+                text: (check.uses.length ? qsTr("Used for: %1").arg(check.uses.join(" · ")) : qsTr("Not used by the Network configuration"))
+                      + (!check.testing && check.hasResults && appWindow.connTestTimes[check.net]
+                         ? " · " + qsTr("checked at %1").arg(Qt.formatTime(appWindow.connTestTimes[check.net], "HH:mm")) : "")
+                      + translationManager.emptyString
                 font.pixelSize: 12
                 color: MoneroComponents.Style.dimmedFontColor
                 themeTransition: false
@@ -161,32 +189,27 @@ ColumnLayout {
         }
         MoneroComponents.StandardButton {
             small: true
-            enabled: !check.testing
+            enabled: !check.busy && check.up
             text: check.testing ? qsTr("Checking…") + translationManager.emptyString
                                 : qsTr("Check now") + translationManager.emptyString
-            onClicked: appWindow.runConnectionTest()
+            tooltip: !check.up ? qsTr("Connect it first in its panel below") + translationManager.emptyString : ""
+            onClicked: appWindow.runConnectionTest(check.net)
         }
     }
 
-    MoneroComponents.TextPlain {
-        visible: !check.testing && !check.test.socks
-        Layout.fillWidth: true
-        wrapMode: Text.WordWrap
-        text: qsTr("Runs only when requested and shares bandwidth with synchronization. Measures a small web download, test peers and the local node; through Nym it can take a few minutes.") + translationManager.emptyString
-        font.pixelSize: 12
-        color: MoneroComponents.Style.dimmedFontColor
-        themeTransition: false
-    }
-
     Repeater {
-        model: (check.testing || check.test.socks) ? [
-            { key: "ip", label: qsTr("Current IP") + translationManager.emptyString },
-            { key: "socks", label: qsTr("Proxy") + translationManager.emptyString },
-            { key: "latency", label: qsTr("Response time") + translationManager.emptyString },
-            { key: "speed", label: qsTr("Download") + translationManager.emptyString },
-            { key: "p2p", label: qsTr("Monero nodes") + translationManager.emptyString },
-            { key: "node", label: qsTr("Local node") + translationManager.emptyString }
-        ] : []
+        model: !(check.testing || check.hasResults) ? []
+               : check.net === "i2p" ? [
+                   { key: "router", label: qsTr("I2P router") + translationManager.emptyString },
+                   { key: "p2p", label: qsTr("I2P Monero nodes") + translationManager.emptyString }
+               ].concat(check.node ? [{ key: "node", label: (persistentSettings.useRemoteNode ? qsTr("Remote node") : qsTr("Local node")) + translationManager.emptyString }] : [])
+               : [
+                   { key: "ip", label: qsTr("Current IP") + translationManager.emptyString },
+                   { key: "socks", label: qsTr("Proxy") + translationManager.emptyString },
+                   { key: "latency", label: qsTr("Response time") + translationManager.emptyString },
+                   { key: "speed", label: qsTr("Download") + translationManager.emptyString },
+                   { key: "p2p", label: qsTr("Monero nodes") + translationManager.emptyString }
+               ].concat(check.node ? [{ key: "node", label: (persistentSettings.useRemoteNode ? qsTr("Remote node") : qsTr("Local node")) + translationManager.emptyString }] : [])
         delegate: RowLayout {
             readonly property var row: check.testRow(modelData.key)
             Layout.fillWidth: true
@@ -198,7 +221,7 @@ ColumnLayout {
                 color: row[1]
             }
             MoneroComponents.TextPlain {
-                Layout.preferredWidth: 120
+                Layout.preferredWidth: 140
                 Layout.alignment: Qt.AlignTop
                 text: modelData.label
                 font.pixelSize: 11

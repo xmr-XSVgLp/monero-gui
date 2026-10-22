@@ -108,7 +108,7 @@ Item {
                 Layout.alignment: Qt.AlignTop
                 Layout.preferredWidth: 180
                 Layout.preferredHeight: 180
-                source: "qrc:///images/node-encrypted.png"
+                source: "qrc:///images/nodes/node-encrypted.png"
                 fillMode: Image.PreserveAspectFit
                 smooth: true
                 mipmap: true

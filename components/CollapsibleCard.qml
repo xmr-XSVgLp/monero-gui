@@ -31,6 +31,7 @@
 
 import QtQuick
 import QtQuick.Layouts
+import FontAwesome
 
 import "../components" as MoneroComponents
 
@@ -38,7 +39,11 @@ Item {
     id: card
     property bool checked: false
     property string title: ""
+    property string icon: ""
+    property color iconColor: MoneroComponents.Style.orange
     property string summary: ""
+    // optional item shown instead of the summary text (e.g. icons)
+    property Component summaryDelegate: null
     default property alias content: body.data
 
     readonly property bool dark: MoneroComponents.Style.blackTheme
@@ -96,7 +101,24 @@ Item {
                     }
                 }
 
+                Text {
+                    visible: card.icon !== ""
+                    Layout.preferredWidth: 16
+                    Layout.preferredHeight: 18
+                    text: card.icon
+                    font.family: FontAwesome.fontFamilySolid
+                    font.styleName: "Solid"
+                    font.pixelSize: 15
+                    color: card.iconColor
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    Accessible.ignored: true
+                }
+
                 MoneroComponents.TextPlain {
+                    Layout.fillWidth: true
+                    Layout.minimumWidth: 0
+                    elide: Text.ElideRight
                     text: card.title.toUpperCase()
                     font.family: MoneroComponents.Style.fontMonoMedium.name
                     font.pixelSize: 13
@@ -106,9 +128,14 @@ Item {
                     themeTransition: false
                 }
 
-                Item { Layout.fillWidth: true }
+                Loader {
+                    active: card.summaryDelegate !== null
+                    visible: active
+                    sourceComponent: card.summaryDelegate
+                }
 
                 MoneroComponents.TextPlain {
+                    visible: card.summaryDelegate === null
                     Layout.maximumWidth: card.width * 0.45
                     text: card.summary
                     elide: Text.ElideMiddle

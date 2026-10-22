@@ -5,8 +5,8 @@
 #include <QThread>
 #include <QThreadPool>
 
-FutureScheduler::FutureScheduler(QObject *parent)
-    : QObject(parent), Alive(0), Stopping(false)
+FutureScheduler::FutureScheduler(QObject *parent, QThreadPool *pool)
+    : QObject(parent), Alive(0), Stopping(false), Pool(pool ? pool : QThreadPool::globalInstance())
 {
     static std::once_flag once;
     std::call_once(once, []() {
@@ -35,7 +35,7 @@ void FutureScheduler::shutdownWaitForFinished() noexcept
 QPair<bool, QFuture<void>> FutureScheduler::run(std::function<void()> function) noexcept
 {
     return execute<void>([this, function](QFutureWatcher<void> *) {
-        return QtConcurrent::run([this, function] {
+        return QtConcurrent::run(Pool, [this, function] {
             try
             {
                 function();
@@ -60,7 +60,7 @@ QPair<bool, QFuture<QJSValueList>> FutureScheduler::run(std::function<QJSValueLi
         connect(watcher, &QFutureWatcher<QJSValueList>::finished, [watcher, callback] {
             QJSValue(callback).call(watcher->future().result());
         });
-        return QtConcurrent::run([this, function] {
+        return QtConcurrent::run(Pool, [this, function] {
             QJSValueList result;
             try
             {

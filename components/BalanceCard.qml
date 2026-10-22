@@ -344,7 +344,7 @@ Item {
                         Layout.preferredHeight: 48
                         Layout.leftMargin: -6
                         Layout.rightMargin: -6
-                        source: "qrc:///images/xmr-ticker.png"
+                        source: "qrc:///images/logos/xmr-ticker.png"
                         fillMode: Image.PreserveAspectFit
                         smooth: true
                         mipmap: true

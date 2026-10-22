@@ -47,4 +47,9 @@ MoneroComponents.Navbar {
         text: qsTr("Swaps") + translationManager.emptyString
         onSelected: if (!active) appWindow.showPageRequest("Swaps")
     }
+    MoneroComponents.NavbarItem {
+        active: current === "SwapsNoKyc"
+        text: "Swaps No-KYC"
+        onSelected: if (!active) appWindow.showPageRequest("SwapsNoKyc")
+    }
 }

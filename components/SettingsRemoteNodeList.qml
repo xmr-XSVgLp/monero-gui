@@ -51,8 +51,13 @@ ColumnLayout {
             readonly property bool selected: index === remoteNodesModel.selected
             readonly property bool hovered: nodeMouse.containsMouse || editButton.hovered || removeButton.hovered
             readonly property var trusted: remoteNodesModel.get(index) ? remoteNodesModel.get(index).trusted : false
+            // Tor on / I2P required / I2P off for an .i2p node: cannot be used now (main.qml remoteNodeAllowed)
+            readonly property string blockedText: (persistentSettings.torEnabled, persistentSettings.netWallet, persistentSettings.i2pEnabled,
+                                                   persistentSettings.netTx, appWindow.remoteNodeBlockedText(address))
+            readonly property bool blockedByTor: blockedText !== ""
             Layout.fillWidth: true
             implicitHeight: 44
+            opacity: blockedByTor ? 0.4 : 1
 
             MoneroComponents.CardPanel {
                 anchors.fill: parent
@@ -97,7 +102,7 @@ ColumnLayout {
 
                 MoneroComponents.TextPlain {
                     Layout.fillWidth: true
-                    text: address
+                    text: address + (nodeRow.blockedByTor ? "  ·  " + nodeRow.blockedText : "")
                     elide: Text.ElideMiddle
                     font.family: MoneroComponents.Style.fontMonoRegular.name
                     font.pixelSize: 14

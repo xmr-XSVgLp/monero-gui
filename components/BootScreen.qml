@@ -75,7 +75,7 @@ Rectangle {
                 anchors.centerIn: parent
                 width: 170
                 height: 170
-                source: "qrc:///images/boot-coin.png"
+                source: "qrc:///images/logos/boot-coin.png"
                 fillMode: Image.PreserveAspectFit
                 smooth: true
                 mipmap: true

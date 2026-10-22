@@ -142,7 +142,7 @@ Drawer {
                 // button gradient while checked
                 Image {
                     anchors.fill: parent
-                    source: "qrc:///images/menuButtonGradient.png"
+                    source: "qrc:///images/window/menuButtonGradient.png"
                     opacity: 0.65
                     visible: true
 

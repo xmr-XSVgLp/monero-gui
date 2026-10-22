@@ -43,6 +43,7 @@ Rectangle {
 
     property int currentAccountIndex
     property alias currentAccountLabel: accountLabel.text
+    property bool minedActive: false   // Wallet+ mined addresses account selected
     property string balanceString: "?.??"
     property string balanceUnlockedString: "?.??"
     property string balanceFiatString: "?.??"
@@ -66,6 +67,7 @@ Rectangle {
     signal swapsClicked()
     signal tradingClicked()
     signal notesClicked()
+    signal customAddressesClicked()
     signal walletPlusClicked()
     signal securityClicked()
     signal trezorClicked()
@@ -80,8 +82,10 @@ Rectangle {
         else if(pos === "Advanced") menuColumn.previousButton = advancedButton
         else if(pos === "Account") menuColumn.previousButton = accountButton
         else if(pos === "Swaps") menuColumn.previousButton = tradingButton
+        else if(pos === "SwapsNoKyc") menuColumn.previousButton = tradingButton
         else if(pos === "Trading") menuColumn.previousButton = tradingButton
         else if(pos === "Notes") menuColumn.previousButton = notesButton
+        else if(pos === "CustomAddresses") menuColumn.previousButton = customAddressesButton
         else if(pos === "WalletPlus") menuColumn.previousButton = walletPlusButton
         else if(pos === "Security") menuColumn.previousButton = securityButton
         else if(pos === "Trezor") menuColumn.previousButton = walletPlusButton
@@ -136,7 +140,7 @@ Rectangle {
                     width: 260
                     height: 135
                     fillMode: Image.PreserveAspectFit
-                    source: "qrc:///images/card-matrix-" + (MoneroComponents.Style.blackTheme ? "dark" : "light") + (currentAccountIndex % 8) + ".png"
+                    source: "qrc:///images/cards/card-matrix-" + (MoneroComponents.Style.blackTheme ? "dark" : "light") + (minedActive ? "-quarry" : (currentAccountIndex % 8)) + ".png"
                 }
 
                 MultiEffect {
@@ -192,7 +196,7 @@ Rectangle {
                 MoneroComponents.Label {
                     fontSize: 12
                     id: accountIndex
-                    text: qsTr("Account") + translationManager.emptyString + " #" + currentAccountIndex
+                    text: qsTr("Account") + translationManager.emptyString + (minedActive ? " ⛏" : " #" + currentAccountIndex)
                     color: MoneroComponents.Style.blackTheme ? "white" : "black"
                     anchors.left: parent.left
                     anchors.leftMargin: 60
@@ -500,28 +504,6 @@ Rectangle {
                 anchors.leftMargin: 20
             }
 
-            // ------------- Advanced tab ---------------
-            MoneroComponents.MenuButton {
-                id: advancedButton
-                visible: appWindow.walletMode >= 2
-                anchors.left: parent.left
-                anchors.right: parent.right
-                text: qsTr("Advanced") + translationManager.emptyString
-                symbol: (isMac ? "⌃" : qsTr("Ctrl+")) + "D" + translationManager.emptyString
-                onClicked: {
-                    parent.previousButton.checked = false
-                    parent.previousButton = advancedButton
-                    panel.advancedClicked()
-                }
-            }
-
-            MoneroComponents.MenuButtonDivider {
-                visible: advancedButton.present && appWindow.walletMode >= 2
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.leftMargin: 20
-            }
-
             // ------------- Settings tab ---------------
             MoneroComponents.MenuButton {
                 id: settingsButton
@@ -538,6 +520,29 @@ Rectangle {
 
             MoneroComponents.MenuButtonDivider {
                 visible: settingsButton.present
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.leftMargin: 20
+            }
+
+            // ------------- Advanced options (under Settings) ---------------
+            MoneroComponents.MenuButton {
+                id: advancedButton
+                visible: appWindow.walletMode >= 2
+                anchors.left: parent.left
+                anchors.right: parent.right
+                text: qsTr("Advanced options") + translationManager.emptyString
+                symbol: (isMac ? "⌃" : qsTr("Ctrl+")) + "D" + translationManager.emptyString
+                under: settingsButton
+                onClicked: {
+                    parent.previousButton.checked = false
+                    parent.previousButton = advancedButton
+                    panel.advancedClicked()
+                }
+            }
+
+            MoneroComponents.MenuButtonDivider {
+                visible: advancedButton.present && appWindow.walletMode >= 2
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.leftMargin: 20
@@ -618,6 +623,28 @@ Rectangle {
                     menuColumn.previousButton.checked = false
                     menuColumn.previousButton = notesButton
                     panel.notesClicked()
+                }
+            }
+
+            MoneroComponents.MenuButtonDivider {
+                visible: customAddressesButton.present
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.leftMargin: 20
+            }
+
+            // ------------- Custom addresses (subsection of Wallet+) ---------------
+            MoneroComponents.MenuButton {
+                id: customAddressesButton
+                anchors.left: parent.left
+                anchors.right: parent.right
+                blueAccent: true
+                text: qsTr("Mine addresses") + translationManager.emptyString
+                under: walletPlusButton
+                onClicked: {
+                    menuColumn.previousButton.checked = false
+                    menuColumn.previousButton = customAddressesButton
+                    panel.customAddressesClicked()
                 }
             }
 

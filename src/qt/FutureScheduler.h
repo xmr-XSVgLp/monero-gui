@@ -9,6 +9,7 @@
 #include <QMutex>
 #include <QMutexLocker>
 #include <QPair>
+#include <QThreadPool>
 #include <QWaitCondition>
 
 class FutureScheduler : public QObject
@@ -16,7 +17,8 @@ class FutureScheduler : public QObject
     Q_OBJECT
 
 public:
-    FutureScheduler(QObject *parent);
+    // pool: where the tasks run; nullptr = Qt's global pool, shared with the network requests
+    FutureScheduler(QObject *parent, QThreadPool *pool = nullptr);
     ~FutureScheduler();
 
     void shutdownWaitForFinished() noexcept;
@@ -58,6 +60,7 @@ private:
     QWaitCondition Condition;
     QMutex Mutex;
     std::atomic<bool> Stopping;
+    QThreadPool *Pool;
 };
 
 #endif // FUTURE_SCHEDULER_H

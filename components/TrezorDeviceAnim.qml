@@ -151,7 +151,7 @@ Item {
                 anchors.verticalCenterOffset: -4
                 width: 52
                 height: 52
-                source: "qrc:///images/xmr-ticker@2x.png"
+                source: "qrc:///images/logos/xmr-ticker@2x.png"
                 smooth: true
                 mipmap: true
                 SequentialAnimation on scale {

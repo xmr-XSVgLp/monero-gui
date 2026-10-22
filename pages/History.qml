@@ -894,7 +894,7 @@ Rectangle {
                                     Layout.preferredHeight: 26
                                     interactive: false
                                     hovered: txNoteArea.containsMouse
-                                    image: "qrc:///images/edit-neon.png"
+                                    image: "qrc:///images/icons/edit-neon.png"
 
                                     MouseArea {
                                         id: txNoteArea
@@ -988,7 +988,7 @@ Rectangle {
                             visible: !isout && confirmationsRequired === 60
                             Layout.preferredWidth: 26
                             Layout.preferredHeight: 26
-                            source: "qrc:///images/miningxmr.png"
+                            source: "qrc:///images/icons/miningxmr.png"
                         }
 
                         MoneroComponents.BookIconButton {

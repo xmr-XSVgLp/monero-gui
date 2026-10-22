@@ -113,7 +113,7 @@ Rectangle {
             Layout.alignment: Qt.AlignCenter
             width: 140
             height: 140
-            source: "qrc:///images/success.png"
+            source: "qrc:///images/icons/success.png"
 
             SequentialAnimation{
                 running: successImage.visible

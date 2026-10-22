@@ -33,7 +33,7 @@ import QtQuick.Layouts
 import "." as MoneroComponents
 
 // Title bar chip: XMR price in mBTC with a green ▲ / red ▼ for the last 24 hours. Hover: XMR in BTC,
-// EUR and USD. Read from the Markets CSVs (~/Monero/xmr-wallet-plus/trading/xmr-<cur>-24h.csv,
+// EUR and USD. Read from the Markets CSVs (~/Monero/xmr-wallet-plus/markets/coingecko/xmr-<cur>-24h.csv,
 // refreshed every 15 min by the Markets page) and the fiat rates; no request of its own.
 Item {
     id: chip
@@ -55,13 +55,24 @@ Item {
     readonly property string dataDir: {
         if (typeof oshelper === "undefined" || !oshelper.swapsLogPath) return "";
         var p = oshelper.swapsLogPath();
-        return p.substring(0, p.lastIndexOf("/")) + "/trading";
+        return p.substring(0, p.lastIndexOf("/")) + "/markets";
     }
+
+    // the 24 h CSVs change every 15 minutes: read them again at most every 2 minutes
+    property var seriesCache: ({})
+    property double seriesTime: 0
 
     // last price and change over the 24 h series in xmr-<pair>-24h.csv
     function readSeries(pair) {
+        if (Date.now() - seriesTime < 120000 && seriesCache[pair] !== undefined)
+            return seriesCache[pair];
+        var s = readSeriesFile(pair);
+        var c = Object.assign({}, seriesCache); c[pair] = s; seriesCache = c;
+        return s;
+    }
+    function readSeriesFile(pair) {
         if (dataDir === "") return null;
-        var lines = oshelper.readTextFile(dataDir + "/xmr-" + pair + "-24h.csv").split("\n");
+        var lines = oshelper.readTextFile(dataDir + "/coingecko/xmr-" + pair + "-24h.csv").split("\n");
         var pts = [];
         for (var i = 1; i < lines.length; i++) {
             var f = lines[i].split(",");
@@ -73,19 +84,34 @@ Item {
         var first = pts[0];
         for (var j = 0; j < pts.length; j++)
             if (pts[j][0] >= last[0] - 86400) { first = pts[j]; break; }
-        return { price: last[1], change: first[1] > 0 && first !== last ? (last[1] / first[1] - 1) * 100 : NaN };
+        return { price: last[1], change: first[1] > 0 && first !== last ? (last[1] / first[1] - 1) * 100 : NaN,
+                 base: first[1] };
+    }
+
+    // the newest price wins: the live ticker (every minute) over the CSV (every 15 minutes); the 24 h change
+    // compares it with the CSV price of 24 hours ago
+    function withLive(series, live) {
+        if (!(live > 0)) return series;
+        var base = series && series.base > 0 ? series.base : 0;
+        return { price: live, change: base > 0 ? (live / base - 1) * 100 : (series ? series.change : NaN), base: base };
     }
 
     function load() {
+        if (dataDir !== "" && Date.now() - seriesTime >= 120000) {
+            seriesCache = ({});
+            seriesTime = Date.now();
+        }
         var q = {};
-        var b = readSeries("btc");
+        var liveBtc = Date.now() - appWindow.priceBtcLiveTime < 10 * 60000 ? appWindow.priceBtcLive : 0;
+        var b = withLive(readSeries("btc"), liveBtc);
         if (b) q["BTC"] = b;
         else if (appWindow.priceBtc > 0) q["BTC"] = { price: appWindow.priceBtc, change: NaN };
-        var usd = readSeries("usd");
-        if (!usd && appWindow.fiatPriceUSD > 0)
-            usd = { price: appWindow.fiatPriceUSD, change: appWindow.fiatChange24h };
+        var usdSeries = readSeries("usd");
+        var usd = withLive(usdSeries, appWindow.fiatPriceUSD);
+        if (usd && !usdSeries) usd.change = appWindow.fiatChange24h;
         if (usd) q["USD"] = usd;
-        var eur = readSeries("eur");
+        var eurRate = appWindow.fiatRates && appWindow.fiatRates["EUR"] > 0 ? appWindow.fiatRates["EUR"] : 0;
+        var eur = withLive(readSeries("eur"), appWindow.fiatPriceUSD > 0 && eurRate > 0 ? appWindow.fiatPriceUSD * eurRate : 0);
         if (eur) q["EUR"] = eur;
         quotes = q;
     }
@@ -115,6 +141,7 @@ Item {
         target: appWindow
         function onFiatPriceUSDChanged() { chip.load(); }
         function onPriceBtcChanged() { chip.load(); }
+        function onPriceBtcLiveTimeChanged() { chip.load(); }
     }
 
     MoneroComponents.NeonFrame {
@@ -212,7 +239,10 @@ Item {
             }
             Text {
                 visible: chip.order.length > 0
-                text: qsTr("From the Markets data.") + translationManager.emptyString
+                // where the numbers come from: the live ticker when it answered in the last 10 minutes
+                text: (Date.now() - appWindow.priceBtcLiveTime < 10 * 60000 || appWindow.fiatPriceUSD > 0
+                       ? qsTr("Price: Kraken, every minute. 24 h change: Markets data (CoinGecko).")
+                       : qsTr("From the Markets data.")) + translationManager.emptyString
                 color: MoneroComponents.Style.dimmedFontColor
                 font.pixelSize: 10
             }

@@ -5,6 +5,7 @@
 # Result: dist/XMR-wallet+.app and dist/XMR-wallet+-macos.zip
 # It works on a copy, so build/release/bin/monero-wallet-gui.app stays as it is.
 set -euo pipefail
+cd "$(dirname "$0")"
 
 SRC="build/release/bin/monero-wallet-gui.app"
 DIST="dist"
@@ -35,8 +36,13 @@ else
   echo "WARNING: the app goes without the GeoIP base (countries show as -)"
 fi
 
+# MRL spy-node ban list, downloaded fresh and put inside the app (the local node uses it)
+echo "== Spy-node ban list"
+bash "$(dirname "$0")/actualizar-banlist.sh" "$APP"
+
 # Folders where the app's non-Qt libraries live (pinned boost/protobuf/openssl and the rest)
-LIBPATHS=()
+LIBPATHS=("-libpath=$QT_PREFIX/lib")
+QT_LIB_DIRS=("$QT_PREFIX/lib")
 for f in boost@1.85 protobuf@21 openssl@3 abseil hidapi libusb zeromq libsodium unbound libpgm \
          icu4c readline expat; do
   p="$(brew --prefix "$f" 2>/dev/null || true)"
@@ -47,7 +53,10 @@ done
 # only finds their frameworks if every module's lib folder is listed.
 for f in $(brew list --formula | grep -E '^qt' || true); do
   p="$(brew --prefix "$f" 2>/dev/null || true)"
-  [ -n "$p" ] && [ -d "$p/lib" ] && LIBPATHS+=("-libpath=$p/lib")
+  if [ -n "$p" ] && [ -d "$p/lib" ]; then
+    LIBPATHS+=("-libpath=$p/lib")
+    QT_LIB_DIRS+=("$p/lib")
+  fi
 done
 
 # macdeployqt fails on Boost's @rpath/@loader_path links between its own libraries
@@ -67,7 +76,58 @@ for d in "$(brew --prefix boost@1.85 2>/dev/null || true)/lib" "$HOME/.local/boo
 done
 
 echo "== Running macdeployqt (copies Qt, QML modules and libraries into the app)"
-"$MACDEPLOYQT" "$APP" -always-overwrite -qmldir="$PWD" ${LIBPATHS[@]+"${LIBPATHS[@]}"} || true
+# -libpath is not consulted when Qt resolves @rpath framework references.
+# Supply temporary LC_RPATH entries on the copied executable. These also reach
+# QML plugins discovered by macdeployqt, and are removed below before signing.
+DEPLOY_EXE="$APP/Contents/MacOS/monero-wallet-gui"
+codesign --remove-signature "$DEPLOY_EXE"
+# Homebrew links Qt with absolute names. macdeployqt only propagates an
+# LC_RPATH to QML plugins if a framework actually used it during deployment.
+# Normalize Qt imports to @rpath so the aggregate Qt lib directory is retained.
+while IFS= read -r dep; do
+  case "$dep" in
+    /opt/homebrew/*/lib/Qt*.framework/*|/usr/local/*/lib/Qt*.framework/*)
+      rel="${dep#*/lib/}"
+      [ -f "$QT_PREFIX/lib/$rel" ] || { echo "ERROR: missing Qt framework $rel"; exit 1; }
+      install_name_tool -change "$dep" "@rpath/$rel" "$DEPLOY_EXE"
+      ;;
+  esac
+done < <(otool -L "$DEPLOY_EXE" | tail -n +2 | sed 's/^[[:space:]]*//; s/ (compatibility version.*//')
+for d in "${QT_LIB_DIRS[@]}"; do
+  if ! otool -l "$DEPLOY_EXE" | awk '/LC_RPATH/{getline; getline; print $2}' | grep -Fx "$d" >/dev/null; then
+    install_name_tool -add_rpath "$d" "$DEPLOY_EXE"
+  fi
+done
+# Scan exactly the QML resources in the build, not Rust/build trees or older
+# dist bundles. Those can contain unrelated imports and millions of files.
+QML_SCAN="$(mktemp -d "$DIST/.qml-scan.XXXXXX")"
+trap 'rm -rf "$QML_SCAN"' EXIT
+python3 - "$QML_SCAN" <<'PYQML'
+import pathlib, shutil, sys, xml.etree.ElementTree as ET
+root = pathlib.Path(sys.argv[1])
+manifest = pathlib.Path('build/release/.qt/rcc/monero-wallet-gui_raw_qml_0.qrc')
+if not manifest.is_file():
+    sys.exit('ERROR: QML build manifest missing; compile the wallet first')
+for qrc in (manifest, manifest.with_name('monero-wallet-gui_raw_res_0.qrc')):
+    for item in ET.parse(qrc).iter('file'):
+        src = pathlib.Path(item.text)
+        if src.suffix not in ('.qml', '.js', '.mjs') and src.name != 'qmldir':
+            continue
+        dest = root / item.get('alias', src.name)
+        if not dest.resolve().is_relative_to(root.resolve()):
+            sys.exit('ERROR: invalid QML resource alias')
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(src, dest)
+PYQML
+DEPLOY_LOG="$DIST/macdeployqt.log"
+# The destination is freshly copied. Re-overwriting frameworks for each QML
+# plugin repeats their entire dependency traversal. Sign once after all edits.
+"$MACDEPLOYQT" "$APP" -no-codesign -qmldir="$QML_SCAN" "${LIBPATHS[@]}" 2>&1 | tee "$DEPLOY_LOG"
+# Some macdeployqt versions print errors but still return success.
+if grep -E '^ERROR:' "$DEPLOY_LOG" >/dev/null; then
+  echo "ERROR: macdeployqt failed; see $DEPLOY_LOG. No ZIP will be produced."
+  exit 1
+fi
 
 echo "== Copying libraries macdeployqt missed"
 FW="$APP/Contents/Frameworks"
@@ -78,7 +138,7 @@ BREW="$(brew --prefix)"
 # which keeps the framework's internal symlinks (cp -RL breaks them).
 copy_framework() {
   local fw="$1" src=""
-  for cand in "$BREW/lib/$fw" $(ls -d "$BREW"/opt/qt*/lib/"$fw" 2>/dev/null); do
+  for cand in "$QT_PREFIX/lib/$fw" "$BREW/lib/$fw" "$BREW"/opt/qt*/lib/"$fw"; do
     [ -d "$cand" ] && { src="$(cd "$cand" && pwd -P)"; break; }
   done
   [ -n "$src" ] || { echo "  not found in Homebrew: $fw"; return 1; }
@@ -90,11 +150,11 @@ copy_framework() {
 
 # every Mach-O file in the app (executables, dylibs, plugins and framework binaries)
 macho_files() {
-  find "$APP/Contents" -type f ! -path "*/Resources/*" ! -path "*/Headers/*" ! -name "*.qml" \
-       ! -name "*.qmltypes" ! -name "*.png" ! -name "*.plist" ! -name "qmldir" -print \
-    | while IFS= read -r f; do file "$f" | grep -q "Mach-O" && echo "$f"; done
+  # QML plugins under Contents/Resources must be checked and repaired too.
+  python3 scripts/check-macos-dependencies.py --list "$APP"
 }
-for pass in 1 2 3 4; do
+
+for pass in {1..32}; do
   missing=0
   while IFS= read -r bin; do
     while IFS= read -r dep; do
@@ -102,7 +162,7 @@ for pass in 1 2 3 4; do
         @rpath/*.framework/*)
           # Qt framework macdeployqt could not resolve (QtMultimedia, QtStateMachine, ...)
           fw="${dep#@rpath/}"; fw="${fw%%/*}"
-          if [ ! -e "$FW/$fw" ]; then copy_framework "$fw" && missing=1 || true; fi
+          if [ ! -e "$FW/$fw" ]; then copy_framework "$fw"; missing=1; fi
           ;;
         */*.framework/*)
           # Qt framework: point at the copy macdeployqt put in the app (never copy it by hand)
@@ -123,6 +183,7 @@ for pass in 1 2 3 4; do
     done < <(otool -L "$bin" 2>/dev/null | tail -n +2 | awk '{print $1}')
   done < <(macho_files)
   [ "$missing" = 0 ] && break
+  [ "$pass" != 32 ] || { echo "ERROR: dependency traversal did not converge"; exit 1; }
 done
 
 echo "== Removing Homebrew rpaths from every library and plugin"
@@ -153,20 +214,20 @@ for EXE in "$APP"/Contents/MacOS/*; do
   done < <(otool -l "$EXE" | awk '/LC_RPATH/{getline; getline; print $2}')
 done
 
-echo "== Checking nothing still points at this Mac"
-LEFT="$(macho_files | while IFS= read -r f; do otool -L "$f" | tail -n +2; done 2>/dev/null \
-        | grep -E "^\s+(/opt/homebrew|/usr/local|$HOME)" | sort -u || true)"
-# @rpath Qt frameworks that are still not in the app
-for fw in $(macho_files | while IFS= read -r f; do otool -L "$f" | tail -n +2 | awk '{print $1}'; done \
-            | grep -o '^@rpath/[^/]*\.framework' | sort -u | sed 's|@rpath/||'); do
-  [ -e "$FW/$fw" ] || LEFT="$LEFT
-missing in the app: $fw"
-done
-if [ -n "$LEFT" ]; then
-  echo "WARNING: these libraries are still outside the app:"; echo "$LEFT"
-else
-  echo "OK: every library is inside the app"
+# bundled Tor (Tor Expert Bundle from torproject.org, SHA-256 checked). Added after the rpath
+# fixes so its own binaries stay as Tor built them; the script signs them before the app is sealed.
+echo "== Tor"
+bash "$(dirname "$0")/actualizar-tor.sh" "$APP"
+bash "$(dirname "$0")/actualizar-i2pd.sh" "$APP"
+if [ ! -x "$APP/Contents/MacOS/i2pd/i2pd" ]; then
+  echo "################################################################"
+  echo "AVISO: el paquete va SIN I2P (i2pd no se ha copiado; mira el WARNING de arriba)."
+  echo "En este Mac la app usa el i2pd de Homebrew, pero en otro Mac no habrá I2P."
+  echo "################################################################"
 fi
+
+echo "== Checking all bundled dependencies"
+python3 scripts/check-macos-dependencies.py "$APP"
 
 echo "== Signing (local certificate, ad hoc as fallback; required on Apple Silicon)"
 source "$(dirname "$0")/firmar-macos.sh"; firmar_app "$APP"
@@ -176,7 +237,8 @@ echo "== Testing monerod from inside the app"
 if "$APP/Contents/MacOS/monerod" --version; then
   echo "OK: monerod starts"
 else
-  echo "WARNING: monerod does not start (error above)"
+  echo "ERROR: monerod does not start; no ZIP will be produced"
+  exit 1
 fi
 
 echo "== Making the zip"

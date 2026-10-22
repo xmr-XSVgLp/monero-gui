@@ -37,7 +37,7 @@ import "effects/" as MoneroEffects
 Item {
     id: checkBox
     property alias text: label.text
-    property string checkedIcon: "qrc:///images/check-white.svg"
+    property string checkedIcon: "qrc:///images/icons/check-white.svg"
     property string uncheckedIcon
     property bool fontAwesomeIcons: false
     property int imgWidth: 13
@@ -102,7 +102,7 @@ Item {
             Canvas {
                 id: neonTick
                 readonly property bool active: !checkBox.fontAwesomeIcons && checkBox.uncheckedIcon == ""
-                    && checkBox.checkedIcon == "qrc:///images/check-white.svg"
+                    && checkBox.checkedIcon == "qrc:///images/icons/check-white.svg"
                 property real progress: checkBox.checked ? 1 : 0
                 Behavior on progress { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
                 visible: active && progress > 0

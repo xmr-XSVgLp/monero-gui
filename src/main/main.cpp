@@ -74,7 +74,7 @@
 #ifdef QML_TESTS
 #include "QmlTestHarness.h"
 #endif
-#ifdef Q_OS_MAC
+#ifdef Q_OS_APPLE
 #include "qt/macoshelper.h"
 #endif
 
@@ -146,14 +146,14 @@ int main(int argc, char *argv[])
 #elif defined(Q_OS_LINUX)
     bool isLinux = true;
     bool isTails = TailsOS::detect();
-#elif defined(Q_OS_MAC)
+#elif defined(Q_OS_APPLE)
     bool isMac = true;
 #endif
 #if defined(__aarch64__)
     bool isARM = true;
 #endif
 
-#ifdef Q_OS_MAC
+#ifdef Q_OS_APPLE
     // macOS window tabbing is not supported
     MacOSHelper::disableWindowTabbing();
 #endif

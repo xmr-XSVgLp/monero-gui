@@ -28,6 +28,7 @@
 
 #include "TransactionHistory.h"
 #include "TransactionInfo.h"
+#include "Wallet.h"
 #include <wallet/api/wallet2_api.h>
 
 #include <QFile>
@@ -100,8 +101,11 @@ void TransactionHistory::refresh(quint32 accountIndex)
         m_minutesToUnlock = 0;
 
         m_pimpl->refresh();
+        // Wallet+ mined addresses of accounts that do not exist belong to no account: shown in every one
+        const Wallet *wallet = qobject_cast<const Wallet *>(parent());
+        const quint32 accounts = wallet ? wallet->numSubaddressAccounts() : 0;
         for (const auto i : m_pimpl->getAll()) {
-            if (i->subaddrAccount() != accountIndex) {
+            if (i->subaddrAccount() != accountIndex && !(accounts > 0 && i->subaddrAccount() >= accounts)) {
                 continue;
             }
 

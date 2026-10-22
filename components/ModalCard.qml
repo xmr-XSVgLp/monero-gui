@@ -50,12 +50,12 @@ Item {
 
     function imageFor(k) {
         switch (k) {
-        case "node": return "qrc:///images/node-encrypted.png";
-        case "tx": return "qrc:///images/dlg-tx.png";
-        case "tag": return "qrc:///images/dlg-tag.png";
-        case "key": return "qrc:///images/dlg-key.png";
-        case "warning": return "qrc:///images/dlg-warning.png";
-        default: return "qrc:///images/dlg-info.png";
+        case "node": return "qrc:///images/nodes/node-encrypted.png";
+        case "tx": return "qrc:///images/dialogs/dlg-tx.png";
+        case "tag": return "qrc:///images/dialogs/dlg-tag.png";
+        case "key": return "qrc:///images/dialogs/dlg-key.png";
+        case "warning": return "qrc:///images/dialogs/dlg-warning.png";
+        default: return "qrc:///images/dialogs/dlg-info.png";
         }
     }
 

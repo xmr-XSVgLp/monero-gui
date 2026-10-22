@@ -92,7 +92,7 @@ Item {
             width: 18
             height: 18
             sourceSize: Qt.size(36, 36)
-            source: "qrc:///images/monero-vector.svg"
+            source: "qrc:///images/logos/monero-vector.svg"
             mipmap: true
         }
     }

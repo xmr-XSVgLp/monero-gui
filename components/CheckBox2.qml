@@ -83,7 +83,7 @@ RowLayout {
                     anchors.centerIn: parent
                     width: 12
                     height: 8
-                    image: "qrc:///images/whiteDropIndicator.png"
+                    image: "qrc:///images/icons/whiteDropIndicator.png"
                     color: MoneroComponents.Style.orange
                     opacity: 1
                     fontAwesomeFallbackIcon: FontAwesome.arrowDown

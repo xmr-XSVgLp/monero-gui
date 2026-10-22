@@ -7,6 +7,15 @@ env:
     sudo rm -rf /usr/local/.ghcup /usr/share/dotnet /usr/share/swift /usr/share/miniconda /usr/local/lib/android /opt/hostedtoolcache
 
 jobs:
+  wallet-regressions:
+    runs-on: ubuntu-26.04
+    steps:
+    - uses: actions/checkout@v7
+    - name: Payment persistence and network lifecycle regressions
+      run: |
+        node tests/audit_regressions.cjs
+        node tests/nym_lifecycle.cjs
+
   build-macos:
     runs-on: macos-latest
     steps:

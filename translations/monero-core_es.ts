@@ -23,6 +23,70 @@
 <context>
     <name>Account</name>
     <message>
+        <source>Mined addresses</source>
+        <translation>Direcciones minadas</translation>
+    </message>
+    <message>
+        <source>Open the mined addresses page</source>
+        <translation>Abrir la página de direcciones minadas</translation>
+    </message>
+    <message>
+        <source>Mined addresses are not affected: they stay in the mined addresses account.</source>
+        <translation>Las direcciones minadas no se ven afectadas: siguen en la cuenta de direcciones minadas.</translation>
+    </message>
+    <message>
+        <source>Removes the accounts at the end of the list that never received or sent anything, with their names. Accounts are numbered, so an empty one between used accounts stays. Your funds and history do not change.</source>
+        <translation>Elimina las cuentas del final de la lista que nunca han recibido ni enviado nada, con sus nombres. Las cuentas van numeradas, así que una vacía entre cuentas usadas se queda. Tus fondos y tu historial no cambian.</translation>
+    </message>
+    <message>
+        <source>Your mined addresses are kept, so accounts up to %1 stay (the furthest mined address is in account %1). To remove more, remove that mined address first.</source>
+        <translation>Tus direcciones minadas se conservan, así que se quedan las cuentas hasta la %1 (la dirección minada más lejana está en la cuenta %1). Para eliminar más, quita antes esa dirección minada.</translation>
+    </message>
+    <message>
+        <source>Removing…</source>
+        <translation>Eliminando…</translation>
+    </message>
+    <message>
+        <source>Remove empty accounts</source>
+        <translation>Eliminar cuentas vacías</translation>
+    </message>
+    <message>
+        <source>Removes the accounts at the end of the list that never received or sent anything, with their names. Accounts are numbered, so an empty one between used accounts stays. Mined addresses in removed accounts leave the mined list. Your funds and history do not change.</source>
+        <translation>Elimina las cuentas del final de la lista que nunca han recibido ni enviado nada, con sus nombres. Las cuentas van numeradas, así que una vacía entre cuentas usadas se queda. Las direcciones minadas de las cuentas eliminadas salen de la lista de minadas. Tus fondos y tu historial no cambian.</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>Eliminar</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Cancelar</translation>
+    </message>
+    <message>
+        <source>Could not remove the accounts: %1</source>
+        <translation>No se pudieron eliminar las cuentas: %1</translation>
+    </message>
+    <message>
+        <source>%1 empty accounts removed, %2 left</source>
+        <translation>%1 cuentas vacías eliminadas, quedan %2</translation>
+    </message>
+    <message>
+        <source>No empty accounts at the end of the list</source>
+        <translation>No hay cuentas vacías al final de la lista</translation>
+    </message>
+    <message>
+        <source>Hide empty accounts</source>
+        <translation>Ocultar cuentas vacías</translation>
+    </message>
+    <message>
+        <source>Mined addresses account</source>
+        <translation>Cuenta de direcciones minadas</translation>
+    </message>
+    <message>
+        <source>%1 addresses</source>
+        <translation>%1 direcciones</translation>
+    </message>
+    <message>
         <source>Price</source>
         <translation>Precio</translation>
     </message>
@@ -768,6 +832,14 @@ Es recomendable escribirla en la billetera física para mayor seguridad.</transl
 <context>
     <name>LeftPanel</name>
     <message>
+        <source>Mine addresses</source>
+        <translation>Minar direcciones</translation>
+    </message>
+    <message>
+        <source>Custom addresses</source>
+        <translation>Direcciones personalizadas</translation>
+    </message>
+    <message>
         <source>open</source>
         <translation>abierto</translation>
     </message>
@@ -901,6 +973,10 @@ Es recomendable escribirla en la billetera física para mayor seguridad.</transl
     <message>
         <source>Notes</source>
         <translation>Notas</translation>
+    </message>
+    <message>
+        <source>Advanced options</source>
+        <translation>Opciones avanzadas</translation>
     </message>
 </context>
 <context>
@@ -1522,6 +1598,90 @@ Minar también te da una posibilidad pequeña de ganar algo de Monero. Tu ordena
 <context>
     <name>Receive</name>
     <message>
+        <source>Write the total amount first</source>
+        <translation>Escribe primero el total</translation>
+    </message>
+    <message>
+        <source>%1 addresses created as one group</source>
+        <translation>%1 direcciones creadas en un grupo</translation>
+    </message>
+    <message>
+        <source>Set the label of the address group:</source>
+        <translation>Etiqueta del grupo de direcciones:</translation>
+    </message>
+    <message>
+        <source>Addresses #%1 to #%2</source>
+        <translation>Direcciones #%1 a #%2</translation>
+    </message>
+    <message>
+        <source>Addresses copied to clipboard</source>
+        <translation>Direcciones copiadas al portapapeles</translation>
+    </message>
+    <message>
+        <source>Copy the addresses to clipboard</source>
+        <translation>Copiar las direcciones al portapapeles</translation>
+    </message>
+    <message>
+        <source>Write the total: it is split at random among the %1 addresses. Copy the request and paste it in Send: each address is filled in with its amount.</source>
+        <translation>Escribe el total: se reparte al azar entre las %1 direcciones. Copia la solicitud y pégala en Enviar: cada dirección se rellena con su cantidad.</translation>
+    </message>
+    <message>
+        <source>%1 addresses separated by commas. Paste them in the address field of Send and they are filled in as %1 recipients.</source>
+        <translation>%1 direcciones separadas por comas. Pégalas en el campo de dirección de Enviar y se rellenan como %1 receptores.</translation>
+    </message>
+    <message>
+        <source>Total</source>
+        <translation>Total</translation>
+    </message>
+    <message>
+        <source>Split again</source>
+        <translation>Repartir de nuevo</translation>
+    </message>
+    <message>
+        <source>Creating…</source>
+        <translation>Creando…</translation>
+    </message>
+    <message>
+        <source>Create addresses in bulk</source>
+        <translation>Crear direcciones a granel</translation>
+    </message>
+    <message>
+        <source>They are created in a row and shown as one row with one label. You can copy them all at once, separated by commas.</source>
+        <translation>Se crean seguidas y se muestran como una sola fila con una etiqueta. Puedes copiarlas todas de una vez, separadas por comas.</translation>
+    </message>
+    <message>
+        <source>How many (2 to 50)</source>
+        <translation>Cuántas (de 2 a 50)</translation>
+    </message>
+    <message>
+        <source>Label</source>
+        <translation>Etiqueta</translation>
+    </message>
+    <message>
+        <source>e.g. Group 1</source>
+        <translation>p. ej. Grupo 1</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Cancelar</translation>
+    </message>
+    <message>
+        <source>Create</source>
+        <translation>Crear</translation>
+    </message>
+    <message>
+        <source>Group</source>
+        <translation>Grupo</translation>
+    </message>
+    <message>
+        <source>%1 addresses</source>
+        <translation>%1 direcciones</translation>
+    </message>
+    <message>
+        <source>#%1 to #%2</source>
+        <translation>#%1 a #%2</translation>
+    </message>
+    <message>
         <source>This is your primary address (it starts with 4). Everyone who has it can link all the payments you receive on it, so it cannot be copied from here: use the QR code (right click to copy it) or, better, a new address.</source>
         <translation>Esta es tu dirección principal (empieza por 4). Cualquiera que la tenga puede relacionar todos los pagos que recibas en ella, por eso no se puede copiar desde aquí: usa el código QR (clic derecho para copiarlo) o, mejor, una dirección nueva.</translation>
     </message>
@@ -1819,6 +1979,10 @@ Minar también te da una posibilidad pequeña de ganar algo de Monero. Tu ordena
 </context>
 <context>
     <name>SettingsInfo</name>
+    <message><source>Your Monero. Your control.</source><translation>Tu Monero. Tú tienes el control.</translation></message>
+    <message><source>An independent wallet built on Monero GUI.</source><translation>Una cartera independiente basada en Monero GUI.</translation></message>
+    <message><source>Software and build</source><translation>Software y compilación</translation></message>
+    <message><source>Wallet and environment</source><translation>Cartera y entorno</translation></message>
     <message>
         <location filename="../pages/settings/SettingsInfo.qml" line="47"/>
         <location filename="../pages/settings/SettingsInfo.qml" line="49"/>
@@ -1966,6 +2130,18 @@ El archivo de caché anterior del monedero será renombrado y puede ser posterio
         <source>Open folder</source>
         <translation>Abrir carpeta</translation>
     </message>
+    <message>
+        <source>XMR Wallet+ version</source>
+        <translation>Versión de XMR Wallet+</translation>
+    </message>
+    <message>
+        <source>Donate to XMR Wallet+</source>
+        <translation>Donar a XMR Wallet+</translation>
+    </message>
+    <message>
+        <source>Donation to XMR Wallet+</source>
+        <translation>Donación a XMR Wallet+</translation>
+    </message>
 </context>
 <context>
     <name>SettingsLayout</name>
@@ -2037,6 +2213,14 @@ El archivo de caché anterior del monedero será renombrado y puede ser posterio
         <location filename="../pages/settings/SettingsLayout.qml" line="58"/>
         <source>Custom decorations</source>
         <translation>Decoraciones personalizadas</translation>
+    </message>
+    <message>
+        <source>Show XMR price ticker at the bottom</source>
+        <translation>Mostrar cotizaciones de XMR abajo</translation>
+    </message>
+    <message>
+        <source>Needs the prices on: Node / Network tab, External connections.</source>
+        <translation>Necesita los precios activados: pestaña Nodo / Red, Conexiones externas.</translation>
     </message>
     <message>
         <location filename="../pages/settings/SettingsLayout.qml" line="82"/>
@@ -2214,6 +2398,174 @@ El archivo de caché anterior del monedero será renombrado y puede ser posterio
 </context>
 <context>
     <name>SettingsNode</name>
+    <message>
+        <source>The local node cannot sync the blockchain over I2P: it is a closed network without exits to normal Monero nodes, and monerod does not download blocks from .i2p peers. You can use I2P with a remote node: add a .i2p node in Node &gt; Remote node.</source>
+        <translation>No se puede sincronizar la cadena con I2P en el nodo local: es una red cerrada sin salidas a los nodos Monero normales, y monerod no descarga bloques de pares .i2p. Sí puedes usar I2P con un nodo remoto: añade un nodo .i2p en Nodo &gt; Nodo remoto.</translation>
+    </message>
+    <message>
+        <source>Wallet</source>
+        <translation>Monedero</translation>
+    </message>
+    <message>
+        <source>Sync</source>
+        <translation>Sincronización</translation>
+    </message>
+    <message>
+        <source>Transactions</source>
+        <translation>Transacciones</translation>
+    </message>
+    <message>
+        <source>Connection check</source>
+        <translation>Prueba de conexión</translation>
+    </message>
+    <message>
+        <source>checking %1…</source>
+        <translation>comprobando %1…</translation>
+    </message>
+    <message>
+        <source>Nym · Tor · I2P</source>
+        <translation>Nym · Tor · I2P</translation>
+    </message>
+    <message>
+        <source>Runs only when requested, one network at a time, and shares bandwidth with synchronization. Through Nym or I2P it can take a few minutes.</source>
+        <translation>Solo se ejecuta cuando la pides, una red cada vez, y comparte ancho de banda con la sincronización. Por Nym o I2P puede tardar unos minutos.</translation>
+    </message>
+    <message>
+        <source>%1 exclusive · %2 priority · %3 peers · %4 remote</source>
+        <translation>%1 exclusivos · %2 prioritarios · %3 pares · %4 remotos</translation>
+    </message>
+    <message>
+        <source>running</source>
+        <translation>en marcha</translation>
+    </message>
+    <message>
+        <source>stopped</source>
+        <translation>parado</translation>
+    </message>
+    <message>
+        <source>monerod command (if you start the local node)</source>
+        <translation>Comando de monerod (si arrancas el nodo local)</translation>
+    </message>
+    <message>
+        <source>Wallet: %1 · Sync: %2 · Transactions: %3</source>
+        <translation>Monedero: %1 · Sincronización: %2 · Transacciones: %3</translation>
+    </message>
+    <message>
+        <source>Node addresses</source>
+        <translation>Direcciones de nodos</translation>
+    </message>
+    <message>
+        <source>Exclusive nodes</source>
+        <translation>Nodos exclusivos</translation>
+    </message>
+    <message>
+        <source>monerod connects only to these nodes and to no other peer.</source>
+        <translation>monerod se conecta solo a estos nodos y a ningún otro par.</translation>
+    </message>
+    <message>
+        <source>Only these nodes give blocks: if they are .onion / .i2p or do not answer, the node does not sync.</source>
+        <translation>Solo estos nodos dan bloques: si son .onion / .i2p o no responden, el nodo no sincroniza.</translation>
+    </message>
+    <message>
+        <source>Priority nodes</source>
+        <translation>Nodos prioritarios</translation>
+    </message>
+    <message>
+        <source>monerod always tries to stay connected to these nodes, plus the usual peers. The P2P peers added in TOR / I2P are here too.</source>
+        <translation>monerod intenta estar siempre conectado a estos nodos, además de los pares habituales. Aquí también están los pares P2P añadidos en TOR / I2P.</translation>
+    </message>
+    <message>
+        <source>Peers</source>
+        <translation>Pares</translation>
+    </message>
+    <message>
+        <source>Added to the peer list monerod picks from; it may or may not connect to them.</source>
+        <translation>Se añaden a la lista de pares de la que monerod elige; puede conectarse a ellos o no.</translation>
+    </message>
+    <message>
+        <source>Remote nodes of the wallet</source>
+        <translation>Nodos remotos del monedero</translation>
+    </message>
+    <message>
+        <source>Not a monerod flag: it is the node the wallet connects to in remote mode. The same list as Node &gt; Remote node.</source>
+        <translation>No es un parámetro de monerod: es el nodo al que se conecta el monedero en modo remoto. Es la misma lista que Nodo &gt; Nodo remoto.</translation>
+    </message>
+    <message>
+        <source>Write host:port, for example abc…xyz.onion:18081 or node.example.org:18089</source>
+        <translation>Escribe host:puerto, por ejemplo abc…xyz.onion:18081 o node.example.org:18089</translation>
+    </message>
+    <message>
+        <source>The Network configuration changed: monerod restarts by itself with the new flags.</source>
+        <translation>La Configuración de la red cambió: monerod se reinicia solo con los parámetros nuevos.</translation>
+    </message>
+    <message>
+        <source>monerod command (next start)</source>
+        <translation>Comando de monerod (próximo arranque)</translation>
+    </message>
+    <message>
+        <source>Your own transactions only go to hidden-service peers (--tx-proxy), padded (--pad-transactions). Tor + I2P uses both networks at once.</source>
+        <translation>Tus transacciones solo van a pares de servicios ocultos (--tx-proxy), con relleno (--pad-transactions). Tor + I2P usa las dos redes a la vez.</translation>
+    </message>
+    <message>
+        <source>With I2P the node does not sync: I2P is a closed network without exits to normal Monero nodes, and monerod does not download blocks from .i2p peers.</source>
+        <translation>Con I2P el nodo no sincroniza: I2P es una red cerrada sin salida a los nodos Monero normales, y monerod no descarga bloques de pares .i2p.</translation>
+    </message>
+    <message>
+        <source>Network configuration</source>
+        <translation>Configuración de la red</translation>
+    </message>
+    <message>
+        <source>Every connection is anonymous: choose the network each one goes through. The app never uses your normal connection; while the chosen network is not connected, that traffic waits.</source>
+        <translation>Todas las conexiones son anónimas: elige por qué red sale cada una. La app nunca usa tu conexión normal; mientras la red elegida no esté conectada, ese tráfico espera.</translation>
+    </message>
+    <message>
+        <source>Wallet connections</source>
+        <translation>Conexiones del monedero</translation>
+    </message>
+    <message>
+        <source>Markets, swaps, prices, updates and the remote node.</source>
+        <translation>Mercados, swaps, precios, actualizaciones y el nodo remoto.</translation>
+    </message>
+    <message>
+        <source>Local node connections</source>
+        <translation>Conexiones del nodo local</translation>
+    </message>
+    <message>
+        <source>Sync the blockchain</source>
+        <translation>Sincronizar la cadena</translation>
+    </message>
+    <message>
+        <source>Peers and blocks of monerod (--proxy, --p2p-bind-ip 127.0.0.1: it does not listen on your network).</source>
+        <translation>Pares y bloques de monerod (--proxy, --p2p-bind-ip 127.0.0.1: no escucha en tu red).</translation>
+    </message>
+    <message>
+        <source>Not possible: I2P is a closed network without exits to normal Monero nodes, and monerod does not download blocks over hidden services.</source>
+        <translation>No es posible: I2P es una red cerrada sin salidas a los nodos Monero normales, y monerod no descarga bloques por servicios ocultos.</translation>
+    </message>
+    <message>
+        <source>Send transactions</source>
+        <translation>Enviar transacciones</translation>
+    </message>
+    <message>
+        <source>Your own transactions only go to hidden-service peers (--tx-proxy).</source>
+        <translation>Tus transacciones solo van a pares de servicios ocultos (--tx-proxy).</translation>
+    </message>
+    <message>
+        <source>monerod command</source>
+        <translation>Comando de monerod</translation>
+    </message>
+    <message>
+        <source>Copy</source>
+        <translation>Copiar</translation>
+    </message>
+    <message>
+        <source>Copied to clipboard</source>
+        <translation>Copiado al portapapeles</translation>
+    </message>
+    <message>
+        <source>Locked while Tor is connected or &quot;Tor required&quot; is checked: the app uses its Tor proxy.</source>
+        <translation>Bloqueado mientras Tor esté conectado o &quot;Tor obligatorio&quot; esté marcado: la app usa su proxy de Tor.</translation>
+    </message>
     <message>
         <source>Node</source>
         <translation>Nodo</translation>
@@ -2426,6 +2778,10 @@ El archivo de caché anterior del monedero será renombrado y puede ser posterio
 </context>
 <context>
     <name>SettingsRemoteNodeList</name>
+    <message>
+        <source>not .onion: blocked while Tor is on</source>
+        <translation>no es .onion: bloqueado con Tor activo</translation>
+    </message>
     <message>
         <location filename="../components/SettingsRemoteNodeList.qml" line="0"/>
         <source>Trusted daemon</source>
@@ -3025,6 +3381,18 @@ Puedes cambiar la contraseña en las opciones del monedero.</translation>
 <context>
     <name>TitleBar</name>
     <message>
+        <source>Wallet: %1 · Sync: %2 · Transactions: %3</source>
+        <translation>Monedero: %1 · Sincronización: %2 · Transacciones: %3</translation>
+    </message>
+    <message>
+        <source>The wallet's network is connected.</source>
+        <translation>La red del monedero está conectada.</translation>
+    </message>
+    <message>
+        <source>The wallet's network is connecting: its requests wait, nothing goes out directly.</source>
+        <translation>La red del monedero está conectando: sus peticiones esperan, nada sale directo.</translation>
+    </message>
+    <message>
         <source>Theme</source>
         <translation>Tema</translation>
     </message>
@@ -3196,6 +3564,102 @@ Puedes cambiar la contraseña en las opciones del monedero.</translation>
 </context>
 <context>
     <name>Transfer</name>
+    <message>
+        <source>%1 recipients filled in</source>
+        <translation>%1 receptores rellenados</translation>
+    </message>
+    <message>
+        <source>Sending from mined address %1:%2 (%3). Only its funds are used: %4 XMR spendable. The change goes to the primary account (address 0:1) and the transaction is tagged "(mined address change)".</source>
+        <translation>Enviando desde la dirección minada %1:%2 (%3). Solo se usan sus fondos: %4 XMR disponibles. El cambio va a la cuenta principal (dirección 0:1) y la transacción se etiqueta "(cambio dirección minada)".</translation>
+    </message>
+    <message>
+        <source>Sending from the mined addresses account. A send can only come from one address: the mined address with the most spendable funds is used (%1 XMR). The change goes to the primary account (address 0:1). To choose one, use Send next to it on the Mine addresses page.</source>
+        <translation>Enviando desde la cuenta de direcciones minadas. Un envío solo puede salir de una dirección: se usa la dirección minada con más fondos disponibles (%1 XMR). El cambio va a la cuenta principal (dirección 0:1). Para elegir una, usa Enviar junto a ella en la página Minar direcciones.</translation>
+    </message>
+    <message>
+        <source>Sending from the mined addresses account. A send can only come from one address: the mined address with the most spendable funds is used (%1 XMR). To choose one, use Send next to it on the Mine addresses page.</source>
+        <translation>Enviando desde la cuenta de direcciones minadas. Un envío solo puede salir de una dirección: se usa la dirección minada con más fondos disponibles (%1 XMR). Para elegir una, usa Enviar junto a ella en la página Minar direcciones.</translation>
+    </message>
+    <message>
+        <source>Sending from mined address %1:%2 (%3). Only its funds are used: %4 XMR spendable. The change goes back to address %1:0, which also shows in the mined addresses account.</source>
+        <translation>Enviando desde la dirección minada %1:%2 (%3). Solo se usan sus fondos: %4 XMR disponibles. El cambio vuelve a la dirección %1:0, que también aparece en la cuenta de direcciones minadas.</translation>
+    </message>
+    <message>
+        <source>Use the account</source>
+        <translation>Usar la cuenta</translation>
+    </message>
+    <message>
+        <source>Write the date as dd/mm/yyyy and the time as hh:mm</source>
+        <translation>Escribe la fecha como dd/mm/aaaa y la hora como hh:mm</translation>
+    </message>
+    <message>
+        <source>The date and time must be in the future</source>
+        <translation>La fecha y hora deben ser futuras</translation>
+    </message>
+    <message>
+        <source>in %1 min</source>
+        <translation>en %1 min</translation>
+    </message>
+    <message>
+        <source>in %1 h %2 min</source>
+        <translation>en %1 h %2 min</translation>
+    </message>
+    <message>
+        <source>in %1 days</source>
+        <translation>en %1 días</translation>
+    </message>
+    <message>
+        <source>Schedule the send</source>
+        <translation>Programar el envío</translation>
+    </message>
+    <message>
+        <source>Now</source>
+        <translation>Ahora</translation>
+    </message>
+    <message>
+        <source>Date and time</source>
+        <translation>Fecha y hora</translation>
+    </message>
+    <message>
+        <source>Will be sent %1</source>
+        <translation>Se enviará %1</translation>
+    </message>
+    <message>
+        <source>The transaction is created and sent at that moment, with the fee of that moment. The app must be open with this wallet; if it is closed at that time, it asks you before sending. With a Trezor you have to confirm it on the device.</source>
+        <translation>La transacción se crea y se envía en ese momento, con la comisión de ese momento. La app tiene que estar abierta con este monedero; si está cerrada a esa hora, te preguntará antes de enviarla. Con un Trezor tendrás que confirmarla en el dispositivo.</translation>
+    </message>
+    <message>
+        <source>Scheduled sends</source>
+        <translation>Envíos programados</translation>
+    </message>
+    <message>
+        <source>%1 recipients</source>
+        <translation>%1 destinatarios</translation>
+    </message>
+    <message>
+        <source>Sending…</source>
+        <translation>Enviando…</translation>
+    </message>
+    <message>
+        <source>Not sent on time (the app was closed) · %1</source>
+        <translation>No se envió a su hora (la app estaba cerrada) · %1</translation>
+    </message>
+    <message>
+        <source>Error: %1 · %2</source>
+        <translation>Error: %1 · %2</translation>
+    </message>
+    <message>
+        <source>Send now</source>
+        <translation>Enviar ahora</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Cancelar</translation>
+    </message>
+    <message>
+        <source>Schedule send</source>
+        <translation>Programar envío</translation>
+    </message>
     <message>
         <location filename="../pages/Transfer.qml" line="88"/>
         <source>OpenAlias error</source>
@@ -4256,6 +4720,22 @@ su entrada puede ser requerida</translation>
 <context>
     <name>WizardHome</name>
     <message>
+        <source>Connection check</source>
+        <translation>Prueba de conexión</translation>
+    </message>
+    <message>
+        <source>checking %1…</source>
+        <translation>comprobando %1…</translation>
+    </message>
+    <message>
+        <source>Nym · Tor · I2P</source>
+        <translation>Nym · Tor · I2P</translation>
+    </message>
+    <message>
+        <source>Runs only when requested, one network at a time, and shares bandwidth with synchronization. Through Nym or I2P it can take a few minutes.</source>
+        <translation>Solo se ejecuta cuando la pides, una red cada vez, y comparte ancho de banda con la sincronización. Por Nym o I2P puede tardar unos minutos.</translation>
+    </message>
+    <message>
         <location filename="../wizard/WizardHome.qml" line="66"/>
         <source>Welcome to Monero</source>
         <translation>Bienvenido a Monero</translation>
@@ -4553,6 +5033,126 @@ su entrada puede ser requerida</translation>
         <source>Back to menu</source>
         <translation>Volver al menu</translation>
     </message>
+    <message>
+        <source>Automatic</source>
+        <translation>Automático</translation>
+    </message>
+    <message>
+        <source>Safe</source>
+        <translation>Caja fuerte</translation>
+    </message>
+    <message>
+        <source>View only</source>
+        <translation>Solo lectura</translation>
+    </message>
+    <message>
+        <source>Edit wallet</source>
+        <translation>Editar monedero</translation>
+    </message>
+    <message>
+        <source>Name</source>
+        <translation>Nombre</translation>
+    </message>
+    <message>
+        <source>Icon</source>
+        <translation>Icono</translation>
+    </message>
+    <message>
+        <source>This wallet is open: close it to rename or delete it.</source>
+        <translation>Este monedero está abierto: ciérralo para cambiarle el nombre o eliminarlo.</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Cancelar</translation>
+    </message>
+    <message>
+        <source>Save</source>
+        <translation>Guardar</translation>
+    </message>
+    <message>
+        <source>Grey safe</source>
+        <translation>Caja gris</translation>
+    </message>
+    <message>
+        <source>Red safe</source>
+        <translation>Caja roja</translation>
+    </message>
+    <message>
+        <source>Leather</source>
+        <translation>Cuero</translation>
+    </message>
+    <message>
+        <source>Neon</source>
+        <translation>Neón</translation>
+    </message>
+    <message>
+        <source>Purse</source>
+        <translation>Monedero</translation>
+    </message>
+    <message>
+        <source>Stack</source>
+        <translation>Pila</translation>
+    </message>
+    <message>
+        <source>Gold</source>
+        <translation>Oro</translation>
+    </message>
+    <message>
+        <source>Silver</source>
+        <translation>Plata</translation>
+    </message>
+    <message>
+        <source>Coins</source>
+        <translation>Monedas</translation>
+    </message>
+    <message>
+        <source>Piggy bank</source>
+        <translation>Hucha</translation>
+    </message>
+    <message>
+        <source>Cards</source>
+        <translation>Tarjetas</translation>
+    </message>
+    <message>
+        <source>Coin bag</source>
+        <translation>Saco</translation>
+    </message>
+    <message>
+        <source>Icon for "%1"</source>
+        <translation>Icono de "%1"</translation>
+    </message>
+    <message>
+        <source>Saved in "%1.json" next to the wallet, so it goes with it when you copy it.</source>
+        <translation>Se guarda en "%1.json" al lado del monedero, así viaja con él cuando lo copias.</translation>
+    </message>
+    <message>
+        <source>There is already a wallet with that name.</source>
+        <translation>Ya hay un monedero con ese nombre.</translation>
+    </message>
+    <message>
+        <source>That name is not valid: do not use / \ : or start with a dot.</source>
+        <translation>Ese nombre no es válido: no uses / \ : ni empieces por un punto.</translation>
+    </message>
+    <message>
+        <source>New name for the wallet "%1":</source>
+        <translation>Nombre nuevo para el monedero "%1":</translation>
+    </message>
+    <message>
+        <source>Rename wallet</source>
+        <translation>Renombrar monedero</translation>
+    </message>
+    <message>
+        <source>Delete wallet</source>
+        <translation>Eliminar monedero</translation>
+    </message>
+    <message>
+        <source>Move the wallet "%1" to the Trash?
+
+Its files go to the macOS Trash, so you can still put them back from Finder until you empty it. Without its seed (or the Trezor that created it) the funds can not be recovered once the Trash is emptied.</source>
+        <translation>¿Mover el monedero "%1" a la Papelera?
+
+Sus archivos van a la Papelera de macOS, así que puedes recuperarlos desde Finder hasta que la vacíes. Sin su semilla (o el Trezor que lo creó) los fondos no se pueden recuperar una vez vaciada la Papelera.</translation>
+    </message>
 </context>
 <context>
     <name>WizardRestoreWallet1</name>
@@ -4750,6 +5350,134 @@ Si no tienes la opción de ejecutar tu propio nodo, hay una opción de conectars
 </context>
 <context>
     <name>main</name>
+    <message>
+        <source>Nym stopped answering: reconnecting…</source>
+        <translation>Nym no respondía: reconectando…</translation>
+    </message>
+    <message>
+        <source>Nym was down: connecting again…</source>
+        <translation>Nym estaba caído: conectando de nuevo…</translation>
+    </message>
+    <message>
+        <source>(mined address change)</source>
+        <translation>(cambio dirección minada)</translation>
+    </message>
+    <message>
+        <source>Mined addresses</source>
+        <translation>Direcciones minadas</translation>
+    </message>
+    <message>
+        <source>All</source>
+        <translation>Todo</translation>
+    </message>
+    <message>
+        <source>Send scheduled for %1</source>
+        <translation>Envío programado para el %1</translation>
+    </message>
+    <message>
+        <source>Schedule the send</source>
+        <translation>Programar el envío</translation>
+    </message>
+    <message>
+        <source>No outputs to send</source>
+        <translation>No hay salidas para enviar</translation>
+    </message>
+    <message>
+        <source>The scheduled send could not be made: %1</source>
+        <translation>No se pudo hacer el envío programado: %1</translation>
+    </message>
+    <message>
+        <source>A scheduled send was not made on time (the app was closed). Check it on the Send page.</source>
+        <translation>Un envío programado no se hizo a su hora (la app estaba cerrada). Revísalo en la página Enviar.</translation>
+    </message>
+    <message>
+        <source>A scheduled send is being made, try again in a few seconds</source>
+        <translation>Se está haciendo un envío programado, inténtalo en unos segundos</translation>
+    </message>
+    <message>
+        <source>Write host:port, for example abc…xyz.onion:18083 or 1.2.3.4:18080</source>
+        <translation>Escribe host:puerto, por ejemplo abc…xyz.onion:18083 o 1.2.3.4:18080</translation>
+    </message>
+    <message>
+        <source>Already in the list</source>
+        <translation>Ya está en la lista</translation>
+    </message>
+    <message>
+        <source>wallet</source>
+        <translation>monedero</translation>
+    </message>
+    <message>
+        <source>node sync</source>
+        <translation>sincronización del nodo</translation>
+    </message>
+    <message>
+        <source>node transactions</source>
+        <translation>transacciones del nodo</translation>
+    </message>
+    <message>
+        <source>.onion: connect Tor to use it</source>
+        <translation>.onion: conecta Tor para usarlo</translation>
+    </message>
+    <message>
+        <source>Tor is off</source>
+        <translation>Tor está apagado</translation>
+    </message>
+    <message>
+        <source>This is a Tor node (.onion). Connect Tor in Settings &gt; Node / Network &gt; TOR NETWORK to use it.</source>
+        <translation>Este es un nodo Tor (.onion). Conecta Tor en Ajustes &gt; Nodo / Red &gt; TOR NETWORK para usarlo.</translation>
+    </message>
+    <message>
+        <source>While the wallet's connections go through Tor, it only connects to remote nodes that are hidden services (.onion). Pick one in Settings &gt; Node / Network &gt; TOR NETWORK &gt; Remote .onion nodes, or choose Nym for the wallet in Network configuration.</source>
+        <translation>Mientras las conexiones del monedero van por Tor, solo se conecta a nodos remotos que sean servicios ocultos (.onion). Elige uno en Ajustes &gt; Nodo / Red &gt; TOR NETWORK &gt; Nodos .onion remotos, o elige Nym para el monedero en Configuración de la red.</translation>
+    </message>
+    <message>
+        <source>.i2p: connect I2P to use it</source>
+        <translation>.i2p: conecta I2P para usarlo</translation>
+    </message>
+    <message>
+        <source>not .onion or .i2p: blocked</source>
+        <translation>no es .onion ni .i2p: bloqueado</translation>
+    </message>
+    <message>
+        <source>not .onion: blocked while Tor is on</source>
+        <translation>no es .onion: bloqueado con Tor activo</translation>
+    </message>
+    <message>
+        <source>not .i2p: blocked, I2P required for the node</source>
+        <translation>no es .i2p: bloqueado, I2P en nodo obligatorio</translation>
+    </message>
+    <message>
+        <source>I2P is off</source>
+        <translation>I2P está apagado</translation>
+    </message>
+    <message>
+        <source>This is an I2P node (.b32.i2p). Connect I2P in Settings &gt; Node / Network &gt; I2P NETWORK to use it.</source>
+        <translation>Este es un nodo I2P (.b32.i2p). Conecta I2P en Ajustes &gt; Nodo / Red &gt; I2P NETWORK para usarlo.</translation>
+    </message>
+    <message>
+        <source>With I2P on, .i2p nodes can be used too.</source>
+        <translation>Con I2P activo también se pueden usar nodos .i2p.</translation>
+    </message>
+    <message>
+        <source>I2P for the Monero node: .i2p nodes only</source>
+        <translation>I2P en nodo Monero: solo nodos .i2p</translation>
+    </message>
+    <message>
+        <source>With "I2P required for the Monero node" the wallet only connects to I2P remote nodes (.b32.i2p). Pick one in Settings &gt; Node / Network &gt; I2P NETWORK &gt; Remote .i2p nodes, or uncheck that option.</source>
+        <translation>Con "I2P en nodo Monero obligatorio" el monedero solo se conecta a nodos remotos I2P (.b32.i2p). Elige uno en Ajustes &gt; Nodo / Red &gt; I2P NETWORK &gt; Nodos .i2p remotos, o desmarca esa opción.</translation>
+    </message>
+    <message>
+        <source>Tor: .onion nodes only</source>
+        <translation>Tor: solo nodos .onion</translation>
+    </message>
+    <message>
+        <source>While Tor is on, the wallet only connects to remote nodes that are Tor hidden services (.onion). Pick one in Settings &gt; Node / Network &gt; TOR NETWORK &gt; Remote .onion nodes, or disconnect Tor.</source>
+        <translation>Con Tor activo, el monedero solo se conecta a nodos remotos que sean servicios ocultos de Tor (.onion). Elige uno en Ajustes &gt; Nodo / Red &gt; TOR NETWORK &gt; Nodos .onion remotos, o desconecta Tor.</translation>
+    </message>
+    <message>
+        <source>The local node does not start until Tor or NymVPN is connected or the SOCKS5 proxy is turned on.</source>
+        <translation>El nodo local no arranca hasta que Tor o NymVPN estén conectados o se active el proxy SOCKS5.</translation>
+    </message>
     <message>
         <source>This wallet has no seed (created from keys)</source>
         <translation>Este monedero no tiene semilla (creado desde claves)</translation>
@@ -5414,6 +6142,82 @@ Si no tienes la opción de ejecutar tu propio nodo, hay una opción de conectars
 <context>
     <name>ConnectionCheck</name>
     <message>
+        <source>Not connected (%1)</source>
+        <translation>No conectado (%1)</translation>
+    </message>
+    <message>
+        <source>%1 routers · %2 tunnels · %3 % tunnel success</source>
+        <translation>%1 routers · %2 túneles · %3 % de túneles con éxito</translation>
+    </message>
+    <message>
+        <source>Block %1</source>
+        <translation>Bloque %1</translation>
+    </message>
+    <message>
+        <source>I2P is not connected: connect it in the I2P NETWORK panel.</source>
+        <translation>I2P no está conectado: conéctalo en el panel I2P NETWORK.</translation>
+    </message>
+    <message>
+        <source>None of monerod's I2P seed nodes answered. Fresh I2P routers need some minutes to build tunnels: try again later.</source>
+        <translation>No respondió ningún nodo semilla I2P de monerod. Un router I2P recién arrancado tarda unos minutos en crear túneles: prueba más tarde.</translation>
+    </message>
+    <message>
+        <source>I2P works: Monero nodes answer through it.</source>
+        <translation>I2P funciona: los nodos Monero responden a través de él.</translation>
+    </message>
+    <message>
+        <source>%1 is not answering: what goes through it waits until it is back.</source>
+        <translation>%1 no responde: lo que va por esta red espera hasta que vuelva.</translation>
+    </message>
+    <message>
+        <source>The test peers did not reply through %1. This alone does not prove that port 18080 is blocked; check the node below.</source>
+        <translation>Los pares de prueba no respondieron por %1. Esto solo no demuestra que el puerto 18080 esté bloqueado; mira el nodo de abajo.</translation>
+    </message>
+    <message>
+        <source>The node is still syncing through %1. Web download speed is not blockchain speed.</source>
+        <translation>El nodo aún está sincronizando por %1. La velocidad de descarga web no es la velocidad de la cadena.</translation>
+    </message>
+    <message>
+        <source>Tor works.</source>
+        <translation>Tor funciona.</translation>
+    </message>
+    <message>
+        <source>connected</source>
+        <translation>conectado</translation>
+    </message>
+    <message>
+        <source>not connected</source>
+        <translation>no conectado</translation>
+    </message>
+    <message>
+        <source>Used for: %1</source>
+        <translation>Se usa para: %1</translation>
+    </message>
+    <message>
+        <source>Not used by the Network configuration</source>
+        <translation>No lo usa la Configuración de la red</translation>
+    </message>
+    <message>
+        <source>Connect it first in its panel below</source>
+        <translation>Conéctalo primero en su panel de abajo</translation>
+    </message>
+    <message>
+        <source>I2P router</source>
+        <translation>Router I2P</translation>
+    </message>
+    <message>
+        <source>I2P Monero nodes</source>
+        <translation>Nodos Monero I2P</translation>
+    </message>
+    <message>
+        <source>Remote node</source>
+        <translation>Nodo remoto</translation>
+    </message>
+    <message>
+        <source>No answer (%1)</source>
+        <translation>No responde (%1)</translation>
+    </message>
+    <message>
         <source>The NymVPN SOCKS5 proxy is not answering. Check NymVPN, then press Reconnect in the wallet.</source>
         <translation>El proxy SOCKS5 de NymVPN no responde. Comprueba NymVPN y pulsa Reconectar en la wallet.</translation>
     </message>
@@ -5612,6 +6416,14 @@ Si no tienes la opción de ejecutar tu propio nodo, hay una opción de conectars
 </context>
 <context>
     <name>NymVpnPanel</name>
+    <message>
+        <source>Used for: %1</source>
+        <translation>Se usa para: %1</translation>
+    </message>
+    <message>
+        <source>Not used by the Network configuration</source>
+        <translation>No lo usa la Configuración de la red</translation>
+    </message>
     <message>
         <source>Reconnect</source>
         <translation>Reconectar</translation>
@@ -6073,9 +6885,163 @@ Si no tienes la opción de ejecutar tu propio nodo, hay una opción de conectars
         <source>XMR Wallet+ is an unofficial fork of the Monero GUI.</source>
         <translation>XMR Wallet+ es un fork no oficial de la GUI de Monero.</translation>
     </message>
+    <message><source>Enable price connections</source><translation>Activar conexiones de precios</translation></message>
+    <message><source>Discover the tools, expand a section and find a useful way to use each feature.</source><translation>Descubre las herramientas, despliega una sección y encuentra un uso práctico para cada función.</translation></message>
+    <message><source>Expand all</source><translation>Desplegar todo</translation></message>
+    <message><source>Collapse all</source><translation>Plegar todo</translation></message>
+    <message><source>Network and privacy</source><translation>Red y privacidad</translation></message>
+    <message><source>Private routes</source><translation>Rutas privadas</translation></message>
+    <message><source>Choose a route for the wallet, local-node synchronization and transaction broadcasts in Node / Network settings.</source><translation>Elige la ruta de la cartera, la sincronización del nodo local y la difusión de transacciones en Nodo / Red.</translation></message>
+    <message><source>Separate how you synchronize from how you broadcast a payment. Network clients still need entry and bootstrap connections.</source><translation>Separa la ruta de sincronización de la de envío. Los clientes de red siguen necesitando conexiones de entrada y de arranque.</translation></message>
+    <message><source>Configure network</source><translation>Configurar red</translation></message>
+    <message><source>Nym mixnet</source><translation>Mixnet de Nym</translation></message>
+    <message><source>Independent client for this app, using the 24 words of an active NymVPN account. Reconnect renews the route; the exit is random.</source><translation>Cliente independiente para esta app, con las 24 palabras de una cuenta NymVPN activa. Reconectar renueva la ruta; la salida es aleatoria.</translation></message>
+    <message><source>Use Nym required to block connections when Nym is unavailable. The Nym account phrase is saved locally in nym.conf.</source><translation>Activa Nym obligatorio para bloquear conexiones si Nym no está disponible. La frase de la cuenta Nym se guarda localmente en nym.conf.</translation></message>
+    <message><source>Open Nym settings</source><translation>Configurar Nym</translation></message>
+    <message><source>Tor and I2P</source><translation>Tor e I2P</translation></message>
+    <message><source>Built-in clients, discovery of .onion and .i2p nodes, and node lists you can reuse as remote nodes or local-node peers.</source><translation>Clientes integrados, búsqueda de nodos .onion e .i2p y listas para usarlos como nodos remotos o pares del nodo local.</translation></message>
+    <message><source>Find a private remote node. I2P has no Internet outproxy and cannot synchronize the local node on its own.</source><translation>Encuentra un nodo remoto privado. I2P no tiene salida a Internet y no permite sincronizar por sí solo el nodo local.</translation></message>
+    <message><source>Find nodes</source><translation>Buscar nodos</translation></message>
+    <message><source>Connection checks</source><translation>Pruebas de conexión</translation></message>
+    <message><source>Test the selected network: exit IP, proxy, latency, download speed and Monero-node reachability.</source><translation>Comprueba la red seleccionada: IP de salida, proxy, latencia, descarga y disponibilidad de nodos Monero.</translation></message>
+    <message><source>Diagnose slow synchronization before changing nodes or reconnecting. Tests run when you request them.</source><translation>Diagnostica una sincronización lenta antes de cambiar de nodo o reconectar. Las pruebas se ejecutan cuando las solicitas.</translation></message>
+    <message><source>Test connection</source><translation>Probar conexión</translation></message>
+    <message><source>Connections and node manager</source><translation>Conexiones y gestor de nodos</translation></message>
+    <message><source>Review contacted services and routes. Compare nodes by availability, synchronization, stability and latency; save favourites or rotate nodes.</source><translation>Revisa los servicios contactados y sus rutas. Compara nodos por disponibilidad, sincronización, estabilidad y latencia; guarda favoritos o cambia de nodo.</translation></message>
+    <message><source>Check whether a lagging node is the cause of a stale balance. The spy-node ban list adds another filter.</source><translation>Comprueba si un nodo atrasado explica un saldo desactualizado. La lista de nodos espía añade un filtro adicional.</translation></message>
+    <message><source>Open security</source><translation>Abrir seguridad</translation></message>
+    <message><source>Extreme privacy and security center</source><translation>Privacidad extrema y centro de seguridad</translation></message>
+    <message><source>Disable optional external services and review file permissions, backups, password strength, connection and session protection.</source><translation>Desactiva servicios externos opcionales y revisa permisos de archivos, copias, fortaleza de contraseña, conexión y protección de sesión.</translation></message>
+    <message><source>Review the setup before using a wallet on a new computer. The checks do not prove that the computer is secure.</source><translation>Revisa la configuración antes de usar una cartera en otro equipo. Las comprobaciones no garantizan que el equipo sea seguro.</translation></message>
+    <message><source>Review protection</source><translation>Revisar protección</translation></message>
+    <message><source>Send and receive</source><translation>Envíos y cobros</translation></message>
+    <message><source>Scheduled payments</source><translation>Pagos programados</translation></message>
+    <message><source>Choose a date and time in Send. Keep this wallet selected, open and synchronized. Hardware wallets cannot schedule payments.</source><translation>Elige fecha y hora en Enviar. Mantén esta cartera seleccionada, abierta y sincronizada. Las carteras hardware no permiten programar pagos.</translation></message>
+    <message><source>Prepare a future payment. Closing the app preserves it but prevents execution; overdue payments require confirmation on reopening.</source><translation>Prepara un pago futuro. Cerrar la app lo conserva, pero impide su ejecución; los pagos vencidos requieren confirmación al volver a abrir.</translation></message>
+    <message><source>Open send</source><translation>Abrir envíos</translation></message>
+    <message><source>Payment safeguards</source><translation>Protecciones del pago</translation></message>
+    <message><source>Other sends from the source account are blocked during the 25 minutes before a scheduled payment. Funds must still be unlocked.</source><translation>Los demás envíos desde la cuenta de origen se bloquean durante los 25 minutos anteriores al pago programado. Los fondos deben seguir estando desbloqueados.</translation></message>
+    <message><source>Leave spendable funds ready. A screen lock can keep the wallet open; background-sync mode without spending access cannot execute payments.</source><translation>Deja preparados fondos disponibles. Un bloqueo de pantalla puede mantener abierta la cartera; el modo de sincronización sin acceso de gasto no puede ejecutar pagos.</translation></message>
+    <message><source>Multiple recipients</source><translation>Varios destinatarios</translation></message>
+    <message><source>Paste up to 50 comma-separated addresses, optionally as address:amount, to fill several recipients.</source><translation>Pega hasta 50 direcciones separadas por comas, opcionalmente como dirección:importe, para rellenar varios destinatarios.</translation></message>
+    <message><source>Prepare a batch of payments and review each address, amount and fee before confirming.</source><translation>Prepara un lote de pagos y revisa cada dirección, importe y comisión antes de confirmar.</translation></message>
+    <message><source>Prepare payments</source><translation>Preparar pagos</translation></message>
+    <message><source>Fresh receiving addresses</source><translation>Direcciones nuevas para cobrar</translation></message>
+    <message><source>Create 2 to 50 addresses together, hide used addresses and split a payment request across a group.</source><translation>Crea de 2 a 50 direcciones juntas, oculta las usadas y reparte una solicitud de pago entre un grupo.</translation></message>
+    <message><source>Use a different address for each customer or collection. Used addresses are marked to discourage reuse.</source><translation>Usa una dirección distinta por cliente o cobro. Las usadas se señalan para evitar reutilizarlas.</translation></message>
+    <message><source>Open receive</source><translation>Abrir cobros</translation></message>
+    <message><source>Wallets and accounts</source><translation>Carteras y cuentas</translation></message>
+    <message><source>Several wallets at once</source><translation>Varias carteras a la vez</translation></message>
+    <message><source>Switch between loaded wallets with the title-bar switcher. Background wallets continue synchronizing while their session allows it.</source><translation>Cambia entre carteras cargadas con el selector de la barra superior. Las carteras en segundo plano siguen sincronizando mientras su sesión lo permita.</translation></message>
+    <message><source>Keep personal and work wallets ready without reloading them each time. Manage session behaviour in Interface settings.</source><translation>Mantén listas las carteras personal y de trabajo sin recargarlas cada vez. Ajusta las sesiones en Interfaz.</translation></message>
+    <message><source>Session settings</source><translation>Ajustar sesiones</translation></message>
+    <message><source>Seed accounts</source><translation>Cuentas de semilla</translation></message>
+    <message><source>The safe icon beside the wallet name creates and switches between wallets derived using numbered seed-offset passphrases.</source><translation>El icono de caja fuerte junto al nombre crea y cambia entre carteras derivadas con contraseñas de desplazamiento de semilla numeradas.</translation></message>
+    <message><source>Separate funds under one seed. To restore account N, keep both the seed and its numbered passphrase; these accounts are not hidden from someone with the seed.</source><translation>Separa fondos bajo una semilla. Para restaurar la cuenta N, conserva la semilla y su contraseña numerada; estas cuentas no están ocultas a quien conoce la semilla.</translation></message>
+    <message><source>Mined addresses</source><translation>Direcciones minadas</translation></message>
+    <message><source>Search your own derived addresses for a chosen text. Results are only kept when you save them and appear in the Mined addresses account.</source><translation>Busca un texto en tus propias direcciones derivadas. Los resultados solo se guardan al elegirlos y aparecen en la cuenta Direcciones minadas.</translation></message>
+    <message><source>Create a recognizable address without sharing your seed. Always compare the full address, not just its recognizable text.</source><translation>Crea una dirección reconocible sin compartir la semilla. Compara siempre la dirección completa, no solo su texto reconocible.</translation></message>
+    <message><source>Search addresses</source><translation>Buscar direcciones</translation></message>
+    <message><source>Backups and removable drives</source><translation>Copias y unidades extraíbles</translation></message>
+    <message><source>Save wallet files, labels, history and encrypted notes to a folder or USB / SD drive. Wallets in the drive’s XMR folder appear when opening a wallet.</source><translation>Guarda archivos de cartera, etiquetas, historial y notas cifradas en una carpeta o USB / SD. Las carteras de la carpeta XMR de la unidad aparecen al abrir una cartera.</translation></message>
+    <message><source>Keep an additional copy before moving computers. Close the wallet before unplugging the drive; file backups do not replace your seed backup.</source><translation>Guarda una copia adicional antes de cambiar de equipo. Cierra la cartera antes de retirar la unidad; los archivos no sustituyen la copia de la semilla.</translation></message>
+    <message><source>Review backups</source><translation>Revisar copias</translation></message>
+    <message><source>Markets and swaps</source><translation>Mercados e intercambios</translation></message>
+    <message><source>Charts, converter and alerts</source><translation>Gráficos, conversor y alertas</translation></message>
+    <message><source>Explore XMR prices and wallet value over time, convert amounts and set price alerts. Historical prices are cached locally.</source><translation>Consulta precios de XMR y valor de la cartera a lo largo del tiempo, convierte importes y crea alertas. El historial de precios se guarda localmente.</translation></message>
+    <message><source>Compare periods or receive an alert at a target price. Requires external price connections to be enabled.</source><translation>Compara periodos o recibe un aviso al alcanzar un precio. Requiere activar las conexiones externas de precios.</translation></message>
+    <message><source>Open markets</source><translation>Abrir mercados</translation></message>
+    <message><source>Swap comparisons</source><translation>Comparador de intercambios</translation></message>
+    <message><source>Compare quotes from Wagyu, NonKYC and ChangeNOW, routes and previous prices. The separate No-KYC table compares more providers.</source><translation>Compara cotizaciones de Wagyu, NonKYC y ChangeNOW, rutas y precios anteriores. La tabla No-KYC compara más proveedores.</translation></message>
+    <message><source>Estimate what you would receive before choosing a service. Quotes are indicative; exchanges are completed with the provider.</source><translation>Estima lo que recibirías antes de elegir un servicio. Las cotizaciones son orientativas; el intercambio se completa con el proveedor.</translation></message>
+    <message><source>Compare swaps</source><translation>Comparar intercambios</translation></message>
+    <message><source>No-KYC offers</source><translation>Ofertas No-KYC</translation></message>
+    <message><source>Compare buy and sell quotes, spread, minimums and the information shown for each provider.</source><translation>Compara cotizaciones de compra y venta, diferencial, mínimos y la información mostrada de cada proveedor.</translation></message>
+    <message><source>Review conditions on the provider’s site before starting. External links open in your browser, outside the wallet’s private route.</source><translation>Revisa las condiciones en la web del proveedor antes de empezar. Los enlaces se abren en tu navegador, fuera de la ruta privada de la cartera.</translation></message>
+    <message><source>View offers</source><translation>Ver ofertas</translation></message>
+    <message><source>Encrypted notes</source><translation>Notas cifradas</translation></message>
+    <message><source>Notes attached to your wallet</source><translation>Notas junto a tu cartera</translation></message>
+    <message><source>Notes are encrypted with AES-256-GCM and stored beside the wallet. They unlock with the open wallet and lock when it closes.</source><translation>Las notas se cifran con AES-256-GCM y se guardan junto a la cartera. Se desbloquean con la cartera abierta y se bloquean al cerrarla.</translation></message>
+    <message><source>Keep payment references or personal records. On supported Trezor wallets, unlocking also requires confirmation on the device.</source><translation>Conserva referencias de pagos o registros personales. En carteras Trezor compatibles, desbloquearlas también requiere confirmar en el dispositivo.</translation></message>
+    <message><source>Open notes</source><translation>Abrir notas</translation></message>
+    <message><source>Trezor</source><translation>Trezor</translation></message>
+    <message><source>Connection and pairing</source><translation>Conexión y emparejamiento</translation></message>
+    <message><source>Trezor Safe 7 supports USB and Bluetooth with THP. Select the device when several are connected and confirm pairing on its screen.</source><translation>Trezor Safe 7 admite USB y Bluetooth con THP. Selecciona el dispositivo si hay varios y confirma el emparejamiento en su pantalla.</translation></message>
+    <message><source>Use the device with the wallet directly. Close Trezor Suite first to avoid competing for the connection.</source><translation>Usa el dispositivo directamente con la cartera. Cierra primero Trezor Suite para evitar conflictos de conexión.</translation></message>
+    <message><source>Open Trezor</source><translation>Abrir Trezor</translation></message>
+    <message><source>Personalize your device</source><translation>Personaliza el dispositivo</translation></message>
+    <message><source>Change the name, homescreen, brightness, haptics and auto-lock where supported by the model. Device changes require confirmation.</source><translation>Cambia nombre, fondo, brillo, vibración y bloqueo automático según lo permita el modelo. Los cambios requieren confirmación en el dispositivo.</translation></message>
+    <message><source>Distinguish several devices by name and appearance, and choose a suitable auto-lock time.</source><translation>Distingue varios dispositivos por nombre y aspecto, y elige un tiempo de bloqueo adecuado.</translation></message>
+    <message><source>Device settings</source><translation>Ajustar dispositivo</translation></message>
+    <message><source>Appearance and desktop</source><translation>Aspecto y escritorio</translation></message>
+    <message><source>Themes and effects</source><translation>Temas y efectos</translation></message>
+    <message><source>Choose dark or light mode, a colour palette and Neon or Matte from the title-bar theme menu. Interface settings control optional effects and sounds.</source><translation>Elige modo oscuro o claro, paleta y Neón o Mate desde el menú de temas de la barra superior. Interfaz controla los efectos y sonidos opcionales.</translation></message>
+    <message><source>Use Matte for a softer appearance and reduce animation or sounds when you want fewer distractions.</source><translation>Usa Mate para un aspecto más suave y reduce animaciones o sonidos cuando prefieras menos distracciones.</translation></message>
+    <message><source>Customize interface</source><translation>Personalizar interfaz</translation></message>
+    <message><source>Ticker, menu bar and widget</source><translation>Ticker, barra de menús y widget</translation></message>
+    <message><source>Show prices in the scrolling ticker, macOS menu bar or desktop widget, with configurable rows and currency. The widget runs while the app is open.</source><translation>Muestra precios en el ticker, la barra de menús de macOS o el widget de escritorio, con filas y moneda configurables. El widget funciona mientras la app está abierta.</translation></message>
+    <message><source>Follow prices or node progress without keeping the main window in front. Choose carefully whether to display your balance.</source><translation>Sigue precios o progreso del nodo sin mantener la ventana en primer plano. Elige si quieres mostrar tu saldo.</translation></message>
+    <message><source>Configure desktop</source><translation>Configurar escritorio</translation></message>
+    <message><source>Tools</source><translation>Herramientas</translation></message>
+    <message><source>XMR Wallet+ is an unofficial fork of the Monero GUI. These shortcuts open tools; they do not enable features or send payments.</source><translation>XMR Wallet+ es una versión no oficial de Monero GUI. Los accesos abren herramientas; no activan funciones ni envían pagos.</translation></message>
+    <message><source>Removable USB wallet</source><translation>Cartera USB extraíble</translation></message>
+    <message><source>Connect · use · close · eject</source><translation>Conectar · usar · cerrar · extraer</translation></message>
+    <message><source>Keep wallet files offline between uses</source><translation>Archivos desconectados entre usos</translation></message>
+    <message><source>Keep your wallet on a USB drive that you connect only when needed. While unplugged, its files are not accessible to that PC.</source><translation>Guarda la cartera en un USB que conectes solo cuando la necesites. Mientras esté desenchufado, sus archivos no estarán accesibles desde ese PC.</translation></message>
+    <message><source>Reduce the time that files containing encrypted private keys are exposed to the computer, and keep the drive separately to reduce exposure if the PC is stolen.</source><translation>Reduce el tiempo de exposición al equipo de los archivos que contienen las claves privadas cifradas y guarda la unidad por separado para reducir la exposición si roban el PC.</translation></message>
+    <message><source>1. Copy the wallet to USB</source><translation>1. Copia la cartera al USB</translation></message>
+    <message><source>Connect the drive and use Save to… for that drive. The copy includes the wallet files, labels, history and encrypted notes in its XMR folder.</source><translation>Conecta la unidad y utiliza Guardar en… para esa unidad. La copia incluye los archivos de cartera, etiquetas, historial y notas cifradas en su carpeta XMR.</translation></message>
+    <message><source>Copying does not remove the original from the PC. Verify that the USB copy opens and keep an independent seed backup before deciding what to do with any local copies.</source><translation>Copiar no elimina el original del PC. Comprueba que la copia del USB se abre y conserva una copia independiente de la semilla antes de decidir qué hacer con las copias locales.</translation></message>
+    <message><source>2. Connect, open and use</source><translation>2. Conecta, abre y utiliza</translation></message>
+    <message><source>Connect the USB and choose its wallet from USB / SD wallets when opening a wallet, or select the wallet file directly from the drive.</source><translation>Conecta el USB y elige su cartera en Carteras USB / SD al abrir una cartera, o selecciona directamente el archivo de la unidad.</translation></message>
+    <message><source>Open the USB copy, synchronize it and carry out the operations you need. Keep the drive connected throughout the session.</source><translation>Abre la copia del USB, sincronízala y realiza las operaciones que necesites. Mantén la unidad conectada durante toda la sesión.</translation></message>
+    <message><source>3. Close the wallet and eject</source><translation>3. Cierra la cartera y extrae</translation></message>
+    <message><source>Close that wallet and wait for saving and closing to finish. Then eject the USB through macOS and unplug it.</source><translation>Cierra esa cartera y espera a que termine de guardarse y cerrarse. Después expulsa el USB desde macOS y desenchúfalo.</translation></message>
+    <message><source>Switching to another wallet or hiding the window does not close it: wallets can remain loaded in the background.</source><translation>Cambiar a otra cartera u ocultar la ventana no la cierra: las carteras pueden seguir cargadas en segundo plano.</translation></message>
+    <message><source>What this protects—and what it does not</source><translation>Alcance de esta protección</translation></message>
+    <message><source>This reduces exposure while the USB is disconnected. It does not protect an open wallet from malware on the PC and is not a hardware wallet.</source><translation>Esta medida reduce la exposición mientras el USB está desconectado. No protege una cartera abierta frente a malware del PC y no equivale a una cartera hardware.</translation></message>
+    <message><source>Use a strong wallet password, protect the USB against loss or theft and keep a separate seed backup. A USB drive can fail, and files copied by malware remain exposed after unplugging it.</source><translation>Usa una contraseña robusta, protege el USB frente a pérdida o robo y conserva la semilla por separado. Una unidad puede fallar, y los archivos que un malware haya copiado seguirán expuestos aunque la desconectes.</translation></message>
+    <message><source>Custom address mining</source><translation>Minería de direcciones personalizadas</translation></message>
+    <message><source>A recognizable public address</source><translation>Una dirección pública más reconocible</translation></message>
+    <message><source>Find a wallet address containing a short text or character pattern. This can make an address published on a website, profile or donation page easier to identify.</source><translation>Encuentra una dirección de tu cartera que contenga un texto corto o un patrón de caracteres. Así, una dirección publicada en una web, perfil o página de donaciones resulta más fácil de identificar.</translation></message>
+    <message><source>Use a recognizable fragment as a visual reference for your project or public collection. Always verify the full address: the fragment alone does not identify its owner.</source><translation>Usa un fragmento reconocible como referencia visual de tu proyecto o tus cobros públicos. Comprueba siempre la dirección completa: el fragmento por sí solo no identifica a su propietario.</translation></message>
+    <message><source>How the search works</source><translation>Cómo funciona la búsqueda</translation></message>
+    <message><source>The wallet derives and checks its own subaddresses until it finds your pattern. This does not mine blocks or earn XMR, and your current address is not edited.</source><translation>La cartera deriva y comprueba sus propias subdirecciones hasta encontrar el patrón elegido. No mina bloques ni genera XMR, y no modifica tu dirección actual.</translation></message>
+    <message><source>Enter a short pattern, choose the start, end or any position, and optionally ignore letter case. Longer patterns take more work and may not produce a match in the chosen range.</source><translation>Escribe un patrón corto, elige inicio, final o cualquier posición y, si quieres, ignora mayúsculas y minúsculas. Los patrones largos requieren más trabajo y pueden no tener coincidencias en el rango elegido.</translation></message>
+    <message><source>Search, choose and save</source><translation>Busca, elige y guarda</translation></message>
+    <message><source>Select an account/address range or enable continuous search. Follow the progress and estimated time, stop when needed and use Save to mined on a result you want to keep.</source><translation>Selecciona un rango de cuentas y direcciones o activa la búsqueda continua. Consulta el progreso y el tiempo estimado, detén la búsqueda cuando quieras y pulsa Guardar en minadas en el resultado que quieras conservar.</translation></message>
+    <message><source>Searching alone does not add addresses. Saved results appear in the Mined addresses account, where you can manage them and use them for receiving payments.</source><translation>La búsqueda por sí sola no añade direcciones. Los resultados guardados aparecen en la cuenta Direcciones minadas, donde puedes gestionarlos y utilizarlos para recibir pagos.</translation></message>
+    <message><source>Mine a custom address</source><translation>Minar una dirección personalizada</translation></message>
+    <message><source>Keep the recovery information</source><translation>Conserva los datos de recuperación</translation></message>
+    <message><source>For results beyond the default scan range, keep the account and address indices and a backup of the wallet files. A normal seed restore may not discover distant indices automatically.</source><translation>Para resultados fuera del rango de exploración habitual, conserva los índices de cuenta y dirección y una copia de los archivos de la cartera. Una restauración normal con la semilla puede no encontrar automáticamente índices lejanos.</translation></message>
+    <message><source>Before publishing a chosen address, save it and retain its recovery details. A public, recognizable address is convenient, but is not a reason to reuse it for every private collection.</source><translation>Antes de publicar una dirección, guárdala y conserva sus datos de recuperación. Una dirección pública reconocible es práctica, pero no es motivo para reutilizarla en todos tus cobros privados.</translation></message>
+    <message><source>Prepare a payment for a specific time</source><translation>Prepara un pago para una fecha concreta</translation></message>
+    <message><source>In Send, enter the recipient and amount, then choose a date and time instead of Now. The wallet saves the schedule and attempts to create and broadcast the transaction when it is due.</source><translation>En Enviar, introduce el destinatario y el importe y elige una fecha y hora en lugar de Ahora. La cartera guarda la programación e intenta crear y difundir la transacción cuando llega el momento.</translation></message>
+    <message><source>Prepare a donation, an agreed payment or a transfer between your wallets in advance. Scheduling does not guarantee the exact time of confirmation on the blockchain.</source><translation>Deja preparada una donación, un pago acordado o una transferencia entre tus carteras. Programar el envío no garantiza la hora exacta de confirmación en la cadena.</translation></message>
+    <message><source>Schedule a payment</source><translation>Programar un pago</translation></message>
+    <message><source>Keep the wallet open and synchronized</source><translation>Mantén la cartera abierta y sincronizada</translation></message>
+    <message><source>For automatic sending, keep the app running and this wallet selected, open and synchronized, with a working network connection and enough unlocked funds for the amount and fee.</source><translation>Para el envío automático, mantén la app en ejecución y esta cartera seleccionada, abierta y sincronizada, con conexión de red y suficientes fondos desbloqueados para el importe y la comisión.</translation></message>
+    <message><source>Keep the computer awake until the payment has been sent. A screen lock can leave the wallet open, but a lock that removes spending access cannot execute the payment.</source><translation>Mantén el equipo despierto hasta que el pago se haya enviado. Un bloqueo de pantalla puede dejar la cartera abierta, pero un bloqueo que retire el acceso de gasto no permite ejecutar el pago.</translation></message>
+    <message><source>If you close the application</source><translation>Si cierras la aplicación</translation></message>
+    <message><source>Closing the app preserves schedules in the encrypted wallet cache, but they cannot run while the app is closed. On reopening, overdue payments require your confirmation before sending, even if only seconds late.</source><translation>Cerrar la app conserva la programación en la caché cifrada de la cartera, pero los pagos no pueden ejecutarse con la app cerrada. Al volver a abrir, los pagos vencidos requieren tu confirmación antes de enviarse, aunque solo hayan pasado unos segundos.</translation></message>
+    <message><source>If the computer was off or the wallet was closed, review pending payments when you return. The app warns before closing when scheduled payments remain.</source><translation>Si el equipo estaba apagado o la cartera cerrada, revisa los pagos pendientes al volver. La app avisa antes de cerrar cuando quedan pagos programados.</translation></message>
+    <message><source>Funds and supported wallets</source><translation>Fondos y carteras compatibles</translation></message>
+    <message><source>Scheduling is disabled for hardware wallets, including Trezor and Ledger. During the 25 minutes before a scheduled payment, other sends from its source account are blocked.</source><translation>La programación está desactivada en carteras hardware, incluidas Trezor y Ledger. Durante los 25 minutos anteriores a un pago programado, se bloquean los demás envíos desde su cuenta de origen.</translation></message>
+    <message><source>Have unlocked funds ready beforehand. This buffer reduces conflicts with other sends but does not guarantee that funds will be spendable when the payment is due.</source><translation>Prepara fondos desbloqueados con antelación. Este margen reduce los conflictos con otros envíos, pero no garantiza que los fondos estén disponibles al llegar la hora.</translation></message>
+    <message><source>Review and manage pending payments</source><translation>Revisa y gestiona los pagos pendientes</translation></message>
+    <message><source>Scheduled payments appear below the send form. Review the recipient, amount and time, or use Send now or Cancel for a pending payment.</source><translation>Los pagos programados aparecen debajo del formulario de envío. Revisa destinatario, importe y hora, o utiliza Enviar ahora o Cancelar en un pago pendiente.</translation></message>
+    <message><source>If a broadcast was interrupted and its outcome is uncertain, check the transaction history before creating another payment to avoid sending twice.</source><translation>Si la difusión se interrumpió y no se conoce su resultado, comprueba el historial antes de crear otro pago para evitar enviarlo dos veces.</translation></message>
 </context>
 <context>
     <name>TradingData</name>
+    <message>
+        <source>KuCoin has no XMR/EUR: XMR/USDT at today's EUR rate</source>
+        <translation>KuCoin no tiene XMR/EUR: XMR/USDT al cambio de hoy en EUR</translation>
+    </message>
+    <message>
+        <source>no EUR rate yet</source>
+        <translation>todavía no hay cambio a EUR</translation>
+    </message>
     <message>
         <source>VALUE</source>
         <translation>VALOR</translation>
@@ -6145,8 +7111,8 @@ Si no tienes la opción de ejecutar tu propio nodo, hay una opción de conectars
         <translation>Los precios están desactivados (Opciones &gt; Nodo / Red).</translation>
     </message>
     <message>
-        <source>Prices from CoinGecko (public data, no account). Every currency and range is saved as CSV in ~/Monero/xmr-wallet-plus/trading and downloaded again every 15 minutes, one request at a time, also with this page closed. With NymVPN on, the requests go through Nym.</source>
-        <translation>Precios de CoinGecko (datos públicos, sin cuenta). Cada moneda y periodo se guarda en CSV en ~/Monero/xmr-wallet-plus/trading y se vuelve a descargar cada 15 minutos, de una en una petición, también con esta página cerrada. Con NymVPN activo, las peticiones van por Nym.</translation>
+        <source>Prices from CoinGecko (public data, no account). Every currency and range is saved as CSV in ~/Monero/xmr-wallet-plus/markets/&lt;source&gt; and downloaded again every 15 minutes, one request at a time, also with this page closed. With NymVPN on, the requests go through Nym.</source>
+        <translation>Precios de CoinGecko (datos públicos, sin cuenta). Cada moneda y periodo se guarda en CSV en ~/Monero/xmr-wallet-plus/markets/&lt;fuente&gt; y se vuelve a descargar cada 15 minutos, de una en una petición, también con esta página cerrada. Con NymVPN activo, las peticiones van por Nym.</translation>
     </message>
     <message>
         <source>Open folder</source>
@@ -6240,6 +7206,10 @@ Si no tienes la opción de ejecutar tu propio nodo, hay una opción de conectars
 <context>
     <name>Security</name>
     <message>
+        <source>Tor network (%1)</source>
+        <translation>Red Tor (%1)</translation>
+    </message>
+    <message>
         <source>Blocked: nothing goes out</source>
         <translation>Bloqueado: no sale nada</translation>
     </message>
@@ -6274,6 +7244,14 @@ Si no tienes la opción de ejecutar tu propio nodo, hay una opción de conectars
 </context>
 <context>
     <name>SecurityConnections</name>
+    <message>
+        <source>through I2P (--proxy): it does not sync blocks</source>
+        <translation>por I2P (--proxy): no sincroniza bloques</translation>
+    </message>
+    <message>
+        <source>through Tor (--proxy)</source>
+        <translation>por Tor (--proxy)</translation>
+    </message>
     <message>
         <source>LIVE</source>
         <translation>EN VIVO</translation>
@@ -6640,6 +7618,46 @@ Si no tienes la opción de ejecutar tu propio nodo, hay una opción de conectars
     <message>
         <source>Each test asks the node for /get_info only (height, version, sync state); it does not send anything about your wallet. Using your own local node is still the most private option.</source>
         <translation>Cada prueba solo pide /get_info al nodo (altura, versión, estado de sincronización); no envía nada sobre tu monedero. Usar tu propio nodo local sigue siendo la opción más privada.</translation>
+    </message>
+    <message>
+        <source>BAN LIST ✓</source>
+        <translation>LISTA MRL ✓</translation>
+    </message>
+    <message>
+        <source>NO BAN LIST</source>
+        <translation>SIN LISTA MRL</translation>
+    </message>
+    <message>
+        <source>SPY NODE</source>
+        <translation>NODO ESPÍA</translation>
+    </message>
+    <message>
+        <source>BAN LIST ?</source>
+        <translation>LISTA MRL ?</translation>
+    </message>
+    <message>
+        <source>this node's IP is on the spy-node list</source>
+        <translation>la IP de este nodo está en la lista de nodos espía</translation>
+    </message>
+    <message>
+        <source>none of its %1 peers is on the spy list</source>
+        <translation>ninguno de sus %1 peers está en la lista de espías</translation>
+    </message>
+    <message>
+        <source>%1 of its %2 peers are on the spy list</source>
+        <translation>%1 de sus %2 peers están en la lista de espías</translation>
+    </message>
+    <message>
+        <source>spy list not checked (no answer on the P2P port)</source>
+        <translation>lista de espías sin comprobar (no responde en el puerto P2P)</translation>
+    </message>
+    <message>
+        <source>Spy-node ban list (Monero Research Lab, Boog900/monero-ban-list): %1 entries, %2. Your local node starts with it and with the DNS blocklist. Each test also opens a P2P handshake on port 18080 and compares the peers the node hands out with the list: a node that applies the list never hands out a banned IP.</source>
+        <translation>Lista de baneos de nodos espía (Monero Research Lab, Boog900/monero-ban-list): %1 entradas, %2. Tu nodo local arranca con ella y con la lista de bloqueo por DNS. Cada prueba también hace un saludo P2P en el puerto 18080 y compara los peers que da el nodo con la lista: un nodo que aplica la lista nunca da una IP baneada.</translation>
+    </message>
+    <message>
+        <source>The spy-node ban list is not inside this build: run compilar-macos.sh again with internet so it gets downloaded.</source>
+        <translation>Esta compilación no lleva la lista de nodos espía: vuelve a ejecutar compilar-macos.sh con internet para que se descargue.</translation>
     </message>
 </context>
 <context>
@@ -7149,6 +8167,14 @@ Si no tienes la opción de ejecutar tu propio nodo, hay una opción de conectars
 <context>
     <name>TrezorDevice</name>
     <message>
+        <source>Pickaxe</source>
+        <translation>Pico</translation>
+    </message>
+    <message>
+        <source>Upload your own image or pick one from the XMR Wallet+ gallery. It is cropped to %1×%2 pixels and turned into black and white dots, because this screen has no grey or colour.</source>
+        <translation>Sube tu propia imagen o elige una de la galería de XMR Wallet+. Se recorta a %1×%2 píxeles y se convierte en puntos blancos y negros, porque esta pantalla no tiene grises ni color.</translation>
+    </message>
+    <message>
         <source>%1 min</source>
         <translation>%1 min</translation>
     </message>
@@ -7437,6 +8463,10 @@ Si no tienes la opción de ejecutar tu propio nodo, hay una opción de conectars
 <context>
     <name>PriceChip</name>
     <message>
+        <source>Price: Kraken, every minute. 24 h change: Markets data (CoinGecko).</source>
+        <translation>Precio: Kraken, cada minuto. Cambio 24 h: datos de Mercados (CoinGecko).</translation>
+    </message>
+    <message>
         <source>From the Markets data.</source>
         <translation>Datos de Mercados.</translation>
     </message>
@@ -7494,6 +8524,30 @@ Si no tienes la opción de ejecutar tu propio nodo, hay una opción de conectars
 </context>
 <context>
     <name>NodePeers</name>
+    <message>
+        <source>through %1 (--proxy); your transactions only to %2 peers</source>
+        <translation>por %1 (--proxy); tus transacciones solo a pares %2</translation>
+    </message>
+    <message>
+        <source>through Tor (--proxy); your transactions only to .onion and .i2p peers</source>
+        <translation>por Tor (--proxy); tus transacciones solo a pares .onion e .i2p</translation>
+    </message>
+    <message>
+        <source>direct, with your real IP; your transactions only to .i2p peers</source>
+        <translation>directo, con tu IP real; tus transacciones solo a pares .i2p</translation>
+    </message>
+    <message>
+        <source>through Tor (--proxy); your transactions only to .onion peers</source>
+        <translation>por Tor (--proxy); tus transacciones solo a pares .onion</translation>
+    </message>
+    <message>
+        <source>Address copied: %1</source>
+        <translation>Dirección copiada: %1</translation>
+    </message>
+    <message>
+        <source>.onion peers are Tor hidden services: they have no public IP or location (that is the point). Click to copy the full address.</source>
+        <translation>Los pares .onion son servicios ocultos de Tor: no tienen IP pública ni ubicación (para eso sirven). Pulsa para copiar la dirección completa.</translation>
+    </message>
     <message>
         <source>Countries from the offline DB-IP base (IP Geolocation by DB-IP): the IPs are not sent anywhere.</source>
         <translation>Países según la base offline de DB-IP (IP Geolocation by DB-IP): las IPs no se envían a ningún sitio.</translation>
@@ -7554,5 +8608,1122 @@ Si no tienes la opción de ejecutar tu propio nodo, hay una opción de conectars
         <source>block %1</source>
         <translation>bloque %1</translation>
     </message>
+</context>
+<context>
+    <name>TorPanel</name>
+    <message>
+        <source>Saved list from %1. &quot;Find nodes&quot; checks them again.</source>
+        <translation>Lista guardada del %1. «Buscar nodos» los vuelve a comprobar.</translation>
+    </message>
+    <message>
+        <source>Used for: %1</source>
+        <translation>Se usa para: %1</translation>
+    </message>
+    <message>
+        <source>Not used by the Network configuration</source>
+        <translation>No lo usa la Configuración de la red</translation>
+    </message>
+    <message>
+        <source>No Monero P2P port answered (%1)</source>
+        <translation>Ningún puerto P2P de Monero respondió (%1)</translation>
+    </message>
+    <message>
+        <source>✓ Remote node</source>
+        <translation>✓ Nodo remoto</translation>
+    </message>
+    <message>
+        <source>Remote node</source>
+        <translation>Nodo remoto</translation>
+    </message>
+    <message>
+        <source>Looking for P2P…</source>
+        <translation>Buscando P2P…</translation>
+    </message>
+    <message>
+        <source>✓ P2P peer</source>
+        <translation>✓ Par P2P</translation>
+    </message>
+    <message>
+        <source>P2P peer</source>
+        <translation>Par P2P</translation>
+    </message>
+    <message>
+        <source>P2P peers of the local node (--add-priority-node). Your own transactions go to them through --tx-proxy; the blocks still come from normal peers.</source>
+        <translation>Pares P2P del nodo local (--add-priority-node). Tus transacciones les llegan por --tx-proxy; los bloques siguen llegando de pares normales.</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>Quitar</translation>
+    </message>
+    <message>
+        <source>Remote .onion nodes</source>
+        <translation>Nodos remotos .onion</translation>
+    </message>
+    <message>
+        <source>Through Tor a local node syncs very slowly: its peers are reached through Tor exits, and many nodes refuse or drop them.</source>
+        <translation>Por Tor un nodo local sincroniza muy despacio: llega a sus pares a través de nodos de salida de Tor, y muchos nodos los rechazan o los cortan.</translation>
+    </message>
+    <message>
+        <source>A remote node with a .onion address is reached inside the Tor network, without exits: the wallet syncs at a good speed and neither the node nor your connection sees who you are.</source>
+        <translation>A un nodo remoto con dirección .onion se llega dentro de la red Tor, sin nodos de salida: la wallet sincroniza a buena velocidad y ni el nodo ni tu conexión ven quién eres.</translation>
+    </message>
+    <message>
+        <source>Candidates come from the xmr.ditatompel.com and monero.fail monitors (asked through Tor). The app then asks each one for /get_info through Tor and only lists those that answer and are at the current height, fastest first.</source>
+        <translation>Los candidatos salen de los monitores xmr.ditatompel.com y monero.fail (consultados por Tor). Luego la app pide /get_info a cada uno por Tor y solo muestra los que responden y están a la altura actual, los más rápidos primero.</translation>
+    </message>
+    <message>
+        <source>The node only sees a Tor connection. Like any remote node it learns which blocks and outputs your wallet asks for, never your keys.</source>
+        <translation>El nodo solo ve una conexión de Tor. Como cualquier nodo remoto, sabe qué bloques y salidas pide tu wallet, nunca tus claves.</translation>
+    </message>
+    <message>
+        <source>Use a good one</source>
+        <translation>Usar uno bueno</translation>
+    </message>
+    <message>
+        <source>Find nodes</source>
+        <translation>Buscar nodos</translation>
+    </message>
+    <message>
+        <source>✓ In use</source>
+        <translation>✓ En uso</translation>
+    </message>
+    <message>
+        <source>Use</source>
+        <translation>Usar</translation>
+    </message>
+    <message>
+        <source>No .onion nodes could be read from the monitors (%1).</source>
+        <translation>No se pudieron leer nodos .onion de los monitores (%1).</translation>
+    </message>
+    <message>
+        <source>None of the %1 .onion nodes answered through Tor. Try again in a moment.</source>
+        <translation>Ninguno de los %1 nodos .onion respondió por Tor. Prueba de nuevo en un momento.</translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation>No instalado</translation>
+    </message>
+    <message>
+        <source>Connected · Tor</source>
+        <translation>Conectado · Tor</translation>
+    </message>
+    <message>
+        <source>Connecting… %1%</source>
+        <translation>Conectando… %1%</translation>
+    </message>
+    <message>
+        <source>Error</source>
+        <translation>Error</translation>
+    </message>
+    <message>
+        <source>Blocked · Tor required</source>
+        <translation>Bloqueado · Tor obligatorio</translation>
+    </message>
+    <message>
+        <source>Off</source>
+        <translation>Apagado</translation>
+    </message>
+    <message>
+        <source>Tor required</source>
+        <translation>Tor obligatorio</translation>
+    </message>
+    <message>
+        <source>When checked, nothing leaves the app outside Tor: while Tor is not connected every connection is blocked. The option is saved and Tor connects at startup. It turns off &quot;Nym required&quot;.</source>
+        <translation>Si está marcado, nada sale de la app fuera de Tor: mientras Tor no esté conectado se bloquea toda conexión. La opción se guarda y Tor se conecta al arrancar. Desactiva &quot;Nym obligatorio&quot;.</translation>
+    </message>
+    <message>
+        <source>Connect</source>
+        <translation>Conectar</translation>
+    </message>
+    <message>
+        <source>New identity</source>
+        <translation>Nueva identidad</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Cancelar</translation>
+    </message>
+    <message>
+        <source>Disconnect</source>
+        <translation>Desconectar</translation>
+    </message>
+    <message>
+        <source>Traffic and privacy · Tor circuits</source>
+        <translation>Tráfico y privacidad · circuitos Tor</translation>
+    </message>
+    <message>
+        <source>The wallet starts its own Tor (client only, SOCKS5 %1). Tor Browser or another Tor on this Mac are not used or changed.</source>
+        <translation>La wallet arranca su propio Tor (solo cliente, SOCKS5 %1). No usa ni cambia Tor Browser ni otro Tor de este Mac.</translation>
+    </message>
+    <message>
+        <source>Through Tor go the connections that the Network configuration (top of this page) assigns to Tor: wallet requests, the local node sync and/or its transactions. .onion remote nodes always use Tor. If the node was running it restarts by itself.</source>
+        <translation>Por Tor van las conexiones que la Configuración de la red (arriba en esta página) le asigna: peticiones del monedero, sincronización del nodo local y/o sus transacciones. Los nodos remotos .onion siempre usan Tor. Si el nodo estaba en marcha, se reinicia solo.</translation>
+    </message>
+    <message>
+        <source>New identity asks Tor for new circuits: new connections leave through another exit. Tor, Nym and I2P can be on at the same time.</source>
+        <translation>Nueva identidad pide a Tor circuitos nuevos: las conexiones nuevas salen por otra salida. Tor, Nym e I2P pueden estar activos a la vez.</translation>
+    </message>
+    <message>
+        <source>Tor closes with the app.</source>
+        <translation>Tor se cierra con la app.</translation>
+    </message>
+    <message>
+        <source>Tor is not in this build. Rebuild the app with compilar-macos.sh (it downloads the Tor Expert Bundle) or install it with: brew install tor</source>
+        <translation>Esta compilación no trae Tor. Vuelve a compilar con compilar-macos.sh (descarga el Tor Expert Bundle) o instálalo con: brew install tor</translation>
+    </message>
+    <message>
+        <source>Exit IP</source>
+        <translation>IP de salida</translation>
+    </message>
+    <message>
+        <source>✓ Confirmed by check.torproject.org</source>
+        <translation>✓ Confirmado por check.torproject.org</translation>
+    </message>
+    <message>
+        <source>⚠ check.torproject.org says this is not Tor</source>
+        <translation>⚠ check.torproject.org dice que esto no es Tor</translation>
+    </message>
+    <message>
+        <source>Refresh</source>
+        <translation>Actualizar</translation>
+    </message>
+</context>
+<context>
+    <name>TorClient</name>
+    <message>
+        <source>Tor could not start yet, retrying…</source>
+        <translation>Tor aún no ha podido arrancar, reintentando…</translation>
+    </message>
+    <message>
+        <source>Tor did not finish connecting in time. %1</source>
+        <translation>Tor no terminó de conectar a tiempo. %1</translation>
+    </message>
+    <message>
+        <source>Could not start Tor: %1</source>
+        <translation>No se pudo iniciar Tor: %1</translation>
+    </message>
+    <message>
+        <source>Tor stopped. %1</source>
+        <translation>Tor se ha detenido. %1</translation>
+    </message>
+    <message>
+        <source>Tor is not in this build of the app.</source>
+        <translation>Esta compilación de la app no trae Tor.</translation>
+    </message>
+    <message>
+        <source>Starting Tor…</source>
+        <translation>Iniciando Tor…</translation>
+    </message>
+    <message>
+        <source>Tor is not connected.</source>
+        <translation>Tor no está conectado.</translation>
+    </message>
+</context>
+<context>
+    <name>I2pPanel</name>
+    <message>
+        <source>Saved list from %1. &quot;Find nodes&quot; checks them again.</source>
+        <translation>Lista guardada del %1. «Buscar nodos» los vuelve a comprobar.</translation>
+    </message>
+    <message>
+        <source>Used for: %1</source>
+        <translation>Se usa para: %1</translation>
+    </message>
+    <message>
+        <source>Not used by the Network configuration</source>
+        <translation>No lo usa la Configuración de la red</translation>
+    </message>
+    <message>
+        <source>No Monero P2P port answered (%1)</source>
+        <translation>Ningún puerto P2P de Monero respondió (%1)</translation>
+    </message>
+    <message>
+        <source>✓ Remote node</source>
+        <translation>✓ Nodo remoto</translation>
+    </message>
+    <message>
+        <source>Remote node</source>
+        <translation>Nodo remoto</translation>
+    </message>
+    <message>
+        <source>Looking for P2P…</source>
+        <translation>Buscando P2P…</translation>
+    </message>
+    <message>
+        <source>✓ P2P peer</source>
+        <translation>✓ Par P2P</translation>
+    </message>
+    <message>
+        <source>P2P peer</source>
+        <translation>Par P2P</translation>
+    </message>
+    <message>
+        <source>P2P peers of the local node (--add-priority-node). Your own transactions go to them through --tx-proxy; the blocks still come from normal peers.</source>
+        <translation>Pares P2P del nodo local (--add-priority-node). Tus transacciones les llegan por --tx-proxy; los bloques siguen llegando de pares normales.</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>Quitar</translation>
+    </message>
+    <message>
+        <source>%1: no .i2p nodes listed</source>
+        <translation>%1: no lista nodos .i2p</translation>
+    </message>
+    <message>
+        <source>%1: could not download (%2)</source>
+        <translation>%1: no se pudo descargar (%2)</translation>
+    </message>
+    <message>
+        <source>unexpected answer</source>
+        <translation>respuesta inesperada</translation>
+    </message>
+    <message>
+        <source>No .i2p nodes could be read from the monitors: %1.</source>
+        <translation>No se pudo leer ningún nodo .i2p de los monitores: %1.</translation>
+    </message>
+    <message>
+        <source>None of the %1 .i2p nodes answered through I2P. Tunnels take a while after connecting: try again in a few minutes.</source>
+        <translation>Ninguno de los %1 nodos .i2p respondió por I2P. Los túneles tardan un rato tras conectar: vuelve a probar en unos minutos.</translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation>No instalado</translation>
+    </message>
+    <message>
+        <source>Waiting for Tor…</source>
+        <translation>Esperando a Tor…</translation>
+    </message>
+    <message>
+        <source>Connected · I2P</source>
+        <translation>Conectado · I2P</translation>
+    </message>
+    <message>
+        <source>Connecting… %1%</source>
+        <translation>Conectando… %1%</translation>
+    </message>
+    <message>
+        <source>Error</source>
+        <translation>Error</translation>
+    </message>
+    <message>
+        <source>Waiting · I2P for the node required</source>
+        <translation>En espera · I2P en nodo obligatorio</translation>
+    </message>
+    <message>
+        <source>Off</source>
+        <translation>Apagado</translation>
+    </message>
+    <message>
+        <source>I2P required for the Monero node</source>
+        <translation>I2P en nodo Monero obligatorio</translation>
+    </message>
+    <message>
+        <source>Only for the Monero node: I2P connects at startup, the wallet only talks to .i2p remote nodes (also .onion ones while Tor is on) and the local node sends your transactions only through I2P. Everything else (prices, swaps, updates) does not use I2P: it is a closed network with no exits to the normal internet. The local node's block sync cannot go through I2P either; it keeps using Tor, Nym or your connection.</source>
+        <translation>Solo para el nodo de Monero: I2P se conecta al arrancar, el monedero solo habla con nodos remotos .i2p (también .onion si Tor está activo) y el nodo local solo envía tus transacciones por I2P. Lo demás (precios, swaps, actualizaciones) no usa I2P: es una red cerrada sin salidas a internet normal. La descarga de bloques del nodo local tampoco puede ir por I2P; sigue usando Tor, Nym o tu conexión.</translation>
+    </message>
+    <message>
+        <source>Connect</source>
+        <translation>Conectar</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Cancelar</translation>
+    </message>
+    <message>
+        <source>Disconnect</source>
+        <translation>Desconectar</translation>
+    </message>
+    <message>
+        <source>Traffic and privacy · I2P tunnels</source>
+        <translation>Tráfico y privacidad · túneles I2P</translation>
+    </message>
+    <message>
+        <source>The wallet starts its own I2P router (i2pd, SOCKS5 %1, no outproxy). Another I2P router on this Mac is not used or changed.</source>
+        <translation>El monedero arranca su propio router I2P (i2pd, SOCKS5 %1, sin outproxy). Otro router I2P de este Mac no se usa ni se toca.</translation>
+    </message>
+    <message>
+        <source>Through I2P go the connection to .b32.i2p remote nodes and, when the Network configuration says so, the transactions of the local node (monerod --tx-proxy i2p: they are only sent to .i2p peers, monerod has built-in I2P seed nodes). If the node was running it restarts by itself.</source>
+        <translation>Por I2P van la conexión a nodos remotos .b32.i2p y, si la Configuración de la red lo indica, las transacciones del nodo local (monerod --tx-proxy i2p: solo se envían a pares .i2p; monerod trae nodos semilla I2P). Si el nodo estaba en marcha, se reinicia solo.</translation>
+    </message>
+    <message>
+        <source>I2P has no exits to the normal internet, so it can be on together with Tor or Nym: they keep carrying prices, clearnet nodes and the local node's sync.</source>
+        <translation>I2P no tiene salidas a internet normal, así que puede estar activo junto a Tor o Nym: ellos siguen llevando los precios, los nodos normales y la sincronización del nodo local.</translation>
+    </message>
+    <message>
+        <source>A new router needs a few minutes to learn the network and build its tunnels. It closes with the app.</source>
+        <translation>Un router nuevo necesita unos minutos para conocer la red y crear sus túneles. Se cierra con la app.</translation>
+    </message>
+    <message>
+        <source>I2P is not in this build. Install it once with: brew install i2pd, then rebuild the app with compilar-macos.sh (it copies i2pd into the app).</source>
+        <translation>I2P no está en esta compilación. Instálalo una vez con: brew install i2pd, y vuelve a compilar con compilar-macos.sh (copia i2pd dentro de la app).</translation>
+    </message>
+    <message>
+        <source>I2P starts when Tor is connected (its first routers are fetched through Tor).</source>
+        <translation>I2P arranca cuando Tor esté conectado (sus primeros routers se descargan por Tor).</translation>
+    </message>
+    <message>
+        <source>Network</source>
+        <translation>Red</translation>
+    </message>
+    <message>
+        <source>Routers</source>
+        <translation>Routers</translation>
+    </message>
+    <message>
+        <source>Tunnels</source>
+        <translation>Túneles</translation>
+    </message>
+    <message>
+        <source>Tunnel success</source>
+        <translation>Éxito de túneles</translation>
+    </message>
+    <message>
+        <source>Remote .i2p nodes</source>
+        <translation>Nodos .i2p remotos</translation>
+    </message>
+    <message>
+        <source>A remote node with a .b32.i2p address is reached inside the I2P network: neither the node nor your connection sees who you are.</source>
+        <translation>A un nodo remoto con dirección .b32.i2p se llega dentro de la red I2P: ni el nodo ni tu conexión ven quién eres.</translation>
+    </message>
+    <message>
+        <source>Candidates come from the xmr.ditatompel.com and monero.fail monitors. The app then asks each one for /get_info through I2P and only lists those that answer and are at the current height, fastest first.</source>
+        <translation>Los candidatos salen de los monitores xmr.ditatompel.com y monero.fail. Luego la app pide /get_info a cada uno por I2P y solo muestra los que responden y están a la altura actual, los más rápidos primero.</translation>
+    </message>
+    <message>
+        <source>I2P is slower than Tor: the first sync of a wallet takes longer. Like any remote node it learns which blocks and outputs your wallet asks for, never your keys.</source>
+        <translation>I2P es más lento que Tor: la primera sincronización de un monedero tarda más. Como cualquier nodo remoto, sabe qué bloques y salidas pide tu monedero, nunca tus claves.</translation>
+    </message>
+    <message>
+        <source>Use a good one</source>
+        <translation>Usar uno bueno</translation>
+    </message>
+    <message>
+        <source>Find nodes</source>
+        <translation>Buscar nodos</translation>
+    </message>
+    <message>
+        <source>✓ In use</source>
+        <translation>✓ En uso</translation>
+    </message>
+    <message>
+        <source>Use</source>
+        <translation>Usar</translation>
+    </message>
+</context>
+<context>
+    <name>I2pClient</name>
+    <message>
+        <source>I2P did not finish connecting in time. %1</source>
+        <translation>I2P no terminó de conectar a tiempo. %1</translation>
+    </message>
+    <message>
+        <source>Could not start I2P: %1</source>
+        <translation>No se pudo arrancar I2P: %1</translation>
+    </message>
+    <message>
+        <source>I2P could not start yet, retrying…</source>
+        <translation>I2P aún no ha podido arrancar, reintentando…</translation>
+    </message>
+    <message>
+        <source>I2P stopped. %1</source>
+        <translation>I2P se ha detenido. %1</translation>
+    </message>
+    <message>
+        <source>I2P (i2pd) is not in this build of the app.</source>
+        <translation>I2P (i2pd) no está en esta compilación de la app.</translation>
+    </message>
+    <message>
+        <source>The i2pd reseed certificates were not found next to %1.</source>
+        <translation>No se encontraron los certificados de reseed de i2pd junto a %1.</translation>
+    </message>
+    <message>
+        <source>Starting I2P…</source>
+        <translation>Arrancando I2P…</translation>
+    </message>
+    <message>
+        <source>Getting the first routers (reseed)…</source>
+        <translation>Obteniendo los primeros routers (reseed)…</translation>
+    </message>
+    <message>
+        <source>Learning the network: %1 routers</source>
+        <translation>Conociendo la red: %1 routers</translation>
+    </message>
+    <message>
+        <source>Building tunnels: %1</source>
+        <translation>Creando túneles: %1</translation>
+    </message>
+</context>
+<context>
+    <name>NodeAddressList</name>
+    <message>
+        <source>not used: its network is not in Send transactions</source>
+        <translation>sin usar: su red no está en Enviar transacciones</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>Quitar</translation>
+    </message>
+    <message>
+        <source>Add</source>
+        <translation>Añadir</translation>
+    </message>
+</context>
+<context>
+    <name>RemoteNodeManager</name>
+    <message>
+        <source>The wallet needs at least one remote node: add another one first.</source>
+        <translation>El monedero necesita al menos un nodo remoto: añade otro primero.</translation>
+    </message>
+    <message>
+        <source>No route to this node now.</source>
+        <translation>Ahora no hay ruta a este nodo.</translation>
+    </message>
+    <message>
+        <source>trusted</source>
+        <translation>de confianza</translation>
+    </message>
+    <message>
+        <source>Edit remote node</source>
+        <translation>Editar nodo remoto</translation>
+    </message>
+    <message>
+        <source>Add remote node</source>
+        <translation>Añadir nodo remoto</translation>
+    </message>
+    <message>
+        <source>Address, port, login and trusted daemon</source>
+        <translation>Dirección, puerto, usuario y nodo de confianza</translation>
+    </message>
+
+    <message>
+        <source>Blocked: nothing goes out</source>
+        <translation>Bloqueado: no sale nada</translation>
+    </message>
+    <message>
+        <source>Tor network (%1)</source>
+        <translation>Red Tor (%1)</translation>
+    </message>
+
+    <message>
+        <source>NymVPN mixnet (%1)</source>
+        <translation>Mixnet de NymVPN (%1)</translation>
+    </message>
+
+    <message>
+        <source>SOCKS5 proxy %1</source>
+        <translation>Proxy SOCKS5 %1</translation>
+    </message>
+    <message>
+        <source>Extreme privacy is on and there is no approved route: nodes are not measured.</source>
+        <translation>La privacidad extrema está activada y no hay ruta aprobada: no se miden los nodos.</translation>
+    </message>
+    <message>
+        <source>Measured through: %1</source>
+        <translation>Medido por: %1</translation>
+    </message>
+    <message>
+        <source>Now using %1 as remote node.</source>
+        <translation>Ahora se usa %1 como nodo remoto.</translation>
+    </message>
+    <message>
+        <source>No other node with a score of 50 or more. Measure the list first.</source>
+        <translation>No hay otro nodo con 50 puntos o más. Mide la lista primero.</translation>
+    </message>
+    <message>
+        <source>Write it as host:port, for example node.example.com:18089</source>
+        <translation>Escríbelo como host:puerto, por ejemplo node.example.com:18089</translation>
+    </message>
+    <message>
+        <source>Measure the nodes through the app's current route. The score weighs availability (35 %), being up to date with the network (25 %), version (15 %) and stability (15 %); speed only counts 10 %, so a fast node that fails or lags behind does not win.</source>
+        <translation>Mide los nodos por la ruta actual de la app. La puntuación pesa disponibilidad (35 %), estar al día con la red (25 %), versión (15 %) y estabilidad (15 %); la velocidad solo cuenta un 10 %, así que un nodo rápido que falla o va retrasado no gana.</translation>
+    </message>
+    <message>
+        <source>Measuring %1 / %2…</source>
+        <translation>Midiendo %1 / %2…</translation>
+    </message>
+    <message>
+        <source>Measure all</source>
+        <translation>Medir todos</translation>
+    </message>
+    <message>
+        <source>Rotate node</source>
+        <translation>Rotar nodo</translation>
+    </message>
+    <message>
+        <source>Switches to another node chosen at random among those with a good score</source>
+        <translation>Cambia a otro nodo elegido al azar entre los que tienen buena puntuación</translation>
+    </message>
+    <message>
+        <source>Only favourites</source>
+        <translation>Solo favoritos</translation>
+    </message>
+    <message>
+        <source>Route: </source>
+        <translation>Ruta: </translation>
+    </message>
+    <message>
+        <source>IN USE</source>
+        <translation>EN USO</translation>
+    </message>
+    <message>
+        <source>my list</source>
+        <translation>mi lista</translation>
+    </message>
+    <message>
+        <source>measuring…</source>
+        <translation>midiendo…</translation>
+    </message>
+    <message>
+        <source>not measured yet</source>
+        <translation>aún sin medir</translation>
+    </message>
+    <message>
+        <source>%1 % up (%2 tests)</source>
+        <translation>%1 % disponible (%2 pruebas)</translation>
+    </message>
+    <message>
+        <source>%1 ms ±%2</source>
+        <translation>%1 ms ±%2</translation>
+    </message>
+    <message>
+        <source>%1 blocks behind</source>
+        <translation>%1 bloques por detrás</translation>
+    </message>
+    <message>
+        <source>up to date</source>
+        <translation>al día</translation>
+    </message>
+    <message>
+        <source>last test failed</source>
+        <translation>la última prueba falló</translation>
+    </message>
+    <message>
+        <source>Test</source>
+        <translation>Probar</translation>
+    </message>
+    <message>
+        <source>Use</source>
+        <translation>Usar</translation>
+    </message>
+    <message>
+        <source>Add to my list: host:port</source>
+        <translation>Añadir a mi lista: host:puerto</translation>
+    </message>
+    <message>
+        <source>Add</source>
+        <translation>Añadir</translation>
+    </message>
+    <message>
+        <source>Add suggested</source>
+        <translation>Añadir sugeridos</translation>
+    </message>
+    <message>
+        <source>Cake Wallet, Seth for Privacy, HashVault and MoneroDevs public nodes</source>
+        <translation>Nodos públicos de Cake Wallet, Seth for Privacy, HashVault y MoneroDevs</translation>
+    </message>
+    <message>
+        <source>Each test asks the node for /get_info only (height, version, sync state); it does not send anything about your wallet. Using your own local node is still the most private option.</source>
+        <translation>Cada prueba solo pide /get_info al nodo (altura, versión, estado de sincronización); no envía nada sobre tu monedero. Usar tu propio nodo local sigue siendo la opción más privada.</translation>
+    </message>
+    <message>
+        <source>BAN LIST ✓</source>
+        <translation>LISTA MRL ✓</translation>
+    </message>
+    <message>
+        <source>NO BAN LIST</source>
+        <translation>SIN LISTA MRL</translation>
+    </message>
+    <message>
+        <source>SPY NODE</source>
+        <translation>NODO ESPÍA</translation>
+    </message>
+    <message>
+        <source>BAN LIST ?</source>
+        <translation>LISTA MRL ?</translation>
+    </message>
+    <message>
+        <source>this node's IP is on the spy-node list</source>
+        <translation>la IP de este nodo está en la lista de nodos espía</translation>
+    </message>
+    <message>
+        <source>none of its %1 peers is on the spy list</source>
+        <translation>ninguno de sus %1 peers está en la lista de espías</translation>
+    </message>
+    <message>
+        <source>%1 of its %2 peers are on the spy list</source>
+        <translation>%1 de sus %2 peers están en la lista de espías</translation>
+    </message>
+    <message>
+        <source>spy list not checked (no answer on the P2P port)</source>
+        <translation>lista de espías sin comprobar (no responde en el puerto P2P)</translation>
+    </message>
+    <message>
+        <source>Spy-node ban list (Monero Research Lab, Boog900/monero-ban-list): %1 entries, %2. Your local node starts with it and with the DNS blocklist. Each test also opens a P2P handshake on port 18080 and compares the peers the node hands out with the list: a node that applies the list never hands out a banned IP.</source>
+        <translation>Lista de baneos de nodos espía (Monero Research Lab, Boog900/monero-ban-list): %1 entradas, %2. Tu nodo local arranca con ella y con la lista de bloqueo por DNS. Cada prueba también hace un saludo P2P en el puerto 18080 y compara los peers que da el nodo con la lista: un nodo que aplica la lista nunca da una IP baneada.</translation>
+    </message>
+    <message>
+        <source>The spy-node ban list is not inside this build: run compilar-macos.sh again with internet so it gets downloaded.</source>
+        <translation>Esta compilación no lleva la lista de nodos espía: vuelve a ejecutar compilar-macos.sh con internet para que se descargue.</translation>
+    </message>
+</context>
+<context>
+    <name>CustomAddresses</name>
+    <message>
+        <source>The wallet watches each of these addresses on its own, without creating any account or address for them. What they receive counts in the total balance and is spent from here with Send. The change of a send goes to the primary account (address 0:1) and the transaction is tagged "(mined address change)". To restore them elsewhere, write down their account and address number.</source>
+        <translation>La cartera vigila cada una de estas direcciones por separado, sin crear ninguna cuenta ni dirección para ellas. Lo que reciben cuenta en el saldo total y se gasta desde aquí con Enviar. El cambio de un envío va a la cuenta principal (dirección 0:1) y la transacción se etiqueta "(cambio dirección minada)". Para restaurarlas en otro sitio, apunta su número de cuenta y de dirección.</translation>
+    </message>
+    <message>
+        <source>Wait until the wallet is synchronized</source>
+        <translation>Espera a que la cartera esté sincronizada</translation>
+    </message>
+    <message>
+        <source>Wait until the wallet is synchronized: it may have received something not found yet</source>
+        <translation>Espera a que la cartera esté sincronizada: puede haber recibido algo que todavía no se ha encontrado</translation>
+    </message>
+    <message>
+        <source>This address already has transactions, so it stays in the mined addresses account for good</source>
+        <translation>Esta dirección ya tiene movimientos, así que se queda para siempre en la cuenta de direcciones minadas</translation>
+    </message>
+    <message>
+        <source>change</source>
+        <translation>cambio</translation>
+    </message>
+    <message>
+        <source>Change</source>
+        <translation>Cambio</translation>
+    </message>
+    <message>
+        <source>Send</source>
+        <translation>Enviar</translation>
+    </message>
+    <message>
+        <source>This address still has funds: send them first, then remove it</source>
+        <translation>Esta dirección todavía tiene fondos: envíalos primero y luego quítala</translation>
+    </message>
+    <message>
+        <source>It leaves the list and, from the next time you open the wallet, the wallet stops watching it: funds sent to it after that would not show up.</source>
+        <translation>Sale de la lista y, desde la próxima vez que abras la cartera, deja de vigilarse: los fondos que se envíen a ella después no aparecerían.</translation>
+    </message>
+    <message>
+        <source>The wallet watches each of these addresses on its own, without creating any account or address for them. What they receive counts in the total balance and is spent from here with Send. The change of a send goes to address 0 of its account and shows up here as "change". To restore them elsewhere, write down their account and address number.</source>
+        <translation>La cartera vigila cada una de estas direcciones por separado, sin crear ninguna cuenta ni dirección para ellas. Lo que reciben cuenta en el saldo total y se gasta desde aquí con Enviar. El cambio de un envío va a la dirección 0 de su cuenta y aparece aquí como "cambio". Para restaurarlas en otro sitio, apunta su número de cuenta y de dirección.</translation>
+    </message>
+    <message>
+        <source>Checked %1 addresses, now at address %2 of each account… (it goes on until you press Stop)</source>
+        <translation>Revisadas %1 direcciones, ahora en la dirección %2 de cada cuenta… (sigue hasta que pulses Detener)</translation>
+    </message>
+    <message>
+        <source>Endless: it goes through addresses 0, 1, 2… without end in the first %1 accounts (the number before the colon, up to 1000) and does not stop until you press Stop or it has 500 matches. Matches show up as they are found. Far-away addresses are not found by a normal restore: write down their account and address number.</source>
+        <translation>Infinito: recorre las direcciones 0, 1, 2… sin fin en las primeras %1 cuentas (el número antes de los dos puntos, hasta 1000) y no para hasta que pulses Detener o tenga 500 coincidencias. Las coincidencias aparecen según se encuentran. Las direcciones lejanas no se encuentran con una restauración normal: apunta su número de cuenta y de dirección.</translation>
+    </message>
+    <message>
+        <source>Account %1 is too far: it would create %1 accounts. Search with fewer accounts (the number before the colon).</source>
+        <translation>La cuenta %1 está demasiado lejos: habría que crear %1 cuentas. Busca con menos cuentas (el número antes de los dos puntos).</translation>
+    </message>
+    <message>
+        <source>%1 s</source>
+        <translation>%1 s</translation>
+    </message>
+    <message>
+        <source>%1 min %2 s</source>
+        <translation>%1 min %2 s</translation>
+    </message>
+    <message>
+        <source>%1 h %2 min</source>
+        <translation>%1 h %2 min</translation>
+    </message>
+    <message>
+        <source>%1 days %2 h</source>
+        <translation>%1 días %2 h</translation>
+    </message>
+    <message>
+        <source>%1 years</source>
+        <translation>%1 años</translation>
+    </message>
+    <message>
+        <source>Measuring speed…</source>
+        <translation>Midiendo la velocidad…</translation>
+    </message>
+    <message>
+        <source>Next match in about %1</source>
+        <translation>Próxima coincidencia en unos %1</translation>
+    </message>
+    <message>
+        <source>Next match: any moment now (luck is behind the average)</source>
+        <translation>Próxima coincidencia: en cualquier momento (la suerte va por detrás de la media)</translation>
+    </message>
+    <message>
+        <source>range finished in %1</source>
+        <translation>rango terminado en %1</translation>
+    </message>
+    <message>
+        <source>Searching the range</source>
+        <translation>Buscando en el rango</translation>
+    </message>
+    <message>
+        <source>Towards the next match</source>
+        <translation>Hacia la próxima coincidencia</translation>
+    </message>
+    <message>
+        <source>%1 addresses/s</source>
+        <translation>%1 direcciones/s</translation>
+    </message>
+    <message>
+        <source>Endless range</source>
+        <translation>Rango infinito</translation>
+    </message>
+    <message>
+        <source>%1 addresses with "%2" so far…</source>
+        <translation>%1 direcciones con "%2" hasta ahora…</translation>
+    </message>
+    <message>
+        <source>%1 addresses: large ranges take a while (all cores but one are used; you can stop it). Addresses beyond 50:200 are not found by a normal restore: write down their account and address number, or keep this wallet's files.</source>
+        <translation>%1 direcciones: los rangos grandes tardan (usa todos los núcleos menos uno; puedes pararlo). Las direcciones más allá de 50:200 no aparecen al restaurar normalmente: apunta su número de cuenta y de dirección, o guarda los archivos de este monedero.</translation>
+    </message>
+    <message>
+        <source>Write the range as accounts:addresses, e.g. 100:1000 (up to 200,000,000 addresses).</source>
+        <translation>Escribe el rango como cuentas:direcciones, p. ej. 100:1000 (hasta 200.000.000 de direcciones).</translation>
+    </message>
+    <message>
+        <source>It is already in the mined addresses account</source>
+        <translation>Ya está en la cuenta de direcciones minadas</translation>
+    </message>
+    <message>
+        <source>The wallet could not watch this address</source>
+        <translation>El monedero no pudo vigilar esta dirección</translation>
+    </message>
+    <message>
+        <source>Saved in the mined addresses account</source>
+        <translation>Guardada en la cuenta de direcciones minadas</translation>
+    </message>
+    <message>
+        <source>Remove mined address</source>
+        <translation>Quitar dirección minada</translation>
+    </message>
+    <message>
+        <source>It leaves the list and, from the next time you open the wallet, the wallet stops watching it: funds sent to it after that would not show up. Funds it already received stay in account %1.</source>
+        <translation>Sale de la lista y, desde la próxima vez que abras el monedero, deja de vigilarse: los fondos que le lleguen después no aparecerían. Lo que ya haya recibido se queda en la cuenta %1.</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>Quitar</translation>
+    </message>
+    <message>
+        <source>in the mined addresses account</source>
+        <translation>en la cuenta de direcciones minadas</translation>
+    </message>
+    <message>
+        <source>save it to mined before using it</source>
+        <translation>guárdala en minadas antes de usarla</translation>
+    </message>
+    <message>
+        <source>Saved</source>
+        <translation>Guardada</translation>
+    </message>
+    <message>
+        <source>Save to mined</source>
+        <translation>Guardar en minadas</translation>
+    </message>
+    <message>
+        <source>Mined addresses account</source>
+        <translation>Cuenta de direcciones minadas</translation>
+    </message>
+    <message>
+        <source>The wallet watches each of these addresses on its own, without creating the ones before it. What they receive is added to the balance of their account (shown next to each one). To restore them elsewhere, use the subaddress lookahead shown.</source>
+        <translation>El monedero vigila cada una de estas direcciones por separado, sin crear las anteriores. Lo que reciban se suma al saldo de su cuenta (indicada en cada una). Para restaurarlas en otro sitio, usa el subaddress lookahead que se indica.</translation>
+    </message>
+    <message>
+        <source>The addresses could not be created</source>
+        <translation>No se pudieron crear las direcciones</translation>
+    </message>
+    <message>
+        <source>Creating addresses…</source>
+        <translation>Creando direcciones…</translation>
+    </message>
+    <message>
+        <source>Mine addresses</source>
+        <translation>Minar direcciones</translation>
+    </message>
+    <message>
+        <source>Looks for an address of this wallet that starts, ends with or contains your text. By default among the %1 accounts × %2 addresses a restore checks, so funds sent to one are found again when you restore with the seed. You can widen the range; addresses outside it need a bigger "subaddress lookahead" when restoring.</source>
+        <translation>Busca una dirección de este monedero que empiece, termine o contenga tu texto. Por defecto entre las %1 cuentas × %2 direcciones que revisa una restauración, así que los fondos que recibas en ellas aparecen igualmente al restaurar con la semilla. Puedes ampliar el rango; las direcciones fuera de él necesitan un "subaddress lookahead" mayor al restaurar.</translation>
+    </message>
+    <message>
+        <source>Range</source>
+        <translation>Rango</translation>
+    </message>
+    <message>
+        <source>Stop</source>
+        <translation>Parar</translation>
+    </message>
+    <message>
+        <source>Write the range as accounts:addresses, e.g. 100:1000 (up to 5,000,000 addresses).</source>
+        <translation>Escribe el rango como cuentas:direcciones, p. ej. 100:1000 (hasta 5.000.000 de direcciones).</translation>
+    </message>
+    <message>
+        <source>Checked %1 of %2 addresses…</source>
+        <translation>Revisadas %1 de %2 direcciones…</translation>
+    </message>
+    <message>
+        <source>%1 addresses: large ranges take a while (a few thousand per second). Addresses beyond 50:200 are only found when restoring with a bigger lookahead, and the wallet only sees funds sent to them after you add them to Receive.</source>
+        <translation>%1 direcciones: los rangos grandes tardan (unas miles por segundo). Las direcciones más allá de 50:200 solo aparecen al restaurar con un lookahead mayor, y el monedero solo ve los fondos que reciban después de añadirlas a Recibir.</translation>
+    </message>
+    <message>
+        <source>(stopped)</source>
+        <translation>(parada)</translation>
+    </message>
+    <message>
+        <source>to restore it use subaddress lookahead %1:%2</source>
+        <translation>para restaurarla usa subaddress lookahead %1:%2</translation>
+    </message>
+    <message>
+        <source>add it to Receive before using it</source>
+        <translation>añádela a Recibir antes de usarla</translation>
+    </message>
+    <message>
+        <source>Anywhere</source>
+        <translation>En cualquier parte</translation>
+    </message>
+    <message>
+        <source>Addresses always start with 8 (the main one with 4) and the second character is only 2-9 or A-C, so at the start write the whole beginning, like 8888. The end can be anything. Each extra character makes a match about 30-60 times less likely.</source>
+        <translation>Las direcciones siempre empiezan por 8 (la principal por 4) y el segundo carácter solo puede ser 2-9 o A-C, así que para el principio escribe el comienzo completo, como 8888. El final puede ser cualquier cosa. Cada carácter más hace una coincidencia unas 30-60 veces menos probable.</translation>
+    </message>
+    <message>
+        <source>No address can start like that (they start with 8 and then 2-9 or A-C). </source>
+        <translation>Ninguna dirección puede empezar así (empiezan por 8 y luego 2-9 o A-C). </translation>
+    </message>
+    <message>
+        <source>About a %1 % chance of finding one.</source>
+        <translation>Probabilidad de encontrar una: un %1 %.</translation>
+    </message>
+    <message>
+        <source>Custom %1</source>
+        <translation>Personalizada %1</translation>
+    </message>
+    <message>
+        <source>Address added to Receive (account %1, address %2)</source>
+        <translation>Dirección añadida a Recibir (cuenta %1, dirección %2)</translation>
+    </message>
+    <message>
+        <source>Add to Receive</source>
+        <translation>Añadir a Recibir</translation>
+    </message>
+    <message>
+        <source>To show this address in Receive the wallet has to create every account and address before it: %1 new accounts and %2 new addresses in account %3. They are empty and only take a line each in the lists.</source>
+        <translation>Para mostrar esta dirección en Recibir, el monedero tiene que crear todas las cuentas y direcciones anteriores: %1 cuentas nuevas y %2 direcciones nuevas en la cuenta %3. Están vacías y solo ocupan una línea cada una en las listas.</translation>
+    </message>
+    <message>
+        <source>Add</source>
+        <translation>Añadir</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Cancelar</translation>
+    </message>
+    <message>
+        <source>Custom addresses</source>
+        <translation>Direcciones personalizadas</translation>
+    </message>
+    <message>
+        <source>Looks for an address of this wallet that starts or ends with your text, among the %1 accounts × %2 addresses a restore checks by default. They all belong to your seed, so funds sent to one are found again when you restore the wallet.</source>
+        <translation>Busca una dirección de este monedero que empiece o termine por tu texto, entre las %1 cuentas × %2 direcciones que revisa por defecto una restauración. Todas salen de tu semilla, así que los fondos que recibas en ellas aparecen igualmente al restaurar el monedero.</translation>
+    </message>
+    <message>
+        <source>e.g. 8888</source>
+        <translation>p. ej. 8888</translation>
+    </message>
+    <message>
+        <source>Searching…</source>
+        <translation>Buscando…</translation>
+    </message>
+    <message>
+        <source>Search</source>
+        <translation>Buscar</translation>
+    </message>
+    <message>
+        <source>At the start</source>
+        <translation>Al principio</translation>
+    </message>
+    <message>
+        <source>At the end</source>
+        <translation>Al final</translation>
+    </message>
+    <message>
+        <source>Ignore upper/lower case</source>
+        <translation>Ignorar mayúsculas/minúsculas</translation>
+    </message>
+    <message>
+        <source>Addresses never contain %1 (they use base58: no 0, O, I or l).</source>
+        <translation>Las direcciones nunca contienen %1 (usan base58: sin 0, O, I ni l).</translation>
+    </message>
+    <message>
+        <source>Subaddresses always start with 8 and the main address with 4, and the second character only takes a few values, so for the start write the text from the first character (88…). The end can be anything. Each extra character makes a match about 30-60 times less likely: 2 characters give several, 3 usually one or none, 4 almost never.</source>
+        <translation>Las subdirecciones siempre empiezan por 8 y la principal por 4, y el segundo carácter solo toma unos pocos valores, así que para el principio escribe el texto desde el primer carácter (88…). El final puede ser cualquier cosa. Cada carácter más hace una coincidencia unas 30-60 veces menos probable: con 2 caracteres salen varias, con 3 normalmente una o ninguna, con 4 casi nunca.</translation>
+    </message>
+    <message>
+        <source>About %1 matches expected.</source>
+        <translation>Se esperan unas %1 coincidencias.</translation>
+    </message>
+    <message>
+        <source>About a %1 % chance of finding one: with %2 characters it is very unlikely among 10,000 addresses.</source>
+        <translation>Probabilidad de encontrar una: un %1 %. Con %2 caracteres es muy poco probable entre 10.000 direcciones.</translation>
+    </message>
+    <message>
+        <source>No address with "%1" among the %2 checked.</source>
+        <translation>Ninguna dirección con "%1" entre las %2 revisadas.</translation>
+    </message>
+    <message>
+        <source>%1 addresses with "%2" among the %3 checked.</source>
+        <translation>%1 direcciones con "%2" entre las %3 revisadas.</translation>
+    </message>
+    <message>
+        <source>Main address</source>
+        <translation>Dirección principal</translation>
+    </message>
+    <message>
+        <source>Account %1 · address %2</source>
+        <translation>Cuenta %1 · dirección %2</translation>
+    </message>
+    <message>
+        <source>Copy</source>
+        <translation>Copiar</translation>
+    </message>
+    <message>
+        <source>Address copied to clipboard</source>
+        <translation>Dirección copiada al portapapeles</translation>
+    </message>
+</context>
+<context>
+    <name>NetworkConfigCard</name>
+    <message>
+        <source>Write host:port, for example abc…xyz.onion:18081 or node.example.org:18089</source>
+        <translation>Escribe host:puerto, por ejemplo abc…xyz.onion:18081 o node.example.org:18089</translation>
+    </message>
+    <message>
+        <source>Every connection is anonymous: choose the network each one goes through. The app never uses your normal connection; while the chosen network is not connected, that traffic waits.</source>
+        <translation>Todas las conexiones son anónimas: elige por qué red sale cada una. La app nunca usa tu conexión normal; mientras la red elegida no esté conectada, ese tráfico espera.</translation>
+    </message>
+    <message>
+        <source>The local node cannot sync the blockchain over I2P: it is a closed network without exits to normal Monero nodes, and monerod does not download blocks from .i2p peers. You can use I2P with a remote node: add a .i2p node in Node &gt; Remote node.</source>
+        <translation>No se puede sincronizar la cadena con I2P en el nodo local: es una red cerrada sin salidas a los nodos Monero normales, y monerod no descarga bloques de pares .i2p. Sí puedes usar I2P con un nodo remoto: añade un nodo .i2p en Nodo &gt; Nodo remoto.</translation>
+    </message>
+    <message>
+        <source>Added to the peer list monerod picks from; it may or may not connect to them.</source>
+        <translation>Se añaden a la lista de pares de la que monerod elige; puede conectarse a ellos o no.</translation>
+    </message>
+    <message>
+        <source>Sync</source>
+        <translation>Sincronización</translation>
+    </message>
+    <message>
+        <source>Network configuration</source>
+        <translation>Configuración de la red</translation>
+    </message>
+    <message>
+        <source>Wallet</source>
+        <translation>Monedero</translation>
+    </message>
+    <message>
+        <source>Send transactions</source>
+        <translation>Enviar transacciones</translation>
+    </message>
+    <message>
+        <source>monerod connects only to these nodes and to no other peer.</source>
+        <translation>monerod se conecta solo a estos nodos y a ningún otro par.</translation>
+    </message>
+    <message>
+        <source>Exclusive nodes</source>
+        <translation>Nodos exclusivos</translation>
+    </message>
+    <message>
+        <source>Sync the blockchain</source>
+        <translation>Sincronizar la cadena</translation>
+    </message>
+    <message>
+        <source>Remote nodes of the wallet</source>
+        <translation>Nodos remotos del monedero</translation>
+    </message>
+    <message>
+        <source>Priority nodes</source>
+        <translation>Nodos prioritarios</translation>
+    </message>
+    <message>
+        <source>Peers</source>
+        <translation>Pares</translation>
+    </message>
+    <message>
+        <source>Markets, swaps, prices, updates and the remote node.</source>
+        <translation>Mercados, swaps, precios, actualizaciones y el nodo remoto.</translation>
+    </message>
+    <message>
+        <source>Node addresses</source>
+        <translation>Direcciones de nodos</translation>
+    </message>
+    <message>
+        <source>Wallet: %1 · Sync: %2 · Transactions: %3</source>
+        <translation>Monedero: %1 · Sincronización: %2 · Transacciones: %3</translation>
+    </message>
+    <message>
+        <source>Transactions</source>
+        <translation>Transacciones</translation>
+    </message>
+    <message>
+        <source>Wallet connections</source>
+        <translation>Conexiones del monedero</translation>
+    </message>
+    <message>
+        <source>%1 exclusive · %2 priority · %3 peers · %4 remote</source>
+        <translation>%1 exclusivos · %2 prioritarios · %3 pares · %4 remotos</translation>
+    </message>
+    <message>
+        <source>Only these nodes give blocks: if they are .onion / .i2p or do not answer, the node does not sync.</source>
+        <translation>Solo estos nodos dan bloques: si son .onion / .i2p o no responden, el nodo no sincroniza.</translation>
+    </message>
+    <message>
+        <source>Local node connections</source>
+        <translation>Conexiones del nodo local</translation>
+    </message>
+    <message>
+        <source>Peers and blocks of monerod (--proxy, --p2p-bind-ip 127.0.0.1: it does not listen on your network).</source>
+        <translation>Pares y bloques de monerod (--proxy, --p2p-bind-ip 127.0.0.1: no escucha en tu red).</translation>
+    </message>
+    <message>
+        <source>monerod always tries to stay connected to these nodes, plus the usual peers. The P2P peers added in TOR / I2P are here too.</source>
+        <translation>monerod intenta estar siempre conectado a estos nodos, además de los pares habituales. Aquí también están los pares P2P añadidos en TOR / I2P.</translation>
+    </message>
+    <message>
+        <source>Not a monerod flag: it is the node the wallet connects to in remote mode. The same list as Node &gt; Remote node.</source>
+        <translation>No es un parámetro de monerod: es el nodo al que se conecta el monedero en modo remoto. Es la misma lista que Nodo &gt; Nodo remoto.</translation>
+    </message>
+    <message>
+        <source>Your own transactions only go to hidden-service peers (--tx-proxy), padded (--pad-transactions). Tor + I2P uses both networks at once.</source>
+        <translation>Tus transacciones solo van a pares de servicios ocultos (--tx-proxy), con relleno (--pad-transactions). Tor + I2P usa las dos redes a la vez.</translation>
+    </message>
+</context>
+
+<context>
+    <name>main</name>
+    <message><source>Wait for the payment or save to finish before closing or switching wallets.</source><translation>Espera a que termine el pago o el guardado antes de cerrar o cambiar de wallet.</translation></message>
+    <message><source>Could not read scheduled payments. Automatic sends are disabled.</source><translation>No se pudo leer la programación de pagos. No se realizarán envíos automáticos.</translation></message>
+    <message><source>Could not save scheduled payments.</source><translation>No se pudo guardar la programación de pagos.</translation></message>
+    <message><source>Could not save scheduled payments. Automatic sends are blocked until you reopen the wallet.</source><translation>No se pudo guardar la programación de pagos. Los envíos automáticos quedan bloqueados hasta reabrir la wallet.</translation></message>
+    <message><source>Broadcast result unverified. Check transaction history before creating another payment.</source><translation>Resultado pendiente de verificar. Revisa el historial antes de crear otro pago.</translation></message>
+    <message><source>Select the payment source account before sending.</source><translation>Selecciona la cuenta de origen del pago para enviarlo.</translation></message>
+</context>
+
+<context><name>main</name>
+<message><source>Scheduled payments pending</source><translation>Pagos programados pendientes</translation></message>
+<message><source>Payments cannot be sent while the app is closed. Your schedules will be kept. Any payment that becomes due while the app or its wallet is closed will require your confirmation when you reopen the wallet.</source><translation>Los pagos no se pueden enviar con la aplicación cerrada. La programación se conservará. Si llega la hora de un pago mientras la aplicación o su cartera está cerrada, se pedirá tu confirmación al volver a abrir la cartera.</translation></message>
+<message><source>Keep open</source><translation>Mantener abierta</translation></message>
+<message><source>Close anyway</source><translation>Cerrar de todos modos</translation></message>
+<message><source>This source account is reserved for a scheduled payment in the next 25 minutes. Cancel that schedule before making another send.</source><translation>Esta cuenta de origen está reservada para un pago programado en los próximos 25 minutos. Cancela esa programación antes de realizar otro envío.</translation></message>
+<message><source>Confirm overdue payment</source><translation>Confirmar pago pendiente</translation></message>
+<message><source>This payment became due while the wallet was closed. Send %1 now? It will not be sent without your confirmation.</source><translation>Llegó la hora de este pago mientras la cartera estaba cerrada. ¿Enviar %1 ahora? No se enviará sin tu confirmación.</translation></message>
+<message><source>Keep pending</source><translation>Mantener pendiente</translation></message>
+<message><source>Leave at least 25 minutes between scheduled payments from the same account.</source><translation>Deja al menos 25 minutos entre pagos programados desde la misma cuenta.</translation></message>
+</context>
+
+<context><name>Transfer</name>
+<message><source>Keep the app open with this wallet selected and synced. A password screen can stay locked only if background-sync mode has not removed spending access. Scheduled payments are unavailable on hardware wallets. If the wallet is closed when a payment becomes due, you must confirm it after reopening. Other sends from the source account are blocked during the previous 25 minutes; funds must still be unlocked at payment time.</source><translation>Mantén la aplicación abierta con esta cartera seleccionada y sincronizada. La pantalla de contraseña puede permanecer bloqueada solo si la sincronización en segundo plano no ha desactivado la capacidad de gastar. Los pagos programados no están disponibles en carteras hardware. Si llega la hora con la cartera cerrada, deberás confirmar el pago al reabrirla. Se bloquean otros envíos desde la cuenta de origen durante los 25 minutos anteriores; los fondos deberán estar desbloqueados al realizar el pago.</translation></message>
 </context>
 </TS>

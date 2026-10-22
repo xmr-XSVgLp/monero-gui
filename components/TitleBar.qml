@@ -488,7 +488,7 @@ Rectangle {
                             radius: 3
                             color: palArea.containsMouse && !current ? Qt.rgba(0.5, 0.5, 0.5, 0.12) : "transparent"
                             border.width: current ? 1 : 0
-                            border.color: pal.color
+                            border.color: pal.mono ? MoneroComponents.Style.defaultFontColor : pal.color
                             RowLayout {
                                 anchors.fill: parent
                                 anchors.leftMargin: 8
@@ -499,6 +499,25 @@ Rectangle {
                                     height: 12
                                     radius: 6
                                     color: pal.color
+                                    // black / white swatch: half black with a grey ring so it shows on both themes
+                                    border.width: pal.mono ? 1 : 0
+                                    border.color: "#808080"
+                                    Item {
+                                        visible: !!pal.mono
+                                        x: 6
+                                        width: 6
+                                        height: 12
+                                        clip: true
+                                        Rectangle {
+                                            x: -6
+                                            width: 12
+                                            height: 12
+                                            radius: 6
+                                            color: "#000000"
+                                            border.width: 1
+                                            border.color: "#808080"
+                                        }
+                                    }
                                 }
                                 Text {
                                     Layout.fillWidth: true
@@ -510,7 +529,7 @@ Rectangle {
                                 Text {
                                     visible: current
                                     text: "✓"
-                                    color: pal.color
+                                    color: pal.mono ? MoneroComponents.Style.defaultFontColor : pal.color
                                     font.pixelSize: 13
                                 }
                             }
@@ -1094,8 +1113,10 @@ Rectangle {
             Layout.rightMargin: 12
             spacing: 6
 
-            readonly property bool nymUp: appWindow.nymVpnProxyUp()
-            readonly property bool nymWorking: persistentSettings.nymVpnEnabled && !nymUp
+            readonly property bool nymUp: persistentSettings.netWallet === "nym" ? appWindow.nymVpnProxyUp() : appWindow.torProxyUp()
+            // the wallet's network (Network configuration) is not up yet: its requests wait
+            readonly property bool nymWorking: !nymUp
+            function netName(n) { return n === "nym" ? "Nym" : n === "i2p" ? "I2P" : n === "both" ? "Tor + I2P" : "Tor"; }
             readonly property bool remote: persistentSettings.useRemoteNode
             readonly property string nodeAddress: remote ? remoteNodesModel.currentRemoteNode().address : "127.0.0.1 (monerod)"
 
@@ -1108,11 +1129,12 @@ Rectangle {
                 blink: !appWindow.disconnected && privacyStatus.nymWorking
                 tip: (privacyStatus.remote ? qsTr("Remote node: %1").arg(privacyStatus.nodeAddress) : qsTr("Local node: %1").arg(privacyStatus.nodeAddress))
                      + " · " + (appWindow.disconnected ? qsTr("disconnected") : qsTr("connected"))
-                     + "<br>" + (privacyStatus.nymUp
-                         ? qsTr("All the app's traffic goes through NymVPN.") + (appWindow.nymVpnIpPlace !== "" ? " " + qsTr("Exit: %1").arg(appWindow.nymVpnIpPlace) : "")
-                         : privacyStatus.nymWorking ? qsTr("NymVPN is connecting…")
-                         : persistentSettings.nymVpnRequired ? qsTr("Nym required is on but NymVPN is not connected: nothing goes out.")
-                         : qsTr("NymVPN is off: the app connects directly."))
+                     + "<br>" + qsTr("Wallet: %1 · Sync: %2 · Transactions: %3")
+                                    .arg(privacyStatus.netName(persistentSettings.netWallet))
+                                    .arg(privacyStatus.netName(persistentSettings.netSync))
+                                    .arg(privacyStatus.netName(persistentSettings.netTx))
+                     + "<br>" + (privacyStatus.nymUp ? qsTr("The wallet's network is connected.")
+                                                     : qsTr("The wallet's network is connecting: its requests wait, nothing goes out directly."))
                      + translationManager.emptyString
             }
 

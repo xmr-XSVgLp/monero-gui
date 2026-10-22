@@ -4,9 +4,9 @@
 > It is not made, reviewed or endorsed by The Monero Project, by Trezor / SatoshiLabs or by Nym.**
 > It handles real money: it is **experimental**, use it at your own risk and test with small amounts first.
 
-XMR Wallet+ is the official Monero GUI with Trezor Safe 7 support, its own built-in Nym mixnet client, a privacy
-toolkit (connection check, node manager, extreme privacy mode, security center), several wallets open and syncing
-at once, market data, encrypted notes, macOS menu bar and desktop widgets, and a Matrix / cyberpunk interface.
+XMR Wallet+ is the official Monero GUI with Trezor Safe 7 support, built-in Nym, Tor and I2P with configurable private routes, a privacy toolkit (connection check, node manager, spy-node ban list, extreme privacy mode, security
+center), several wallets open and syncing at once, address mining, address groups and scheduled sends, market data,
+encrypted notes, macOS menu bar and desktop widgets, and a Matrix / cyberpunk interface.
 It tracks upstream `monero-gui` **master** and Monero **v0.18.5.4**.
 
 Tested on **macOS (Apple Silicon) with a Trezor Safe 7**, over USB and Bluetooth. Older Trezor models, Ledger
@@ -23,13 +23,18 @@ and other platforms are untested. The interface is available in English and Span
 | **Trezor Safe 7** (Trezor Host Protocol, Noise-encrypted channel) | ❌ | ✅ |
 | Trezor over **Bluetooth** | ❌ | ✅ (macOS) |
 | Trezor passphrase entered on the device | ✅ | ✅ (also on the Safe 7) |
-| **Trezor settings** from the wallet: name, homescreen gallery, brightness, haptics, auto-lock | ❌ | ✅ |
+| **Trezor settings** from the wallet: name, homescreen gallery, brightness, haptics, auto-lock | ❌ | ✅ (Safe 7, Safe 5 and Safe 3 homescreens) |
+| Pick which Trezor to use when several are connected | ❌ | ✅ |
 | Cancel a Trezor confirmation from the app (e.g. if the device freezes) | ❌ | ✅ |
 | **Several wallets open at once**, syncing in the background, switch without the password | ❌ | ✅ |
 | **Seed accounts**: extra wallets (addresses starting with 4) from the same seed + passphrase 1, 2, 3… | ❌ | ✅ |
 | SOCKS5 proxy (Tor, I2P…) | ✅ | ✅ |
 | **Built-in Nym mixnet client** for this app only, including the local node's P2P traffic | ❌ | ✅ |
-| "Nym required" kill switch (nothing connects while Nym is down) | ❌ | ✅ |
+| Nym watchdog: detects a hung Nym connection and reconnects by itself | ❌ | ✅ |
+| **Built-in Tor** and **built-in I2P** (i2pd), no extra install | ❌ | ✅ |
+| **Private network routes**: choose Tor / Nym / I2P for the wallet, for syncing and for sending transactions | ❌ | ✅ |
+| Remote .onion and .i2p nodes found and tested from the app | ❌ | ✅ |
+| **Spy-node ban list** (MRL) for the local node, and spy check of remote nodes | ❌ | ✅ |
 | **Connection check** (exit IP, latency, 1 MB speed test, P2P reachability, node health) | ❌ | ✅ |
 | List of every outside connection the wallet makes, and its route | ❌ | ✅ |
 | Live list of the local node's peers (IP, country, in/out, height), click to copy | ❌ | ✅ (country from an offline GeoIP base) |
@@ -40,15 +45,23 @@ and other platforms are untested. The interface is available in English and Span
 | One-click backup of all wallet files to a folder | ❌ | ✅ |
 | **Wallets on USB / SD**: open from the drive, save a copy to the drive | ❌ | ✅ |
 | Used addresses flagged in red, copy blocked, optional hiding (no address reuse) | ❌ | ✅ |
+| **Address mining**: search your own subaddresses for a chosen prefix / suffix | ❌ | ✅ |
+| **Mined addresses** account (one-off addresses, spent one at a time) | ❌ | ✅ |
+| **Address groups**: 2 to 50 new addresses in one row, copied together, random split of a payment request | ❌ | ✅ |
+| Paste a list of addresses (with amounts) in Send to fill every recipient | ❌ | ✅ (up to 50 recipients) |
+| **Scheduled sends** (send at a date and time) | ❌ | ✅ |
+| Remove empty accounts | ❌ | ✅ |
 | **Encrypted notes** tied to the wallet (and to the Trezor on hardware wallets) | ❌ | ✅ |
 | Balance in fiat | ✅ | ✅ (Kraken / CoinPaprika, with 24 h and 7 d change, last price cached) |
-| XMR price in mBTC with 24 h trend in the title bar | ❌ | ✅ |
-| **Markets**: XMR/EUR, XMR/USD, XMR/BTC charts, wallet value and balance over time, converter | ❌ | ✅ |
+| XMR price in mBTC with 24 h trend in the title bar | ❌ | ✅ (live from Kraken, every minute) |
+| **Markets**: XMR/EUR, XMR/USD, XMR/BTC charts, wallet value and balance over time, converter | ❌ | ✅ (CoinGecko, Kraken, KuCoin, CoinMarketCap) |
 | **Price alerts** with system notifications | ❌ | ✅ |
 | **Swaps** comparison: Wagyu, NonKYC and ChangeNOW, best routes, price history in CSV | ❌ | ✅ |
+| **Swaps No-KYC** table (MoneroPriceNow + NonKYC) in USD / EUR / BTC | ❌ | ✅ |
+| Scrolling **price ticker** at the bottom (XMR in BTC and every fiat) | ❌ | ✅ |
 | **macOS menu bar icon** with price, balance, node and Nym status | ❌ | ✅ |
 | **Desktop widget** on the wallpaper (price, 24 h chart, balance, node, Nym) | ❌ | ✅ (macOS) |
-| Themes | Dark / light | 8 colour palettes (Matrix, Cyberpunk, Tron, Amber, Monero, Ice, Ultraviolet, Acid), each dark or light and neon or matte, with optional effects |
+| Themes | Dark / light | 9 colour palettes (Matrix, Cyberpunk, Tron, Amber, Monero, Ice, Ultraviolet, Acid, Black and white), each dark or light and neon or matte, with optional effects |
 | Languages | 40+ | English and Spanish (other languages show the new texts in English) |
 | Platforms | Windows, macOS, Linux | macOS tested; others build from the same code, untested |
 | Ready-to-run download | ✅ | ✅ macOS app in [Releases](https://github.com/xmr-XSVgLp/monero-gui/releases) |
@@ -72,6 +85,12 @@ and other platforms are untested. The interface is available in English and Span
   menu bars.
 - **Wallet+ → Trezor** changes the device settings from the wallet: name, homescreen (with a built-in gallery
   and your own images), brightness, haptic feedback and auto-lock time. Each change is confirmed on the device.
+- Each model gets homescreens in its own format: a JPEG of 380×520 on the Safe 7 and 240×240 on the Safe 5, and on
+  the **Safe 3** (128×64, black and white) a Trezor TOIF image, dithered to black and white, with its own gallery
+  drawn for that screen. Images dropped in `images/trezor-wallpapers/` (`safe5/`, `safe3/`) join the gallery
+  after a rebuild.
+- **Several Trezors connected**: before opening a Trezor wallet the app lists the connected devices (by name and
+  model, Bluetooth on request) and remembers which Trezor each wallet uses.
 - Close Trezor Suite before opening the wallet: the Safe 7 is used directly, not through Trezor Bridge.
 
 ### Several wallets at once
@@ -98,9 +117,9 @@ and other platforms are untested. The interface is available in English and Span
   try these numbers too: seed accounts separate funds, they do not hide them.
 
 ### Wallet+ menu
-A blue section below Settings groups the extra pages: an overview page whose cards open each page, **Markets**
-(with **Markets / Swaps** tabs), **Notes** and **Security**. Trezor settings are reached from the overview or by
-clicking the Trezor icon in the title bar.
+A blue section below Settings groups the extra pages: a collapsible feature guide with practical examples and shortcuts, **Markets**
+(with **Markets / Swaps / Swaps No-KYC** tabs), **Notes**, **Mined addresses** and **Security**. Trezor settings
+are reached from the overview or by clicking the Trezor icon in the title bar.
 
 ### Security page (Wallet+ → Security)
 Four tabs:
@@ -135,6 +154,38 @@ Four tabs:
 - Addresses that already received a transaction are shown in red, their copy buttons are disabled and a warning
   offers to create a new address, to avoid address reuse.
 - **Hide used addresses** removes them from the list.
+- **Create addresses in bulk** (next to "Create new address") makes 2 to 50 new addresses with one label and shows
+  them as a single row. Selecting it shows all the addresses separated by commas, ready to copy. In **Payment
+  request** you write the total and it is split at random among the addresses (**Split again** for another split);
+  the box then holds `address:amount,address:amount,…`, and the description and name fields are hidden.
+
+### Send
+- **Several recipients at once**: pasting a list of addresses separated by commas (optionally `address:amount`) in
+  the address field fills one recipient per address, up to 50. "Send all" only works with one recipient, as in the
+  official wallet (Monero's sweep sends to one address).
+- **Schedule the send**: Now, or a date and time. The transaction is created and sent automatically at that moment
+  if the app is open and synced. Scheduling is disabled for all hardware wallets (including Trezor and Ledger). Schedules are stored in the encrypted wallet cache. Legacy schedules migrate when their wallet is opened,
+  and are removed from general settings only after a successful save. An interrupted broadcast is held for
+  history verification and cannot be automatically or manually retried from the same entry.
+  Scheduled sends are listed below with
+  **Send now** and **Cancel**. Any payment already due when its wallet is reopened requires confirmation,
+  even if only seconds late. Closing the app warns that schedules are preserved but cannot run while closed.
+  The source account is reserved against other sends for 25 minutes before a scheduled payment (including
+  a final check before broadcasting a manually prepared transaction). This is a buffer, not a guarantee:
+  spendable outputs must still be unlocked. Keep this wallet selected and synced; hardware wallets cannot schedule payments, and a background-sync lock that removes spending access cannot execute payments.
+
+### Accounts and mined addresses
+- **Wallet+ → Mined addresses** searches your own subaddresses for a text at the start, at the end or anywhere
+  (optionally ignoring case), over a range of accounts and addresses or without end, with live results, a progress
+  bar and an estimated time per match. It only derives addresses: it creates nothing until you save one.
+- **Save to mined** keeps an address as a one-off address of the wallet, without creating the accounts and
+  addresses before it. All of them appear together in a virtual **Mined addresses** account (⛏, with its own
+  quarry-style card) on the Accounts page: its balance is counted only there and the addresses are hidden from
+  Receive.
+- **Send** from a mined address spends from that address alone, for privacy; the change goes back to the account 0
+  address 0:1 (or the next non-mined one) and the transaction note says "(mined address change)". A mined address
+  that has received anything cannot be removed, and none can be removed while the wallet is syncing.
+- **Remove empty accounts** on the Accounts page deletes trailing accounts that never received or sent anything.
 
 ### Privacy and network
 - **Built-in Nym client.** The wallet ships its own Nym mixnet client (`external/nym-client`, built from the
@@ -143,17 +194,41 @@ Four tabs:
   traffic goes through the mixnet, on a local SOCKS5 port (127.0.0.1:17890), including the local node's P2P
   traffic. It does not control or need the official NymVPN app.
 - The phrase is sent to the helper through stdin and saved in plain text, owner-only, in
-  `~/Monero/xmr-wallet-plus/nym.conf` (not in the macOS Keychain). **Forget** stops the client and deletes the
-  phrase and the device keys. **Reconnect** picks a different random exit. **Nym required** keeps everything
-  blocked while Nym is down; while Nym is connected the checkbox shows ticked and locked.
+  `~/Monero/xmr-wallet-plus/nym.conf` (not in the macOS Keychain). **Log out** disconnects while retaining the phrase and device keys. Connecting with a different phrase replaces the local device identity. **Reconnect** picks a different random exit.
+- **Nym watchdog**: every 90 s the app checks that Nym still carries traffic (two small HTTPS requests through the
+  mixnet). After two failed rounds it reconnects by itself (at most once every 2 minutes) and says so in the status
+  bar. If the client stops or fails, it retries with growing pauses (20 s up to 5 min, 8 tries). When the route
+  comes back, prices and Markets are asked again at once instead of waiting for the next round.
 - With Nym on, monerod uses proxy-friendly sync settings (longer peer timeouts, smaller block batches), so the
   local node keeps syncing through the mixnet.
 - **Connection check**: current IP, proxy, latency, a 1 MB speed test, reachability of Monero seed nodes and node
-  status. It runs on demand and automatically every time Nym connects or reconnects.
-- **Settings → Node / Network**: one **Node** card with the start/stop button on the left (yellow and disabled
-  with "Starting…" / "Stopping…" while it works) and Local / Remote node buttons on the right, with their
-  explanations in tooltips, and below it the same live list of the node's external IPs. Then the Nym panel,
-  **External connections** (price and market services) and proxy.
+  status. It runs only when you press the button, always through the network being checked; if that network's
+  local SOCKS port does not answer, the check stops without sending anything.
+- **Built-in Tor.** The app ships the Tor Expert Bundle (downloaded and SHA-256 / signature checked by
+  `actualizar-tor.sh`) and runs its own Tor client for this app only (SOCKS 127.0.0.1:17950), with **New identity**
+  and the exit IP. Tor stops when the app quits. The panel also finds **remote .onion nodes**, tests them through
+  Tor and lists the synced ones by latency.
+- **Built-in I2P.** The app ships i2pd and runs its own router (SOCKS 127.0.0.1:17960, no outproxy). It can be on
+  together with Tor or Nym. The panel shows routers, tunnels and progress, and finds and tests **remote .i2p
+  nodes**. Rows in the .onion / .i2p lists can be used as remote node or as a P2P peer of the local node.
+- The last good .onion and .i2p node lists are saved in `~/Monero/xmr-wallet-plus/nodes/tor.json` and `i2p.json`
+  and shown at start; a new search runs by itself only when the list is older than a day (or with **Find nodes**).
+- **Network configuration** (*Settings → Node / Network*): the wallet requires a configured private route; there is no clearnet
+  option for wallet traffic. The network clients still need bootstrap and entry connections. You choose the network for the **wallet** (Tor or Nym), for **syncing** the local node (Tor, Nym or I2P;
+  I2P alone cannot sync a node, the app warns) and for **sending transactions** (Tor, I2P or both). .onion nodes
+  always go through Tor and .i2p nodes through I2P. monerod gets the matching `--proxy`, `--tx-proxy`,
+  `--p2p-bind-ip 127.0.0.1`, `--hide-my-port` and `--pad-transactions`, and is restarted when the choice changes.
+  The card also holds the node address lists (exclusive nodes, priority peers, extra peers, remote nodes) and
+  shows the real monerod command line.
+- The **Welcome to Monero** page (before opening a wallet) shows the same **Network configuration** card, then
+  the Nym, Tor and I2P panels and the **Connection check**, so the network can be set up before the first wallet.
+- Below it: the **Node** card (start / stop, Local / Remote node, live list of the node's external IPs), a
+  **connection check per network**, the Nym, Tor and I2P panels and **External connections** (price and market
+  services).
+- **Spy-node ban list**: the MRL ban list ([Boog900/monero-ban-list](https://github.com/Boog900/monero-ban-list))
+  is downloaded at build time (`actualizar-banlist.sh`) and the local node starts with `--ban-list` and
+  `--enable-dns-blocklist`. In Security → Nodes each remote node is also checked over P2P: a node on the list, or
+  one whose peers are largely on it, is marked and left out of rotation.
 - Hovering the daemon progress bar in the left menu shows the sync details (blocks left, last block number and
   time, speed, ETA) with a blue border when synced and yellow while syncing.
 - **NODE chip** in the title bar: green when the node is connected, blinking yellow while Nym connects, red when
@@ -161,15 +236,23 @@ Four tabs:
 - With external connections off, the app makes no price or exchange requests at all.
 
 ### Markets and swaps (only when external connections are on)
-- XMR/EUR, XMR/USD and XMR/BTC charts from CoinGecko for 24H, 7D, 30D, 90D, 1Y and MAX, cached as CSV under
-  `~/Monero/xmr-wallet-plus/trading/` and refreshed every 15 minutes.
+- XMR/EUR, XMR/USD and XMR/BTC charts for 24H, 7D, 30D, 90D, 1Y and MAX with tabs for CoinGecko, Kraken, KuCoin
+  and CoinMarketCap, cached as CSV under `~/Monero/xmr-wallet-plus/markets/<source>/` (coingecko, kraken, kucoin,
+  coinmarketcap) and refreshed every 15 minutes.
 - **Value of your wallet** chart with the same grid, dates and crosshair as the price chart; hovering one chart
   moves the other and shows the date, value and balance at that moment.
 - Converter and **price alerts** with a macOS notification.
 - **Swaps** tab: quotes from Wagyu, NonKYC and ChangeNOW side by side, the best cross-exchange routes and a
   comparison with earlier prices. Every refresh is saved to `~/Monero/xmr-wallet-plus/precios-swaps.csv`.
-- **Price chip** in the title bar: XMR in mBTC with a green ▲ / red ▼ for the last 24 h. Hover for BTC, EUR and
-  USD prices; click to open Markets.
+- **Swaps No-KYC** tab: buy and sell prices of the no-KYC exchanges listed by MoneroPriceNow, plus NonKYC, in
+  XMR/USD, XMR/EUR and XMR/BTC, with spread, minimum, time and privacy rating, sortable, refreshed every minute.
+- **Price ticker** at the bottom of the window (*Settings → Interface*): XMR in BTC and in every fiat currency with
+  its 24 h change, scrolling, paused on hover. It uses the prices already loaded and makes no requests of its own.
+- **Price chip** in the title bar: XMR in mBTC with a green ▲ / red ▼ for the last 24 h. The price comes live
+  from Kraken every minute (XMR/BTC, XMR/USD; EUR from the fiat rate); the 24 h change is measured against the
+  CoinGecko series from Markets. Hover for BTC, EUR and USD prices and their source; click to open Markets.
+- After a failed price request the app tries again after 20 s instead of waiting for the next minute. Swaps ask
+  three quotes at a time, and the No-KYC table loads its USD and BTC lists together.
 - The last price is cached in `~/Monero/xmr-wallet-plus/precio-actual.csv`, so the balance shows a fiat value
   as soon as the app starts.
 
@@ -190,14 +273,17 @@ Four tabs:
   file cannot be opened without that Trezor and passphrase.
 
 ### Look and feel
-- **Themes**: the moon button in the title bar opens a list with Dark / Light and 8 colour palettes (Matrix,
-  Cyberpunk, Tron, Amber, Monero, Ice, Ultraviolet, Acid). Every accent of the neon design follows the palette;
+- **Themes**: the moon button in the title bar opens a list with Dark / Light and 9 colour palettes (Matrix,
+  Cyberpunk, Tron, Amber, Monero, Ice, Ultraviolet, Acid, Black and white). Every accent of the neon design follows the palette;
   error reds, greys and white text stay the same. The choice is saved. Some PNG images still use the Matrix green.
 - **Neon / Matte**: below Dark / Light. Neon is the bright original; Matte softens every palette: neutral grey
   backgrounds instead of pure black or white, less glaring text and muted accents.
+- **Wallet+ guide**: collapsible sections with practical uses, including scheduled payments, custom address mining
+  and removable USB wallets. Shortcuts open the corresponding tools.
+- **Settings → Info**: larger XMR Wallet+ logo, compact build and wallet details, responsive cards and themed donation buttons.
 - Redesigned pages, cards, dialogs and icons, with white text on the dark themes and narrower window buttons.
-- Cyberpunk "please wait" screen (opening / closing wallet…): neon HUD frame, scanlines, counter-rotating rings
-  around the logo, glitching title and a segmented progress bar.
+- Minimal loading panel with wallet name and an indeterminate activity bar. Device prompts retain the Trezor
+  illustration, confirmation instructions, address comparison and cancellation.
 - Optional effects (Matrix rain in both themes, boot screen, page glitch, UI sounds) in
   *Settings → Interface*. The rain pauses while the window is minimized, to save CPU.
 
@@ -221,7 +307,8 @@ bash compilar-macos.sh          # first build: installs Homebrew dependencies an
 bash compilar-macos.sh rapido   # later rebuilds
 ```
 `compilar-macos.sh` pins OpenSSL 3, Boost 1.85 and protobuf 21, because Monero v0.18 does not build with newer
-versions. It also builds the Nym client: the first time it downloads the pinned (SHA-256 checked) Nym sources and
+versions. It also puts Tor (`actualizar-tor.sh`), i2pd (`actualizar-i2pd.sh`, needs `brew install i2pd` once)
+and the spy-node ban list (`actualizar-banlist.sh`) inside the app. It also builds the Nym client: the first time it downloads the pinned (SHA-256 checked) Nym sources and
 an isolated Rust toolchain into `build/` (Python 3.11+ required). `build/` and `dist/` are not committed. The app
 ends up in `build/release/bin`.
 
@@ -231,7 +318,7 @@ is not in the repository). On the other Mac, run
 `xattr -dr com.apple.quarantine XMR-wallet+.app` once before opening it.
 
 The Nym client needs an active NymVPN subscription account. Without it, everything else works (use a SOCKS5
-proxy such as Tor, or connect directly).
+route such as the built-in Tor client).
 
 ## License
 

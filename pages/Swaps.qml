@@ -206,9 +206,9 @@ Rectangle {
     // turned off: drop the queued requests so nothing else reaches the exchanges
     onPricesEnabledChanged: if (!pricesEnabled) requestQueue.length = 0
 
-    // the app has 4 background threads, shared with the wallet (opening, sync): the swap
-    // requests (slow through Nym) never take more than 2 of them, the rest wait in this queue
-    readonly property int maxInFlight: 2
+    // the network requests share 4 background threads (the wallets have their own pools): the swap
+    // requests (slow through Nym) take at most 3 of them, the rest wait in this queue
+    readonly property int maxInFlight: 3
     readonly property var requestQueue: []
     property int inFlight: 0
 

@@ -170,26 +170,26 @@ Rectangle {
                              source: {
                                 if (hardwareWalletType == "Trezor") {
                                     if (trezorType == "Trezor Model T") {
-                                        return "qrc:///images/trezorT.png";
+                                        return "qrc:///images/devices/trezorT.png";
                                     } else if (trezorType == "Trezor Safe 3") {
-                                        return "qrc:///images/trezor3.png";
+                                        return "qrc:///images/devices/trezor3.png";
                                     } else if (trezorType == "Trezor Safe 5" || trezorType == "Trezor Safe 7") {
                                         // no dedicated Safe 7 picture yet, it looks close to the Safe 5
-                                        return "qrc:///images/trezor5.png";
+                                        return "qrc:///images/devices/trezor5.png";
                                     }
                                 } else if (hardwareWalletType == "Ledger") {
                                     if (ledgerType == "Ledger Nano S") {
-                                        return "qrc:///images/ledgerNanoS.png";
+                                        return "qrc:///images/devices/ledgerNanoS.png";
                                     } else if (ledgerType == "Ledger Nano S Plus") {
-                                        return "qrc:///images/ledgerNanoSPlus.png";
+                                        return "qrc:///images/devices/ledgerNanoSPlus.png";
                                     } else if (ledgerType == "Ledger Nano X") {
-                                        return "qrc:///images/ledgerNanoX.png";
+                                        return "qrc:///images/devices/ledgerNanoX.png";
                                     } else if (ledgerType == "Ledger Nano Gen5") {
-                                        return "qrc:///images/ledgerNanoGen5.png";
+                                        return "qrc:///images/devices/ledgerNanoGen5.png";
                                     } else if (ledgerType == "Ledger Stax") {
-                                        return "qrc:///images/ledgerStax.png";
+                                        return "qrc:///images/devices/ledgerStax.png";
                                     } else if (ledgerType == "Ledger Flex") {
-                                        return "qrc:///images/ledgerFlex.png";
+                                        return "qrc:///images/devices/ledgerFlex.png";
                                     }
                                 }
                                 return "";

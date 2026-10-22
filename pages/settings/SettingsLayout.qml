@@ -72,13 +72,6 @@ Rectangle {
             }
 
             MoneroComponents.CheckBox {
-                id: customDecorationsCheckBox
-                checked: persistentSettings.customDecorations
-                onClicked: Windows.setCustomWindowDecorations(checked)
-                text: qsTr("Custom decorations") + translationManager.emptyString
-            }
-
-            MoneroComponents.CheckBox {
                 checked: persistentSettings.displayWalletNameInTitleBar
                 onClicked: persistentSettings.displayWalletNameInTitleBar = !persistentSettings.displayWalletNameInTitleBar
                 text: qsTr("Display wallet name in title bar") + translationManager.emptyString
@@ -92,6 +85,22 @@ Rectangle {
                     appWindow.updateBalance();
                 }
                 text: qsTr("Hide balance") + translationManager.emptyString
+            }
+
+            MoneroComponents.CheckBox {
+                checked: persistentSettings.priceTicker
+                onClicked: persistentSettings.priceTicker = !persistentSettings.priceTicker
+                text: qsTr("Show XMR price ticker at the bottom") + translationManager.emptyString
+            }
+
+            MoneroComponents.TextPlain {
+                visible: persistentSettings.priceTicker && !persistentSettings.fiatPriceEnabled
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+                text: qsTr("Needs the prices on: Node / Network tab, External connections.") + translationManager.emptyString
+                font.pixelSize: 12
+                color: MoneroComponents.Style.dimmedFontColor
+                themeTransition: false
             }
 
             MoneroComponents.StandardButton {

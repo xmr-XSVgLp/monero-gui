@@ -98,6 +98,38 @@ Rectangle {
 
     Clipboard { id: clipboard }
 
+    // "Now" / "Date and time" buttons of the schedule card
+    component ScheduleOption: Rectangle {
+        id: scheduleOption
+        property string label: ""
+        property bool selected: false
+        signal picked()
+        readonly property color accent: MoneroComponents.Style.blackTheme ? "#4E9E6A" : "#2E7D4A"
+        implicitWidth: Math.max(80, optionText.implicitWidth + 28)
+        implicitHeight: 30
+        radius: 3
+        color: selected ? Qt.rgba(accent.r, accent.g, accent.b, 0.22) : (optionMouse.containsMouse ? (MoneroComponents.Style.blackTheme ? "#14FFFFFF" : "#14000000") : "transparent")
+        border.width: 1
+        border.color: selected ? accent : Qt.rgba(MoneroComponents.Style.defaultFontColor.r, MoneroComponents.Style.defaultFontColor.g, MoneroComponents.Style.defaultFontColor.b, 0.25)
+        MoneroComponents.TextPlain {
+            id: optionText
+            anchors.centerIn: parent
+            text: scheduleOption.label
+            font.family: MoneroComponents.Style.fontMonoMedium.name
+            font.pixelSize: 13
+            font.bold: scheduleOption.selected
+            color: MoneroComponents.Style.defaultFontColor
+            themeTransition: false
+        }
+        MouseArea {
+            id: optionMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: if (!scheduleOption.selected) scheduleOption.picked()
+        }
+    }
+
     function oa_message(text) {
       oaPopup.title = qsTr("OpenAlias error") + translationManager.emptyString
       oaPopup.text = text
@@ -116,6 +148,27 @@ Rectangle {
       confirmationDialog.onAcceptedCallback = onAccepted
       confirmationDialog.onRejectedCallback = null
       confirmationDialog.open()
+    }
+
+    // Wallet+: "addr,addr,..." or "addr:amount,addr:amount,..." (a group copied from Receive) -> one row per address
+    function parseMultipleRecipients(text) {
+        var parts = text.split(/[\s,;]+/).filter(function(p) { return p !== ""; });
+        if (parts.length < 2 || parts.length > recipientModel.maxRecipients)
+            return null;
+        var list = [];
+        for (var k = 0; k < parts.length; ++k) {
+            var m = parts[k].match(/^([0-9A-Za-z]+)(?::([0-9]*\.?[0-9]+))?$/);
+            if (!m || !walletManager.addressValid(m[1], appWindow.persistentSettings.nettype))
+                return null;
+            list.push({ address: m[1], amount: m[2] !== undefined ? m[2] : "" });
+        }
+        return list;
+    }
+    function fillMultipleRecipients(list) {
+        recipientModel.clear();
+        for (var k = 0; k < list.length; ++k)
+            recipientModel.append(list[k]);
+        appWindow.showStatusMessage(qsTr("%1 recipients filled in").arg(list.length) + translationManager.emptyString, 4);
     }
 
     function fillPaymentDetails(address, payment_id, amount, tx_description, recipient_name) {
@@ -151,6 +204,7 @@ Rectangle {
         recipientModel.clear();
         fillPaymentDetails("", "", "", "", "");
         priorityDropdown.currentIndex = 0
+        scheduleCard.reset()
     }
 
     // Information dialog
@@ -180,6 +234,50 @@ Rectangle {
 
       spacing: 16
 
+      // sending from a mined address (Mine addresses page): only its funds are used
+      Rectangle {
+          Layout.fillWidth: true
+          visible: !!appWindow.minedSpend || appWindow.minedAccountActive
+          implicitHeight: minedSpendRow.implicitHeight + 24
+          radius: 3
+          color: "#143B9EFF"
+          border.width: 1
+          border.color: "#3B9EFF"
+
+          RowLayout {
+              id: minedSpendRow
+              anchors.left: parent.left
+              anchors.right: parent.right
+              anchors.verticalCenter: parent.verticalCenter
+              anchors.leftMargin: 14
+              anchors.rightMargin: 14
+              spacing: 12
+              MoneroComponents.TextPlain {
+                  text: "⛏"
+                  font.pixelSize: 16
+                  color: "#3B9EFF"
+                  themeTransition: false
+              }
+              MoneroComponents.TextPlain {
+                  Layout.fillWidth: true
+                  wrapMode: Text.WordWrap
+                  font.pixelSize: 13
+                  color: MoneroComponents.Style.defaultFontColor
+                  themeTransition: false
+                  readonly property var m: appWindow.minedSpend
+                  text: m ? qsTr("Sending from mined address %1:%2 (%3). Only its funds are used: %4 XMR spendable. The change goes to the primary account (address 0:1) and the transaction is tagged \"(mined address change)\".").arg(m.account).arg(m.index).arg(m.label || "").arg(leftPanel.balanceUnlockedString) + translationManager.emptyString
+                        : qsTr("Sending from the mined addresses account. A send can only come from one address: the mined address with the most spendable funds is used (%1 XMR). The change goes to the primary account (address 0:1). To choose one, use Send next to it on the Mine addresses page.").arg(leftPanel.balanceUnlockedString) + translationManager.emptyString
+              }
+              MoneroComponents.StandardButton {
+                  small: true
+                  primary: false
+                  visible: !!appWindow.minedSpend
+                  text: qsTr("Use the account") + translationManager.emptyString
+                  onClicked: appWindow.stopMinedSpend()
+              }
+          }
+      }
+
       RowLayout {
           visible: root.warningContent !== ""
 
@@ -202,7 +300,7 @@ Rectangle {
         ListModel {
             id: recipientModel
 
-            readonly property int maxRecipients: 15
+            readonly property int maxRecipients: 50
 
             ListElement {
                 address: ""
@@ -472,6 +570,11 @@ Rectangle {
                                     }
                                 }
                                 onTextChanged: {
+                                    const several = root.parseMultipleRecipients(text);
+                                    if (several) {
+                                        Qt.callLater(root.fillMultipleRecipients, several);
+                                        return;
+                                    }
                                     const parsed = walletManager.parse_uri_to_object(text);
                                     if (!parsed.error) {
                                         fillPaymentDetails(parsed.address, parsed.payment_id, parsed.amount, parsed.tx_description, parsed.recipient_name);
@@ -843,6 +946,236 @@ Rectangle {
         }
         }
 
+        // "Schedule the send": now (default) or at a date and time; the app makes the send itself then
+        Item {
+            id: scheduleCard
+            Layout.fillWidth: true
+            implicitHeight: scheduleLayout.implicitHeight + 32
+            readonly property bool supported: !!appWindow.currentWallet && !appWindow.currentWallet.isHwBacked()
+            onSupportedChanged: if (!supported) reset()
+            visible: supported && !appWindow.viewOnly && !appWindow.minedSpend && !appWindow.minedAccountActive
+
+            // a scheduled send would run later without the mined address as source
+            readonly property bool minedSpend: !!appWindow.minedSpend || appWindow.minedAccountActive
+            onMinedSpendChanged: if (minedSpend) reset()
+            property bool scheduled: false
+            property double nowMs: Date.now()
+            // dd/mm/yyyy + hh:mm -> ms, or NaN
+            readonly property double whenMs: {
+                var d = scheduleDate.text.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+                var t = scheduleTime.text.trim().match(/^(\d{1,2}):(\d{2})$/);
+                if (!d || !t) return NaN;
+                var day = +d[1], month = +d[2] - 1, year = +d[3], h = +t[1], m = +t[2];
+                if (h > 23 || m > 59) return NaN;
+                var date = new Date(year, month, day, h, m, 0, 0);
+                return date.getDate() === day && date.getMonth() === month ? date.getTime() : NaN;
+            }
+            readonly property string whenError: {
+                if (!scheduled) return "";
+                if (isNaN(whenMs)) return qsTr("Write the date as dd/mm/yyyy and the time as hh:mm") + translationManager.emptyString;
+                if (whenMs < nowMs + 60000) return qsTr("The date and time must be in the future") + translationManager.emptyString;
+                return "";
+            }
+            readonly property bool valid: !scheduled || whenError === ""
+
+            function two(n) { return (n < 10 ? "0" : "") + n; }
+            function remainingText(ms) {
+                var min = Math.max(0, Math.round(ms / 60000));
+                if (min < 60) return qsTr("in %1 min").arg(min) + translationManager.emptyString;
+                var h = Math.floor(min / 60);
+                if (h < 48) return qsTr("in %1 h %2 min").arg(h).arg(min % 60) + translationManager.emptyString;
+                return qsTr("in %1 days").arg(Math.floor(h / 24)) + translationManager.emptyString;
+            }
+            function pick(on) {
+                scheduled = on;
+                if (on && scheduleDate.text === "" && scheduleTime.text === "") {
+                    // default: one hour from now, on the next quarter
+                    var d = new Date(Date.now() + 60 * 60000);
+                    d.setMinutes(Math.ceil(d.getMinutes() / 15) * 15, 0, 0);
+                    scheduleDate.text = two(d.getDate()) + "/" + two(d.getMonth() + 1) + "/" + d.getFullYear();
+                    scheduleTime.text = two(d.getHours()) + ":" + two(d.getMinutes());
+                }
+            }
+            function reset() {
+                scheduled = false;
+                scheduleDate.text = "";
+                scheduleTime.text = "";
+            }
+
+            Timer {
+                interval: 20000
+                running: scheduleCard.visible
+                repeat: true
+                onTriggered: scheduleCard.nowMs = Date.now()
+            }
+
+            HoverHandler { id: scheduleCardHover }
+
+            MoneroComponents.CardPanel {
+                anchors.fill: parent
+                selected: scheduleCardHover.hovered
+            }
+
+            ColumnLayout {
+                id: scheduleLayout
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.margins: 16
+                spacing: 12
+
+                MoneroComponents.SectionTitle {
+                    Layout.fillWidth: true
+                    text: qsTr("Schedule the send") + translationManager.emptyString
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 8
+
+                    ScheduleOption {
+                        label: qsTr("Now") + translationManager.emptyString
+                        selected: !scheduleCard.scheduled
+                        onPicked: scheduleCard.pick(false)
+                    }
+                    ScheduleOption {
+                        label: qsTr("Date and time") + translationManager.emptyString
+                        selected: scheduleCard.scheduled
+                        onPicked: scheduleCard.pick(true)
+                    }
+
+                    MoneroComponents.LineEdit {
+                        id: scheduleDate
+                        visible: scheduleCard.scheduled
+                        Layout.leftMargin: 8
+                        Layout.preferredWidth: 130
+                        inputHeight: 34
+                        inputPaddingLeft: 8
+                        inputPaddingRight: 8
+                        inputPaddingTop: 0
+                        inputPaddingBottom: 0
+                        fontFamily: MoneroComponents.Style.fontMonoRegular.name
+                        fontSize: 14
+                        placeholderFontSize: 14
+                        placeholderText: "dd/mm/aaaa"
+                        error: scheduleCard.scheduled && isNaN(scheduleCard.whenMs) && text !== ""
+                    }
+                    MoneroComponents.LineEdit {
+                        id: scheduleTime
+                        visible: scheduleCard.scheduled
+                        Layout.preferredWidth: 80
+                        inputHeight: 34
+                        inputPaddingLeft: 8
+                        inputPaddingRight: 8
+                        inputPaddingTop: 0
+                        inputPaddingBottom: 0
+                        fontFamily: MoneroComponents.Style.fontMonoRegular.name
+                        fontSize: 14
+                        placeholderFontSize: 14
+                        placeholderText: "hh:mm"
+                        error: scheduleCard.scheduled && isNaN(scheduleCard.whenMs) && text !== ""
+                    }
+
+                    MoneroComponents.TextPlain {
+                        visible: scheduleCard.scheduled
+                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignVCenter
+                        elide: Text.ElideRight
+                        font.pixelSize: 13
+                        text: scheduleCard.whenError !== "" ? scheduleCard.whenError
+                              : qsTr("Will be sent %1").arg(scheduleCard.remainingText(scheduleCard.whenMs - scheduleCard.nowMs)) + translationManager.emptyString
+                        color: scheduleCard.whenError !== "" ? "#FF5C5C" : MoneroComponents.Style.dimmedFontColor
+                        themeTransition: false
+                    }
+                    Item { Layout.fillWidth: true; visible: !scheduleCard.scheduled }
+                }
+
+                MoneroComponents.TextPlain {
+                    visible: scheduleCard.scheduled || appWindow.walletScheduledSends.length > 0
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
+                    font.pixelSize: 12
+                    color: MoneroComponents.Style.dimmedFontColor
+                    themeTransition: false
+                    text: qsTr("Keep the app open with this wallet selected and synced. A password screen can stay locked only if background-sync mode has not removed spending access. Scheduled payments are unavailable on hardware wallets. If the wallet is closed when a payment becomes due, you must confirm it after reopening. Other sends from the source account are blocked during the previous 25 minutes; funds must still be unlocked at payment time.") + translationManager.emptyString
+                }
+
+                // sends already scheduled for this wallet
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    visible: appWindow.walletScheduledSends.length > 0
+                    spacing: 6
+
+                    MoneroComponents.TextPlain {
+                        text: qsTr("Scheduled sends") + translationManager.emptyString
+                        font.pixelSize: 11
+                        font.bold: true
+                        font.letterSpacing: 0.8
+                        color: MoneroComponents.Style.dimmedFontColor
+                        themeTransition: false
+                    }
+
+                    Repeater {
+                        model: appWindow.walletScheduledSends
+                        delegate: RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 12
+                            readonly property var entry: modelData
+                            readonly property bool running: appWindow.scheduledRunningId === entry.id
+                            readonly property bool late: entry.error === "late"
+                            readonly property bool failed: entry.error !== "" && !late
+
+                            MoneroComponents.TextPlain {
+                                Layout.preferredWidth: 150
+                                text: new Date(entry.when).toLocaleString(Qt.locale(), "dd/MM/yyyy HH:mm")
+                                font.family: MoneroComponents.Style.fontMonoRegular.name
+                                font.pixelSize: 13
+                                color: MoneroComponents.Style.defaultFontColor
+                                themeTransition: false
+                            }
+                            MoneroComponents.TextPlain {
+                                Layout.preferredWidth: 150
+                                text: appWindow.scheduledAmountText(entry)
+                                font.family: MoneroComponents.Style.fontMonoMedium.name
+                                font.pixelSize: 13
+                                color: MoneroComponents.Style.defaultFontColor
+                                themeTransition: false
+                            }
+                            MoneroComponents.TextPlain {
+                                Layout.fillWidth: true
+                                elide: Text.ElideRight
+                                font.pixelSize: 12
+                                themeTransition: false
+                                color: late || failed ? "#FF5C5C" : MoneroComponents.Style.dimmedFontColor
+                                text: {
+                                    var to = entry.recipients.length > 1 ? qsTr("%1 recipients").arg(entry.recipients.length)
+                                                                          : entry.recipients[0].address.substring(0, 8) + "…" + entry.recipients[0].address.slice(-6);
+                                    if (running) return qsTr("Sending…") + translationManager.emptyString;
+                                    if (late) return qsTr("Not sent on time (the app was closed) · %1").arg(to) + translationManager.emptyString;
+                                    if (failed) return qsTr("Error: %1 · %2").arg(entry.error).arg(to) + translationManager.emptyString;
+                                    return to + " · " + scheduleCard.remainingText(entry.when - scheduleCard.nowMs);
+                                }
+                            }
+                            MoneroComponents.StandardButton {
+                                visible: (late || failed) && !running
+                                small: true
+                                enabled: appWindow.scheduledRunningId === "" && !appWindow.scheduledSaving && entry.state !== "broadcasting"
+                                text: qsTr("Send now") + translationManager.emptyString
+                                onClicked: appWindow.runScheduledSend(entry.id)
+                            }
+                            MoneroComponents.StandardButton {
+                                visible: !running
+                                small: true
+                                primary: false
+                                text: qsTr("Cancel") + translationManager.emptyString
+                                onClicked: appWindow.removeScheduledSend(entry.id)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
       MoneroComponents.WarningBox {
           text: qsTr("Description field contents match long payment ID format. \
           Please don't paste long payment ID into description field, your funds might be lost.") + translationManager.emptyString;
@@ -963,16 +1296,20 @@ Rectangle {
 
           StandardButton {
               id: sendButton
-              rightIcon: "qrc:///images/rightArrow.png"
+              rightIcon: "qrc:///images/icons/rightArrow.png"
               Layout.topMargin: 4
               Layout.preferredWidth: Math.max(implicitWidth, 160)
-              text: qsTr("Send") + translationManager.emptyString
-              enabled: root.canSendTransaction
+              text: (scheduleCard.scheduled ? qsTr("Schedule send") : qsTr("Send")) + translationManager.emptyString
+              enabled: root.canSendTransaction && scheduleCard.valid
               onClicked: {
                   console.log("Transfer: paymentClicked")
                   var priority = priorityModelV5.get(priorityDropdown.currentIndex).priority
                   console.log("priority: " + priority)
                   setPaymentId(paymentIdLine.text.trim());
+                  if (scheduleCard.scheduled) {
+                      appWindow.scheduleSend(recipientModel.getRecipients(), paymentIdLine.text, root.mixin, priority, descriptionLine.text, scheduleCard.whenMs);
+                      return;
+                  }
                   root.paymentClicked(recipientModel.getRecipients(), paymentIdLine.text, root.mixin, priority, descriptionLine.text)
               }
           }

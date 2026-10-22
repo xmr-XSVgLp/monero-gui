@@ -59,6 +59,9 @@ public:
     Q_INVOKABLE QVariantMap validateDataDir(const QString &dataDir, const int estimatedBlockchainSizeGb) const;
     Q_INVOKABLE bool checkLmdbExists(QString datadir);
     Q_INVOKABLE QString getArgs(const QString &dataDir);
+    // full command line of the running monerod (from ps), or the last one this app started
+    // runningOnly: only the monerod running now (ps), not the last one started by the app
+    Q_INVOKABLE QString command(bool runningOnly = false) const;
 
 private:
 
@@ -81,6 +84,7 @@ private:
     std::unique_ptr<QProcess> m_daemon;
     QMutex m_daemonMutex;
     QString m_monerod;
+    QString m_lastCommand;
     bool m_app_exit = false;
     bool m_noSync = false;
     QString args = "";

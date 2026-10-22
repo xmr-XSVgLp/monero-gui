@@ -94,7 +94,7 @@ Rectangle {
                     }
                 }
 
-                imageIcon: "qrc:///images/remote-node.png"
+                imageIcon: "qrc:///images/nodes/remote-node.png"
 
                 onMenuClicked: {
                     if (simpleModeAvailable) {
@@ -126,7 +126,7 @@ Rectangle {
                         }
                     }
                 }
-                imageIcon: "qrc:///images/local-node.png"
+                imageIcon: "qrc:///images/nodes/local-node.png"
 
                 onMenuClicked: {
                     if (simpleModeAvailable) {
@@ -149,7 +149,7 @@ Rectangle {
                 id: advancedModeButton
                 headerText: qsTr("Advanced mode") + translationManager.emptyString
                 bodyText: qsTr("Includes extra features like mining and message verification. The blockchain is downloaded to your computer.") + translationManager.emptyString
-                imageIcon: "qrc:///images/local-node-full.png"
+                imageIcon: "qrc:///images/nodes/local-node-full.png"
 
                 onMenuClicked: {
                     appWindow.persistentSettings.pruneBlockchain = true;

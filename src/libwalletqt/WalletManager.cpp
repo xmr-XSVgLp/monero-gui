@@ -42,6 +42,11 @@
 #include <QMutex>
 #include <QMutexLocker>
 #include <QString>
+#include <QThread>
+#include <QElapsedTimer>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <thread>
 
 #include "qt/updater.h"
@@ -143,8 +148,13 @@ void WalletManager::parkWallet()
     if (!wallet)
         return;
     if (wallet->isHwBacked()) {
-        // one device: never two hardware wallets talking to it from the background
-        closeParkedHwWallets();
+        // its session on the Trezor keeps the passphrase: switching back resumes it instead of asking again
+        const QString session = wallet->deviceSessionHandle();
+        {
+            QMutexLocker locker(&m_mutex);
+            m_parkedSessions.insert(wallet, session);
+            m_deviceOwner = wallet;
+        }
         // nobody answers device prompts in the background: decline them and pause the sync
         QList<QMetaObject::Connection> hooks;
         hooks << connect(wallet, &Wallet::walletPassphraseNeeded, wallet, [wallet](bool) {
@@ -186,6 +196,27 @@ void WalletManager::createSeedOffsetWalletAsync(const QString &path, const QStri
         m_pimpl->closeWallet(w, ok);
         return QJSValueList({ok, error, address});
     }, callback);
+}
+
+void WalletManager::pauseParkedHwWallets()
+{
+    QList<Wallet *> paused;
+    for (Wallet *wallet : m_parked) {
+        if (wallet->isHwBacked()) {
+            wallet->pauseRefresh();
+            paused.append(wallet);
+        }
+    }
+    // a refresh already running finishes first, so it does not use the device with another wallet's session;
+    // a sync does not talk to the Trezor, so do not hold the opening for long (2 s at most)
+    for (int i = 0; i < 40; ++i) {
+        bool busy = false;
+        for (Wallet *wallet : paused)
+            busy = busy || wallet->refreshing();
+        if (!busy)
+            break;
+        QThread::msleep(50);
+    }
 }
 
 void WalletManager::closeParkedHwWallets()
@@ -256,6 +287,9 @@ void WalletManager::closeInBackground(Wallet *wallet)
         QMutexLocker locker(&m_mutex);
         for (const auto &hook : m_parkedHooks.take(wallet))
             disconnect(hook);
+        m_parkedSessions.remove(wallet);
+        if (m_deviceOwner == wallet)
+            m_deviceOwner = nullptr;
     }
     const QString key = closingKey(wallet->path());
     {
@@ -283,16 +317,22 @@ void WalletManager::waitClosingWalletsAsync(const QJSValue& callback)
     closeParkedWallets();
     m_scheduler.run([this] {
         waitForClosingWallets(QString());
-        return QJSValueList({true});
+        return QJSValueList{QJSValue(true)};
     }, callback);
 }
 
 Wallet *WalletManager::openWallet(const QString &path, const QString &password, NetworkType::Type nettype, quint64 kdfRounds)
 {
+    // timings in the log, to see where a slow opening spends its time
+    QElapsedTimer openTimer;
+    openTimer.start();
     // the same wallet may still be saving after a quick switch
     waitForClosingWallets(path);
+    const qint64 closingMs = openTimer.elapsed();
     QMutexLocker locker(&m_mutex);
     m_lastOpenResumed = false;
+    qInfo() << "Opening wallet: waited" << closingMs << "ms for it to finish closing,"
+            << openTimer.elapsed() - closingMs << "ms for the wallet manager";
 
     // parked (still loaded and syncing): resume it if the password is right
     const QString parkedKey = closingKey(path);
@@ -311,8 +351,16 @@ Wallet *WalletManager::openWallet(const QString &path, const QString &password, 
             m_currentWallet = m_parked.take(parkedKey);
             for (const auto &hook : m_parkedHooks.take(m_currentWallet.data()))
                 disconnect(hook);
+            if (m_currentWallet->isHwBacked()) {
+                // the other Trezor wallets stop using the device, this one goes back to its own session
+                pauseParkedHwWallets();
+                const QString session = m_parkedSessions.take(m_currentWallet.data());
+                if (!m_currentWallet->resumeDeviceSession(session))
+                    qDebug() << "Device session not resumed: the Trezor may ask for the passphrase again";
+                m_deviceOwner = m_currentWallet.data();
+            }
             m_lastOpenResumed = true;
-            qDebug() << "Resumed parked wallet" << path;
+            qInfo() << "Resumed parked wallet" << path << "in" << openTimer.elapsed() << "ms";
             return m_currentWallet;
         }
         qDebug() << "Parked wallet: wrong password, opening normally (will fail)";
@@ -328,16 +376,31 @@ Wallet *WalletManager::openWallet(const QString &path, const QString &password, 
 
     if (m_currentWallet) {
         qDebug() << "Closing open m_currentWallet" << m_currentWallet;
+        if (m_deviceOwner == m_currentWallet.data())
+            m_deviceOwner = nullptr;
         delete m_currentWallet;
     }
     qDebug("%s: opening wallet at %s, nettype = %d ",
            __PRETTY_FUNCTION__, qPrintable(path), nettype);
 
+    // it may be another Trezor wallet: the parked ones stop using the device while it opens
+    Wallet *owner = m_deviceOwner;
+    pauseParkedHwWallets();
+    const qint64 loadStart = openTimer.elapsed();
     Monero::Wallet * w =  m_pimpl->openWallet(path.toStdString(), password.toStdString(), static_cast<Monero::NetworkType>(nettype), kdfRounds, &tmpListener);
     w->setListener(nullptr);
+    qInfo() << "Opening wallet: loading keys, cache and device took" << openTimer.elapsed() - loadStart << "ms,"
+            << openTimer.elapsed() << "ms in total";
 
     qDebug("%s: opened wallet: %s, status: %d", __PRETTY_FUNCTION__, w->address(0, 0).c_str(), w->status());
     m_currentWallet  = new Wallet(w);
+    if (m_currentWallet->isHwBacked()) {
+        m_deviceOwner = m_currentWallet.data();
+    } else if (owner && m_parkedSessions.contains(owner)) {
+        // a software wallet does not use the device: the last Trezor wallet goes on syncing in the background
+        owner->resumeDeviceSession(m_parkedSessions.value(owner));
+        owner->startRefresh();
+    }
 
     // move wallet to the GUI thread. Otherwise it wont be emitting signals
     if (m_currentWallet->thread() != qApp->thread()) {
@@ -398,14 +461,18 @@ Wallet *WalletManager::createWalletFromDevice(const QString &path, const QString
 
     if (m_currentWallet) {
         qDebug() << "Closing open m_currentWallet" << m_currentWallet;
+        if (m_deviceOwner == m_currentWallet.data())
+            m_deviceOwner = nullptr;
         delete m_currentWallet;
         m_currentWallet = NULL;
     }
+    pauseParkedHwWallets();
     Monero::Wallet * w = m_pimpl->createWalletFromDevice(path.toStdString(), password.toStdString(), static_cast<Monero::NetworkType>(nettype),
                                                          deviceName.toStdString(), restoreHeight, subaddressLookahead.toStdString(), kdfRounds, &tmpListener);
     w->setListener(nullptr);
 
     m_currentWallet = new Wallet(w);
+    m_deviceOwner = m_currentWallet.data();
 
     // move wallet to the GUI thread. Otherwise it wont be emitting signals
     if (m_currentWallet->thread() != qApp->thread()) {
@@ -574,7 +641,7 @@ bool WalletManager::isMining() const
 
 void WalletManager::miningStatusAsync()
 {
-    m_scheduler.run([this] {
+    m_netScheduler.run([this] {
         emit miningStatus(isMining());
     });
 }
@@ -677,6 +744,27 @@ void WalletManager::cancelDeviceConfirmation()
     Monero::WalletManagerFactory::cancelDeviceConfirmation();
 }
 
+void WalletManager::trezorDevicesAsync(bool bluetooth, const QJSValue &callback)
+{
+    m_scheduler.run([bluetooth] {
+        QJsonArray list;
+        for (const auto &d : Monero::WalletManagerFactory::listTrezorDevices(bluetooth)) {
+            list.append(QJsonObject{
+                {"path", QString::fromStdString(d.path)},
+                {"name", QString::fromStdString(d.name)},
+                {"label", QString::fromStdString(d.label)},
+                {"model", QString::fromStdString(d.model)},
+                {"lastUsed", d.lastUsed}});
+        }
+        return QJSValueList({QString::fromUtf8(QJsonDocument(list).toJson(QJsonDocument::Compact))});
+    }, callback);
+}
+
+void WalletManager::setTrezorDevicePath(const QString &path)
+{
+    Monero::WalletManagerFactory::setTrezorDevicePath(path.toStdString());
+}
+
 QString WalletManager::urlToLocalPath(const QUrl &url) const
 {
     return QDir::toNativeSeparators(url.toLocalFile());
@@ -723,7 +811,7 @@ void WalletManager::checkUpdatesAsync(
     const QString &version,
     const QString &proxyAddress)
 {
-    m_scheduler.run([this, software, subdir, buildTag, version, proxyAddress] {
+    m_netScheduler.run([this, software, subdir, buildTag, version, proxyAddress] {
         const auto updateInfo = Monero::WalletManager::checkUpdates(
             software.toStdString(),
             subdir.toStdString(),
@@ -785,8 +873,10 @@ bool WalletManager::clearWalletCache(const QString &wallet_path) const
 WalletManager::WalletManager(QObject *parent)
     : QObject(parent)
     , m_passphraseReceiver(nullptr)
-    , m_scheduler(this)
+    , m_scheduler(this, &m_pool)
+    , m_netScheduler(this)
 {
+    m_pool.setMaxThreadCount(4);
     m_pimpl =  Monero::WalletManagerFactory::getWalletManager();
 }
 

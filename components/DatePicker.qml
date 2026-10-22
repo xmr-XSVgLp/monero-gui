@@ -225,7 +225,7 @@ Item {
                     anchors.right: parent.right
                     anchors.rightMargin: 10
                     anchors.verticalCenter: parent.verticalCenter
-                    image: "qrc:///images/whiteDropIndicator.png"
+                    image: "qrc:///images/icons/whiteDropIndicator.png"
                     height: 8
                     width: 12
                     fontAwesomeFallbackIcon: FontAwesome.arrowDown

@@ -55,7 +55,7 @@ static const QString defaultLogName = "monero-wallet-gui.log";
     //AppDataLocation = "<USER>/<APPNAME>/files"
     static const QString osPath = QStandardPaths::standardLocations(QStandardPaths::AppDataLocation).at(1);
     static const QString appFolder = "";
-#elif defined(Q_OS_MAC)
+#elif defined(Q_OS_APPLE)
     //HomeLocation = "~"
     static const QString osPath = QStandardPaths::standardLocations(QStandardPaths::HomeLocation).at(0);
     static const QString appFolder = "Library/Logs";

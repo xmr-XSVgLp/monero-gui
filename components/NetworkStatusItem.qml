@@ -210,7 +210,7 @@ Rectangle {
                 anchors.topMargin: 4
                 anchors.right: parent.right
                 anchors.rightMargin: 0
-                source: "qrc:///images/miningxmr.png"
+                source: "qrc:///images/icons/miningxmr.png"
                 MouseArea {
                     anchors.fill: parent
                     visible: appWindow.walletMode >= 2

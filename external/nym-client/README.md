@@ -15,8 +15,8 @@ The phrase travels through the child process's stdin, never command-line
 arguments, settings, wallet cache or the packaged app. Connecting automatically remembers the phrase in a JSON file at
 ~/Monero/xmr-wallet-plus/nym.conf (beside the price CSVs), using atomic replacement
 and owner-only read/write permissions. The phrase is plaintext in this file.
-The panel has a three-line phrase input. The connected device ID opens the
-account dialog, where the phrase can be revealed and logout forgets the account.
+The panel has a two-line phrase input. The connected device ID opens the
+account dialog, where the phrase can be revealed and logout disconnects while retaining the account and device identity.
 The removed local device name is discarded when saving the config. DNS customization is not exposed for the SOCKS5 mode.
 An explicit migration action copies the legacy Keychain phrase to the file and
 removes that Keychain item only after successful saving. New secrets are never

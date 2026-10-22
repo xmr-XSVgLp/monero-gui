@@ -39,6 +39,7 @@
 #include <QMap>
 #include <QVariantList>
 #include "qt/FutureScheduler.h"
+#include <QThreadPool>
 #include "NetworkType.h"
 #include "PassphraseHelper.h"
 
@@ -196,6 +197,10 @@ public:
     Q_INVOKABLE void setLogCategories(const QString &categories);
     // gives up the wait for a confirmation on the Trezor (the operation fails as cancelled)
     Q_INVOKABLE void cancelDeviceConfirmation();
+    // lists the connected Trezors; callback(json) gets [{path, name, label, model, lastUsed}]
+    Q_INVOKABLE void trezorDevicesAsync(bool bluetooth, const QJSValue &callback);
+    // the Trezor that hardware wallets connect to from now on ("" = the first one found)
+    Q_INVOKABLE void setTrezorDevicePath(const QString &path);
 
     Q_INVOKABLE quint64 add(quint64 x, quint64 y) const { return x + y; }
     Q_INVOKABLE quint64 sub(quint64 x, quint64 y) const { return x - y; }
@@ -263,12 +268,22 @@ private:
     void closeInBackground(Wallet *wallet);
     QMap<QString, Wallet *> m_parked;      // key: closingKey(path)
     QMap<Wallet *, QList<QMetaObject::Connection>> m_parkedHooks;
+    // Trezor wallets share one device: each parked one keeps its device session (and passphrase) here, and only
+    // the device owner (the last Trezor wallet in use) may keep syncing in the background
+    QMap<Wallet *, QString> m_parkedSessions;
+    Wallet *m_deviceOwner = nullptr;
+    // caller holds m_mutex
+    void pauseParkedHwWallets();
     bool m_lastOpenResumed = false;
     PassphraseReceiver * m_passphraseReceiver;
     QMutex m_mutex_passphraseReceiver;
     QString m_proxyAddress;
     mutable QMutex m_proxyMutex;
+    // own threads: opening a wallet must not wait behind slow network requests in Qt's global pool
+    QThreadPool m_pool;
     FutureScheduler m_scheduler;
+    // requests to the node or the internet (mining status, updates) stay on Qt's global pool
+    FutureScheduler m_netScheduler;
 };
 
 #endif // WALLETMANAGER_H

@@ -40,11 +40,11 @@ Window {
 
     readonly property string dataDir: {
         var p = oshelper.swapsLogPath();
-        return p.substring(0, p.lastIndexOf("/")) + "/trading";
+        return p.substring(0, p.lastIndexOf("/")) + "/markets";
     }
 
     function readSeries() {
-        var lines = oshelper.readTextFile(dataDir + "/xmr-" + unit.toLowerCase() + "-24h.csv").split("\n");
+        var lines = oshelper.readTextFile(dataDir + "/coingecko/xmr-" + unit.toLowerCase() + "-24h.csv").split("\n");
         var pts = [];
         for (var i = 1; i < lines.length; i++) {
             var f = lines[i].split(",");
@@ -162,7 +162,7 @@ Window {
                 Layout.fillWidth: true
                 Image {
                     // app icon (moneroLogo_white.png is a wide wordmark, squeezed it looked like bars)
-                    source: "qrc:///images/appicon-matrix.png"
+                    source: "qrc:///images/logos/appicon-matrix.png"
                     sourceSize.width: 40
                     sourceSize.height: 40
                     smooth: true

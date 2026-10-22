@@ -83,6 +83,11 @@ TextArea {
                 error = false;
                 return;
             }
+            // Wallet+: several addresses (comma separated, optionally addr:amount) are split into recipients by Send
+            if (textArea.text.split(/[\s,;]+/).filter(function(p) { return p !== ""; }).length > 1) {
+                error = false;
+                return;
+            }
             textArea.text = textArea.text.replace(/[^a-z0-9.@\-]/gi,'');
             var address_ok = TxUtils.checkAddress(textArea.text, appWindow.persistentSettings.nettype) || TxUtils.isValidOpenAliasAddress(textArea.text);
             if(!address_ok) error = true;
