@@ -254,8 +254,11 @@ Rectangle {
                 QtObject {
                     id: restoreHeightText
                     function changeRestoreHeight() {
+                        var owner = appWindow.currentWallet;
+                        if (!owner) return;
                         inputDialog.labelText = qsTr("Set a new restore height.\nYou can enter a block height or a date (YYYY-MM-DD):") + translationManager.emptyString;
                         inputDialog.onAcceptedCallback = function() {
+                            if (appWindow.currentWallet !== owner) return;
                             var _restoreHeight;
                             if (inputDialog.inputText) {
                                 _restoreHeight = Utils.parseDateStringOrRestoreHeightAsInteger(inputDialog.inputText.trim());
@@ -276,6 +279,7 @@ Rectangle {
                                                                     + "The old wallet cache file will be renamed and can be restored later.\n"
                                                                     );
                                     confirmationDialog.onAcceptedCallback = function() {
+                                        if (appWindow.currentWallet !== owner) return;
                                         appWindow.closeWallet(function() {
                                             walletManager.clearWalletCache(persistentSettings.wallet_path);
                                             walletManager.openWalletAsync(persistentSettings.wallet_path, appWindow.walletPassword,

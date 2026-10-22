@@ -35,6 +35,22 @@ import "." as MoneroComponents
 FocusScope {
     id: root
     visible: false
+    focus: visible
+
+    function focusPassword() {
+        if (root.visible && root.enabled)
+            passwordInput1.input.forceActiveFocus(Qt.OtherFocusReason);
+    }
+
+    // At startup the dialog may open before the native window becomes active.
+    // Reapply focus after activation, but preserve navigation inside the dialog.
+    Connections {
+        target: appWindow
+        function onActiveChanged() {
+            if (appWindow.active && root.visible && !root.activeFocus)
+                Qt.callLater(root.focusPassword);
+        }
+    }
 
     property alias password: passwordInput1.text
     property alias acceptButton: okButton
@@ -69,7 +85,7 @@ FocusScope {
         root.visible = true;
         appWindow.hideBalanceForced = true;
         appWindow.updateBalance();
-        Qt.callLater(() => passwordInput1.input.forceActiveFocus())
+        Qt.callLater(root.focusPassword)
     }
 
     function open(walletName, errorText, okButtonText, okButtonIcon, backgroundSyncOn) {
@@ -216,7 +232,7 @@ FocusScope {
             MoneroComponents.LineEdit {
                 id: passwordInput1
                 password: true
-                input.focus: root.visible && (appWindow.active || Qt.application.state === Qt.ApplicationActive)
+                input.focus: true
                 Layout.topMargin: 6
                 Layout.fillWidth: true
                 KeyNavigation.tab: {

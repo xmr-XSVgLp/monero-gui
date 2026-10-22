@@ -193,7 +193,9 @@ QString Network::get(
     const bool result = httpClient->invoke(uri.toStdString(), method, body, timeout, std::addressof(pri), headers);
     if (!result)
     {
-        return "unknown error";
+        return tr("Connection to %1 failed%2. Check the privacy network, TLS certificates and connection timeout.")
+            .arg(urlParsed.host(), m_proxyAddress.isEmpty()
+                 ? QString() : tr(" through proxy %1").arg(m_proxyAddress));
     }
     if (!pri)
     {

@@ -1,0 +1,16 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const c={};vm.createContext(c);vm.runInContext(fs.readFileSync('js/TransactionPrices.js','utf8').replace('.pragma library',''),c);
+const now=2000000, tx=1000000;
+let cache={'eur/365':{prices:[[tx-500,100],[now,120]]},'eur/90':{prices:[[tx-100,110],[now,120]]},'usd/1':{prices:[[now,999]]}};
+let q=c.compare(cache,'eur',tx,now);assert.equal(q.historical[1],110);assert(Math.abs(q.change-9.090909)<0.00001);
+assert.equal(c.compare(cache,'btc',tx,now).change,null);
+assert.equal(c.compare(cache,'eur',tx-90000,now).historical,null);
+assert.equal(c.compare(cache,'eur',tx+90000,now).historical,null);
+assert.equal(c.compare(cache,'eur',0,now).historical,null);
+assert.equal(c.compare(cache,'eur',now+1,now).historical,null);
+cache={'usd/1':{prices:[[tx,200],[now,100]]}};
+assert.equal(c.compare(cache,'usd',tx,now).change,-50);
+cache={'usd/1':{prices:[[tx,0],[now,100]]}};assert.equal(c.compare(cache,'usd',tx,now).change,null);
+cache={'usd/1':{prices:[[tx+1,200],[now,100]]}};assert.equal(c.compare(cache,'usd',tx,now).historical,null);
+assert.equal(c.compare({},'usd',tx,now).latest,null);
+console.log('PASS: historical selection, currency isolation, missing data, gaps, invalid dates and percentage changes');

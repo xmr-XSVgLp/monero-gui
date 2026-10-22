@@ -50,11 +50,9 @@ Rectangle {
     readonly property color upColor: "#3DDC84"
     readonly property color downColor: "#FF5A5A"
 
-    readonly property var pairs: [
-        { key: "EUR", pair: "eur", digits: 2, prefix: "€" },
-        { key: "USD", pair: "usd", digits: 2, prefix: "$" },
-        { key: "BTC", pair: "btc", digits: 6, prefix: "₿" }
-    ]
+    readonly property var pairs: appWindow.favoriteCurrencies.map(function(c) {
+        return {key:c, pair:c.toLowerCase(), digits:c === "BTC" ? 8 : 2, prefix:c === "EUR" ? "€" : c === "USD" ? "$" : c === "BTC" ? "₿" : c + " "};
+    })
     // CoinGecko picks the step from the range asked: 5 minutes for 1 day, hourly up to 90 days,
     // daily beyond (the free API gives at most 365 days). So each currency needs 3 downloads
     // (1, 90 and 365 days); 7D and 30D are cut from the 90-day one
@@ -106,9 +104,10 @@ Rectangle {
     property int rangeIndex: 1
     // bindings for the page; the functions below read pairs[pairIndex] / ranges[rangeIndex]
     // directly because onPairIndexChanged runs before these bindings are updated
-    readonly property var pairInfo: pairs[pairIndex]
+    readonly property var pairInfo: pairs[Math.min(pairIndex, pairs.length - 1)]
     readonly property var rangeInfo: ranges[rangeIndex]
 
+    onCacheChanged: if (appWindow.fiatApiCurrencySymbol() === "BTC") appWindow.fiatApiUpdatePrice()
     property var cache: ({})          // "eur/90" -> { time: ms, prices: [[t, price], ...] } (t in seconds)
     property var failed: ({})         // "eur/90" -> { time: ms, error: "..." }
     property var queue: []            // keys waiting for download, one request at a time
@@ -191,6 +190,8 @@ Rectangle {
         for (var i = 0; i < pairs.length; i++) {
             for (var d = 0; d < downloads.length; d++) {
                 var file = downloads[d] === 1 ? "24h" : downloads[d] === 90 ? "90d" : "1a";
+                var savedKey = keyFor(sources[s].key, pairs[i].pair, downloads[d]);
+                if (c[savedKey]) continue; // Never replace a live series with an older file.
                 var prices = readCsv(csvPath(pairs[i].pair, file, sources[s].key));
                 if (prices.length > 1)
                     // the last point is about the download time (the newest price is "now"); the
@@ -213,6 +214,7 @@ Rectangle {
     // draws the selected pair/range from the cache (never another currency's data) and
     // asks for it first if it is missing or older than 15 minutes
     function select() {
+        if (!pairs.length || pairIndex >= pairs.length || sourceIndex >= sources.length) return;
         var pi = pairs[pairIndex], ri = ranges[rangeIndex];
         selKey = keyFor(sources[sourceIndex].key, pi.pair, ri.fetch);
         var c = cache[selKey];
@@ -225,11 +227,16 @@ Rectangle {
         hoverIndex = -1;
         chart.requestPaint();
         updateValue();
-        if (isStale(selKey))
-            enqueue(selKey, true);
+        if (!supportsPair(sources[sourceIndex].key, pi.pair) || !appWindow.priceSourceEnabled(sources[sourceIndex].key)) {
+            var unavailable = Object.assign({}, failed);
+            unavailable[selKey] = {time:Date.now(),error:"Fuente desactivada o moneda no disponible en esta fuente"};
+            failed = unavailable;
+        } else if (isStale(selKey)) enqueue(selKey, true);
     }
 
     function enqueue(key, first) {
+        var source = splitKey(key);
+        if (!appWindow.priceSourceEnabled(source.src) || !supportsPair(source.src, source.pair)) return;
         if (!pricesEnabled || key === busyKey)
             return;
         var q = queue.filter(function(k) { return k !== key; });
@@ -250,9 +257,14 @@ Rectangle {
         busyKey = key;
         var k = splitKey(key);
         var src = k.src, pair = k.pair, days = k.days;
+        if (!appWindow.priceSourceEnabled(src) || !supportsPair(src, pair)) {
+            busyKey = "";
+            Qt.callLater(pump);
+            return;
+        }
         var req = sourceRequest(src, pair, days);
 
-        network.getJSON(req.url, function(url, resp, err) {
+        appWindow.priceGetJSON(req.url, function(url, resp, err) {
             var failure = err;
             if (!failure) {
                 try {
@@ -272,7 +284,7 @@ Rectangle {
                         cache = c;
                         var f = Object.assign({}, failed); delete f[key]; failed = f;
                         saveSeries(pair, days, prices, src);
-                        if (src === "coingecko" && prices.length > 0)
+                        if (src === appWindow.historicalPriceSource(pair) && prices.length > 0)
                             checkAlerts(pair, prices[prices.length - 1][1]);
                     }
                 } catch (ex) {
@@ -292,6 +304,31 @@ Rectangle {
 
     // one request per source, pair and download ("days": 1, 90 or 365, see ranges). parse(json) returns
     // [[time s, price], ...] in the pair's currency, or a string with the error
+    function supportsPair(src, pair) {
+        return src === "coingecko" || ["usd","eur","btc"].indexOf(pair) >= 0;
+    }
+    function applyPreferences() {
+        failed = ({});
+        pairIndex = Math.max(0, pairs.map(function(p) { return p.key; }).indexOf(appWindow.fiatApiCurrencySymbol()));
+        var preferred = appWindow.historicalPriceSource(pairs[pairIndex].pair);
+        var index = sources.map(function(s) { return s.key; }).indexOf(preferred);
+        sourceIndex = Math.max(0, index);
+        queue = queue.filter(function(k) { return appWindow.priceSourceEnabled(splitKey(k).src); });
+        alertsCard.newPair = Math.min(alertsCard.newPair, pairs.length - 1);
+        loadSaved();
+        select();
+        if (preferred) {
+            var latestKey = keyFor(preferred, pairs[pairIndex].pair, 1);
+            if (isStale(latestKey)) enqueue(latestKey, true);
+        }
+    }
+    Connections {
+        target: persistentSettings
+        function onFiatPriceProviderChanged() { Qt.callLater(pageTrading.applyPreferences); }
+        function onFiatPriceCurrencyChanged() { Qt.callLater(pageTrading.applyPreferences); }
+        function onPriceSourcesJsonChanged() { Qt.callLater(pageTrading.applyPreferences); }
+        function onFavoriteCurrenciesJsonChanged() { Qt.callLater(pageTrading.applyPreferences); }
+    }
     function sourceRequest(src, pair, days) {
         var now = Math.floor(Date.now() / 1000);
         if (src === "kraken") {
@@ -376,17 +413,19 @@ Rectangle {
         onTriggered: {
             for (var i = 0; i < pageTrading.pairs.length; i++)
                 for (var d = 0; d < pageTrading.downloads.length; d++) {
-                    var key = pageTrading.pairs[i].pair + "/" + pageTrading.downloads[d];
+                    var src = appWindow.historicalPriceSource(pageTrading.pairs[i].pair);
+                    if (!src) continue;
+                    var key = pageTrading.keyFor(src, pageTrading.pairs[i].pair, pageTrading.downloads[d]);
                     if (pageTrading.isStale(key) && pageTrading.queue.indexOf(key) < 0)
                         pageTrading.enqueue(key, false);
                 }
         }
     }
 
-    onPricesEnabledChanged: if (!pricesEnabled) queue = []
+    onPricesEnabledChanged: { if (!pricesEnabled) queue = []; else Qt.callLater(applyPreferences); }
     onPairIndexChanged: select()
     onRangeIndexChanged: select()
-    Component.onCompleted: loadSaved()
+    Component.onCompleted: Qt.callLater(applyPreferences)
 
     function onPageCompleted() {
         loadBalanceEvents();
@@ -394,9 +433,10 @@ Rectangle {
         select();
     }
 
-    // the wallet's network just came up: forget the failures so the next minute asks again
+    // The route is ready: retry the selected series without waiting for the next minute.
     function retryFailed() {
         failed = ({});
+        if (pricesEnabled) select();
     }
 
     // Refresh: the series on screen, now (after the request in progress, if any)
@@ -409,7 +449,7 @@ Rectangle {
     function pairByKey(pair) {
         for (var i = 0; i < pairs.length; i++)
             if (pairs[i].pair === pair) return pairs[i];
-        return pairs[0];
+        return {key:pair.toUpperCase(), pair:pair, digits:pair === "btc" ? 8 : 2, prefix:pair.toUpperCase()};
     }
 
     function fmtIn(pair, v) {
@@ -419,9 +459,11 @@ Rectangle {
 
     // newest price we have of a currency (any downloaded series)
     function latestPrice(pair) {
+        var source = appWindow.historicalPriceSource(pair);
+        if (!source) return 0;
         var best = null;
         for (var d = 0; d < downloads.length; d++) {
-            var c = cache[pair + "/" + downloads[d]];
+            var c = cache[keyFor(source, pair, downloads[d])];
             if (c && c.prices.length > 0) {
                 var p = c.prices[c.prices.length - 1];
                 if (!best || p[0] > best[0]) best = p;
@@ -582,11 +624,21 @@ Rectangle {
         return v.toFixed(digits);
     }
 
+    Connections {
+        target: appWindow
+        function onCurrentWalletChanged() { pageTrading.loadBalanceEvents(); }
+    }
+
+    Connections {
+        target: appWindow.currentWallet ? appWindow.currentWallet.historyModel : null
+        function onModelReset() { Qt.callLater(pageTrading.loadBalanceEvents); }
+    }
+
     // the wallet's history changes (new transaction, other account): value chart again
     Connections {
         target: typeof appWindow !== "undefined" && appWindow.currentWallet ? appWindow.currentWallet : null
         ignoreUnknownSignals: true
-        function onHistoryModelChanged() { pageTrading.loadBalanceEvents(); }
+
         function onCurrentSubaddressAccountChanged() { pageTrading.loadBalanceEvents(); }
         function onMoneyReceived() { pageTrading.loadBalanceEvents(); }
         function onMoneySpent() { pageTrading.loadBalanceEvents(); }
@@ -701,7 +753,8 @@ Rectangle {
     }
 
     // segmented selector (EUR / USD / BTC, 24H / 7D …)
-    component Segments: Row {
+    component Segments: Flow {
+        Layout.fillWidth: true
         id: seg
         property var labels: []
         property int current: 0
@@ -839,13 +892,13 @@ Rectangle {
                     Layout.fillWidth: true
                     spacing: 10
                     Segments {
-                        labels: pageTrading.sources.map(function(s) { return s.name; })
+                        labels: pageTrading.sources.map(function(s) { return s.name + (appWindow.priceSourceEnabled(s.key) ? "" : " · OFF"); })
                         current: pageTrading.sourceIndex
-                        onPicked: (i) => pageTrading.sourceIndex = i
+                        onPicked: (i) => { if (appWindow.priceSourceEnabled(pageTrading.sources[i].key)) pageTrading.sourceIndex = i; }
                     }
                     Item { Layout.fillWidth: true }
                     MoneroComponents.TextPlain {
-                        visible: pageTrading.sources[pageTrading.sourceIndex].key === "kucoin" && pageTrading.pairs[pageTrading.pairIndex].pair === "eur"
+                        visible: pageTrading.sources[pageTrading.sourceIndex].key === "kucoin" && pageTrading.pairInfo.pair === "eur"
                         text: qsTr("KuCoin has no XMR/EUR: XMR/USDT at today's EUR rate") + translationManager.emptyString
                         font.pixelSize: 11
                         color: MoneroComponents.Style.dimmedFontColor
@@ -1352,7 +1405,7 @@ Rectangle {
                     Field {
                         id: alertPrice
                         Layout.fillWidth: true
-                        suffix: pageTrading.pairs[alertsCard.newPair].key
+                        suffix: pageTrading.pairs[Math.min(alertsCard.newPair, pageTrading.pairs.length - 1)].key
                         onAccepted: addAlertButton.clicked()
                     }
                     MoneroComponents.StandardButton {

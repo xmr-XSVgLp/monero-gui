@@ -64,6 +64,15 @@ Item {
 
     StandardDialog {
         id: entryChooserDialog
+
+        function chooseHardwareWallet(event) {
+            event.accepted = true;
+            if (!visible || event.isAutoRepeat) return;
+            close();
+            accepted();
+        }
+        Keys.onReturnPressed: event => chooseHardwareWallet(event)
+        Keys.onEnterPressed: event => chooseHardwareWallet(event)
         title: qsTr("Hardware wallet passphrase") + translationManager.emptyString
         text: qsTr("Please select where you want to enter passphrase.\nIt is recommended to enter passphrase on the hardware wallet for better security.") + translationManager.emptyString
 

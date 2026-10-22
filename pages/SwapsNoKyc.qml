@@ -63,7 +63,7 @@ Rectangle {
         ["USDTTRC", "BTC"].forEach(function(quote) {
         if (force || !(mpnTime[quote] > now - 60000)) {
             pending++;
-            network.getJSON(mpnUrl + quote, function(url, resp, error) {
+            appWindow.priceGetJSON(mpnUrl + quote, function(url, resp, error) {
                 pending--;
                 if (error) {
                     mpnError = error;
@@ -84,7 +84,7 @@ Rectangle {
         });
         if (force || !(nonKycTime > now - 60000)) {
             pending++;
-            network.getJSON(nonKycUrl, function(url, resp, error) {
+            appWindow.priceGetJSON(nonKycUrl, function(url, resp, error) {
                 pending--;
                 if (error) {
                     nonKycError = error;
@@ -186,7 +186,21 @@ Rectangle {
         return (pair.key === "eur" ? "€" : "$") + Number(v).toLocaleString(Qt.locale("en_US"), "f", 2);
     }
 
+    Connections {
+        target: persistentSettings
+        function onFiatPriceCurrencyChanged() { page.preferCurrency(); }
+        function onPriceSourcesJsonChanged() {
+            if (!appWindow.priceSourceEnabled("moneropricenow")) { page.mpnRows = ({}); page.mpnTime = ({}); }
+            if (!appWindow.priceSourceEnabled("nonkyc")) { page.nonKycTickers = null; page.nonKycTime = 0; }
+            if (page.visible && page.pending === 0) page.refresh(false);
+        }
+    }
+    function preferCurrency() {
+        var i = pairs.map(function(p) { return p.key; }).indexOf(appWindow.fiatApiCurrencySymbol().toLowerCase());
+        if (i >= 0) pairIndex = i;
+    }
     function onPageCompleted() {
+        preferCurrency();
         refresh(false);
     }
 

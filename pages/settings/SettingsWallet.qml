@@ -37,6 +37,7 @@ import "../../js/Utils.js" as Utils
 import "../../components" as MoneroComponents
 
 Rectangle {
+    enabled: !!appWindow.currentWallet
     color: "transparent"
     Layout.fillWidth: true
     property alias settingsHeight: settingsWallet.height
@@ -108,7 +109,9 @@ Rectangle {
             title: qsTr("Change wallet password") + translationManager.emptyString
 
             onClicked: {
+                var owner = appWindow.currentWallet;
                 passwordDialog.onAcceptedCallback = function() {
+                    if (!owner || appWindow.currentWallet !== owner) return;
                     if(appWindow.walletPassword === passwordDialog.password){
                         passwordDialog.openNewPasswordDialog()
                     } else {
@@ -116,7 +119,7 @@ Rectangle {
                         informationPopup.text = qsTr("Wrong password") + translationManager.emptyString;
                         informationPopup.open()
                         informationPopup.onCloseCallback = function() {
-                            passwordDialog.open()
+                            if (appWindow.currentWallet === owner) passwordDialog.open()
                         }
                     }
                 }
@@ -129,7 +132,7 @@ Rectangle {
             iconText: FontAwesome.eye
             description: qsTr("Creates a new wallet that can only view and initiate transactions, but requires a spendable wallet to sign transactions before sending.") + translationManager.emptyString
             title: qsTr("Create a view-only wallet") + translationManager.emptyString
-            visible: !appWindow.viewOnly && (currentWallet ? !currentWallet.isLedger() : true)
+            visible: !!currentWallet && !currentWallet.viewOnly && !currentWallet.isLedger()
 
             onClicked: {
                 var newPath = currentWallet.path + "_viewonly";
@@ -189,8 +192,10 @@ Rectangle {
             isLast: true
 
             onClicked: {
+                var owner = appWindow.currentWallet;
                 inputDialog.labelText = qsTr("Enter a transaction ID:") + translationManager.emptyString;
                 inputDialog.onAcceptedCallback = function() {
+                    if (!owner || appWindow.currentWallet !== owner) return;
                     var txid = inputDialog.inputText.trim();
                     if (currentWallet.scanTransactions([txid])) {
                         updateBalance();

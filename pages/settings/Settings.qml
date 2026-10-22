@@ -156,6 +156,7 @@ ColumnLayout {
 
     // fires on every page load
     function onPageCompleted() {
-        console.log("Settings page loaded");
+        if (settingsStateView.currentView && typeof settingsStateView.currentView.onPageCompleted === "function")
+            settingsStateView.currentView.onPageCompleted();
     }
 }

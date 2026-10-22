@@ -851,6 +851,41 @@ Rectangle {
                     font.pixelSize: 19
                 }
 
+                // Trezor name, in brackets like the wallet name
+                Row {
+                    visible: root.deviceLabel.length > 0
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 10
+
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "["
+                        color: walletTitle.accent
+                        font.family: MoneroComponents.Style.fontMonoBold.name
+                        font.pixelSize: 19
+                    }
+
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: Math.min(implicitWidth, walletTitle.nameMax / 2)
+                        elide: Text.ElideRight
+                        text: root.deviceLabel
+                        color: walletTitle.ink
+                        font.family: MoneroComponents.Style.fontMonoMedium.name
+                        font.pixelSize: 16
+                        font.capitalization: Font.AllUppercase
+                        font.letterSpacing: 2
+                    }
+
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "]"
+                        color: walletTitle.accent
+                        font.family: MoneroComponents.Style.fontMonoBold.name
+                        font.pixelSize: 19
+                    }
+                }
+
                 // quick wallet switch (main.qml unlockedWallets)
                 Rectangle {
                     id: walletSwitchButton
@@ -1068,40 +1103,7 @@ Rectangle {
                     }
                 }
 
-                // Trezor name, in brackets like the wallet name
-                Row {
-                    visible: root.deviceLabel.length > 0
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 10
 
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: "["
-                        color: walletTitle.accent
-                        font.family: MoneroComponents.Style.fontMonoBold.name
-                        font.pixelSize: 19
-                    }
-
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: Math.min(implicitWidth, walletTitle.nameMax / 2)
-                        elide: Text.ElideRight
-                        text: root.deviceLabel
-                        color: walletTitle.ink
-                        font.family: MoneroComponents.Style.fontMonoMedium.name
-                        font.pixelSize: 16
-                        font.capitalization: Font.AllUppercase
-                        font.letterSpacing: 2
-                    }
-
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: "]"
-                        color: walletTitle.accent
-                        font.family: MoneroComponents.Style.fontMonoBold.name
-                        font.pixelSize: 19
-                    }
-                }
             }
         }
 

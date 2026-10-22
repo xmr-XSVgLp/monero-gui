@@ -18,6 +18,7 @@ Rectangle {
     readonly property color accent: "#FF6600"
     readonly property bool device: currentWallet ? currentWallet.isHwBacked() : false
 
+    property int walletGeneration: 0
     property bool unlocked: false
     property bool busy: false
     property string error: ""
@@ -55,7 +56,9 @@ Rectangle {
             return;
         busy = true;
         error = "";
+        var generation = walletGeneration;
         currentWallet.notesUnlockAsync(appWindow.walletPassword || "", function(ok, text, err) {
+            if (generation !== walletGeneration) return;
             busy = false;
             if (!ok) {
                 error = errorText(err);
@@ -124,7 +127,9 @@ Rectangle {
         saving = true;
         dirty = false;
         var payload = JSON.stringify({ version: 1, notes: notes });
+        var generation = walletGeneration;
         currentWallet.notesSaveAsync(payload, function(ok, err) {
+            if (generation !== walletGeneration) return;
             saving = false;
             if (ok) {
                 savedAt = new Date().toLocaleTimeString(Qt.locale(), "HH:mm:ss");
@@ -158,6 +163,11 @@ Rectangle {
     Connections {
         target: appWindow
         function onCurrentWalletChanged() {
+            saveTimer.stop();
+            pageNotes.walletGeneration++;
+            pageNotes.busy = false;
+            pageNotes.saving = false;
+            pageNotes.savedAt = "";
             pageNotes.unlocked = false;
             pageNotes.notes = [];
             pageNotes.current = -1;

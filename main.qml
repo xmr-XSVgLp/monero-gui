@@ -45,6 +45,8 @@ import moneroComponents.NetworkType 1.0
 import moneroComponents.Settings 1.0
 import moneroComponents.P2PoolManager 1.0
 
+import "js/PriceSources.js" as PriceSources
+import "js/TransactionPrices.js" as TransactionPrices
 import "components"
 import "components" as MoneroComponents
 import "components/effects" as MoneroEffects
@@ -164,24 +166,28 @@ ApplicationWindow {
         var key = String(path).replace(/\.keys$/, "");
         return walletManager.parkedWallets().some(function(w) { return String(w.path).replace(/\.keys$/, "") === key; });
     }
-    // calls onChosen(devicePath) once the Trezor to use is set; with more than one connected the user picks it
+    // A cable device must not hide the Bluetooth discovery option.
+    property string openingTrezorLabel: ""
+    property string openingTrezorPath: ""
     function chooseTrezor(walletPath, onChosen, onCancelled) {
+        openingTrezorLabel = "";
+        openingTrezorPath = "";
+        walletManager.setTrezorDevicePath("");
         walletManager.trezorDevicesAsync(false, function(json) {
             var list = [];
             try { list = JSON.parse(json); } catch (e) {}
             rememberTrezorDevices(list);
-            if (list.length <= 1) {
-                walletManager.setTrezorDevicePath("");
-                if (list.length === 1) rememberTrezorWallet(walletPath, list[0].path);
-                onChosen(list.length === 1 ? list[0].path : "");
-                return;
-            }
             hideProcessingSplash();
             trezorPicker.open(withKnownTrezorNames(list), jsonSetting("trezorWallets")[walletPath] || "", function(path) {
                 walletManager.setTrezorDevicePath(path);
-                rememberTrezorWallet(walletPath, path);
+                // A remembered wallet label is not evidence of the connected device's identity.
+                openingTrezorLabel = "Trezor · " + trezorPicker.connectionName(path);
+                openingTrezorPath = path;
                 onChosen(path);
             }, function() {
+                walletManager.setTrezorDevicePath("");
+                openingTrezorLabel = "";
+                openingTrezorPath = "";
                 if (onCancelled) onCancelled();
             });
         });
@@ -1100,10 +1106,70 @@ ApplicationWindow {
         "HKD", "HUF", "IDR", "ILS", "INR", "ISK", "JPY", "KRW", "MXN", "MYR",
         "NOK", "NZD", "PHP", "PLN", "RON", "SEK", "SGD", "THB", "TRY", "ZAR"
     ]
+    readonly property var priceSources: PriceSources.catalog
+    readonly property var favoriteCurrencies: {
+        var list;
+        try { list = JSON.parse(persistentSettings.favoriteCurrenciesJson); } catch (e) { list = []; }
+        if (!Array.isArray(list)) list = [];
+        list = list.filter(function(c,i) { return (fiatCurrencies.indexOf(c) >= 0 || c === "BTC") && list.indexOf(c) === i; });
+        return list.length ? list : ["USD", "EUR", "BTC"];
+    }
+    function priceSourceEnabled(key) { return PriceSources.enabled(persistentSettings.priceSourcesJson, key); }
+    function historicalPriceSource(pair) { return PriceSources.historySource(persistentSettings.priceSourcesJson, persistentSettings.fiatPriceProvider, pair); }
+    function priceSourceName(key) {
+        var source = priceSources.filter(function(s) { return s.key === key; });
+        return source.length ? source[0].name : "Sin fuente histórica activa";
+    }
+    function setPriceSourceEnabled(key, enabled) {
+        var state;
+        try { state = JSON.parse(persistentSettings.priceSourcesJson); } catch(e) { state = {}; }
+        if (!state || typeof state !== "object" || Array.isArray(state)) state = {};
+        state[key] = enabled;
+        persistentSettings.priceSourcesJson = JSON.stringify(state);
+        if (!enabled && persistentSettings.fiatPriceProvider === key) {
+            var alternatives = priceSources.filter(function(s) { return s.ticker && priceSourceEnabled(s.key); });
+            persistentSettings.fiatPriceProvider = alternatives.length ? alternatives[0].key : "";
+        } else if (enabled && !persistentSettings.fiatPriceProvider && fiatPriceAPIs.hasOwnProperty(key)) {
+            persistentSettings.fiatPriceProvider = key;
+        }
+    }
+    function setFavoriteCurrency(code, enabled) {
+        var list = favoriteCurrencies.slice();
+        if (enabled && list.indexOf(code) < 0) list.push(code);
+        if (!enabled) list = list.filter(function(c) { return c !== code; });
+        if (!list.length) return;
+        persistentSettings.favoriteCurrenciesJson = JSON.stringify(list);
+        if (list.indexOf(fiatApiCurrencySymbol()) < 0)
+            persistentSettings.fiatPriceCurrency = "xmr" + list[0].toLowerCase();
+    }
+    function priceRequestAllowed(url) {
+        var key = PriceSources.sourceForUrl(url);
+        return persistentSettings.fiatPriceEnabled && key !== "" && priceSourceEnabled(key);
+    }
+    function priceGetJSON(url, callback) {
+        if (!priceRequestAllowed(url)) { callback(url, "", "Fuente desactivada"); return; }
+        network.getJSON(url, function(u,r,e) { callback(u, priceRequestAllowed(u) ? r : "", priceRequestAllowed(u) ? e : "Fuente desactivada"); });
+    }
+    function pricePostJSON(url, body, callback) {
+        if (!priceRequestAllowed(url)) { callback(url, "", "Fuente desactivada"); return; }
+        network.postJSON(url, body, function(u,r,e) { callback(u, priceRequestAllowed(u) ? r : "", priceRequestAllowed(u) ? e : "Fuente desactivada"); });
+    }
+    Connections {
+        target: persistentSettings
+        function onPriceSourcesJsonChanged() { appWindow.fiatApiUpdatePrice(); appWindow.fiatApiRefresh(); }
+        function onFiatPriceProviderChanged() {
+            appWindow.restoreFiatTicker();
+            appWindow.fiatApiUpdatePrice();
+            appWindow.fiatApiRefresh();
+        }
+        function onFiatPriceCurrencyChanged() { appWindow.fiatApiUpdatePrice(); appWindow.fiatApiRefresh(); }
+    }
+
     property var fiatPriceAPIs: {
         return {
             "kraken": "https://api.kraken.com/0/public/Ticker?pair=XMRUSD",
-            "coinpaprika": "https://api.coinpaprika.com/v1/tickers/xmr-monero"
+            "coinpaprika": "https://api.coinpaprika.com/v1/tickers/xmr-monero",
+            "coingecko": "https://api.coingecko.com/api/v3/coins/monero/market_chart?vs_currency=usd&days=1"
         }
     }
 
@@ -1456,9 +1522,31 @@ ApplicationWindow {
     // background: the wallet saves and closes on its own thread (quick switch, back to the wizard),
     // so the UI does not wait for a refresh in progress
     function closeWallet(callback, background) {
+        if (middlePanel.trezorView.busy !== "") {
+            isQuitting = false;
+            showStatusMessage(qsTr("Wait for the Trezor operation to finish before closing or switching wallets."), 5);
+            return;
+        }
         if (scheduledRunningId !== "" || scheduledSaving) {
             isQuitting = false;
             showStatusMessage(qsTr("Wait for the payment or save to finish before closing or switching wallets."), 5);
+            return;
+        }
+
+        // Finish wallet-specific writes before detaching their owner.
+        if ((middlePanel.notesView && middlePanel.notesView.saving)
+                || (middlePanel.receiveView && middlePanel.receiveView.creatingGroup)
+                || (middlePanel.customAddressesView && middlePanel.customAddressesView.adding)
+                || (middlePanel.accountView && middlePanel.accountView.trimming)) {
+            isQuitting = false;
+            showStatusMessage(qsTr("Wait for the payment or save to finish before closing or switching wallets."), 5);
+            return;
+        }
+        if (middlePanel.notesView && middlePanel.notesView.dirty && middlePanel.notesView.unlocked) {
+            middlePanel.notesView.save(function() {
+                if (!middlePanel.notesView.dirty) closeWallet(callback, background);
+                else isQuitting = false;
+            });
             return;
         }
 
@@ -1497,6 +1585,19 @@ ApplicationWindow {
         middlePanel.getProofClicked.disconnect(handleGetProof);
         middlePanel.checkProofClicked.disconnect(handleCheckProof);
 
+        currentWallet.cancelAddressSearch();
+        // Dialogs opened for this wallet must not remain actionable in the next one.
+        inputDialog.onAcceptedCallback = null;
+        inputDialog.onRejectedCallback = null;
+        if (inputDialog.visible) inputDialog.close();
+        confirmationDialog.onAcceptedCallback = null;
+        confirmationDialog.onRejectedCallback = null;
+        if (confirmationDialog.visible) confirmationDialog.close();
+        informationPopup.onCloseCallback = null;
+        if (informationPopup.visible) informationPopup.close();
+        middlePanel.clearWalletPages();
+        current_subaddress_table_index = 0;
+        current_address = "";
         appWindow.walletName = "";
         appWindow.walletDeviceLabel = "";
         currentWallet = undefined;
@@ -1533,6 +1634,10 @@ ApplicationWindow {
 
         walletName = usefulName(wallet.path)
         walletDeviceLabel = wallet.isTrezor() ? wallet.deviceLabel() : ""
+        if (wallet.isTrezor() && openingTrezorPath !== "")
+            rememberTrezorWallet(persistentSettings.wallet_path, openingTrezorPath);
+        openingTrezorPath = "";
+        openingTrezorLabel = "";
 
         viewOnly = currentWallet.viewOnly;
         backgroundSyncType = currentWallet.getBackgroundSyncType();
@@ -1629,6 +1734,23 @@ ApplicationWindow {
             return 0
         }
         return currentWallet.unlockedBalance()
+    }
+
+    Connections {
+        target: appWindow.currentWallet
+        function onCurrentSubaddressAccountChanged() {
+            appWindow.updateBalance();
+        }
+    }
+
+    property int accountLabelsRevision: 0
+    Connections {
+        target: appWindow.currentWallet ? appWindow.currentWallet.subaddressAccount : null
+        function onRefreshFinished() { appWindow.accountLabelsRevision++; }
+    }
+    Connections {
+        target: appWindow.currentWallet ? appWindow.currentWallet.subaddress : null
+        function onRefreshFinished() { appWindow.accountLabelsRevision++; }
     }
 
     function updateBalance() {
@@ -1844,6 +1966,8 @@ ApplicationWindow {
         walletName = usefulName(wallet.path)
         console.log(">>> wallet opened: " + wallet)
         if (wallet.status !== Wallet.Status_Ok) {
+            openingTrezorPath = "";
+            openingTrezorLabel = "";
             // try to resolve common wallet cache errors automatically
             switch (wallet.errorString) {
                 case "basic_string::_M_replace_aux":
@@ -1884,9 +2008,11 @@ ApplicationWindow {
         rememberUnlockedWallet(persistentSettings.wallet_path, walletPassword, persistentSettings.nettype);
         rememberSeedAccounts();
 
-        // the start page (Account) was shown before the wallet existed: fill it now
-        if (middlePanel.state === "Account")
-            middlePanel.accountView.onPageCompleted();
+        // Persistent pages must rebind/reload even when the selected page did not change.
+        if (middlePanel.currentView && typeof middlePanel.currentView.onPageCompleted === "function")
+            middlePanel.currentView.onPageCompleted();
+
+        updateBalance();
 
         // Force switch normal view
         rootItem.state = "normal";
@@ -2823,6 +2949,10 @@ ApplicationWindow {
 
     // called on "getProof"
     function handleGetProof(txid, address, message, amount) {
+        var owner = currentWallet;
+        function completed(id, result) {
+            if (currentWallet === owner) txProofComputed(id, result);
+        }
         if (amount !== null && amount.length > 0) {
             var result = currentWallet.getReserveProof(false, currentWallet.currentSubaddressAccount, amount, message)
             txProofComputed(null, result)
@@ -2832,10 +2962,11 @@ ApplicationWindow {
                         ", address: ", address,
                         ", message: ", message);
             function spendProofFallback(txid, result){
+                if (currentWallet !== owner) return;
                 if (!result || result.indexOf("error|") === 0) {
-                    currentWallet.getSpendProofAsync(txid, message, txProofComputed);
+                    owner.getSpendProofAsync(txid, message, completed);
                 } else {
-                    txProofComputed(txid, result);
+                    completed(txid, result);
                 }
             }
             if (address.length > 0)
@@ -3007,6 +3138,10 @@ ApplicationWindow {
     }
 
     function fiatApiParseTicker(url, resp){
+        if (url.startsWith("https://api.coingecko.com/")) {
+            var points = resp.prices || [];
+            return points.length ? Number(points[points.length-1][1]) : 0;
+        }
         if(url.startsWith("https://api.kraken.com/0/")){
             if(resp.hasOwnProperty("error") && resp.error.length > 0 || !resp.hasOwnProperty("result")){
                 appWindow.fiatApiError("Kraken API has error(s)");
@@ -3034,7 +3169,26 @@ ApplicationWindow {
         }
     }
 
+    // Keep providers isolated while allowing immediate switches back to a known quote.
+    property var fiatTickers: ({})
+    function rememberFiatTicker() {
+        if (!(fiatPriceUSD > 0)) return;
+        var copy = Object.assign({}, fiatTickers);
+        copy[persistentSettings.fiatPriceProvider] = {
+            usd: fiatPriceUSD, week: fiatPriceUSD7d, day: fiatPriceUSD24h
+        };
+        fiatTickers = copy;
+    }
+    function restoreFiatTicker() {
+        var cached = fiatTickers[persistentSettings.fiatPriceProvider];
+        fiatPriceUSD = cached ? cached.usd : 0;
+        fiatPriceUSD7d = cached ? cached.week : 0;
+        fiatPriceUSD24h = cached ? cached.day : 0;
+        fiatHistoryTimestamp = 0;
+    }
+
     function fiatApiJsonReceived(url, resp, error) {
+        if (url !== appWindow.fiatPriceAPIs[persistentSettings.fiatPriceProvider]) return;
         if (error) {
             appWindow.fiatApiError(error);
             return;
@@ -3054,6 +3208,7 @@ ApplicationWindow {
         }
 
         appWindow.fiatPriceUSD = ticker;
+        appWindow.rememberFiatTicker();
         appWindow.fiatApiUpdatePrice();
     }
 
@@ -3090,6 +3245,8 @@ ApplicationWindow {
     }
 
     function fiatApiHistoryReceived(url, resp, error) {
+        // An earlier request must not overwrite the newly selected provider's changes.
+        if (persistentSettings.fiatPriceProvider !== "kraken" || !priceSourceEnabled("kraken")) return;
         if (error) {
             appWindow.fiatApiError(error);
             return;
@@ -3122,6 +3279,7 @@ ApplicationWindow {
         appWindow.fiatPriceUSD7d = price7d;
         appWindow.fiatPriceUSD24h = price24h;
         appWindow.fiatHistoryTimestamp = Date.now();
+        appWindow.rememberFiatTicker();
         appWindow.fiatApiUpdatePrice();
     }
 
@@ -3157,8 +3315,14 @@ ApplicationWindow {
 
     function fiatApiUpdatePrice() {
         const symbol = appWindow.fiatApiCurrencySymbol();
+        if (symbol === "BTC" && (!middlePanel || !middlePanel.tradingView)) return;
         const rate = appWindow.fiatRates.hasOwnProperty(symbol) ? appWindow.fiatRates[symbol] : 0;
         appWindow.fiatPrice = (appWindow.fiatPriceUSD > 0 && rate > 0) ? appWindow.fiatPriceUSD * rate : 0;
+        if (symbol === "BTC") {
+            var market = middlePanel.tradingView;
+            var latest = TransactionPrices.compare(market.cache, "btc", 0, Date.now()/1000, historicalPriceSource("btc")).latest;
+            appWindow.fiatPrice = latest ? latest[1] : 0;
+        }
 
         const rate7d = appWindow.fiatRates7d.hasOwnProperty(symbol) ? appWindow.fiatRates7d[symbol] : 0;
         appWindow.fiatChange7d = (appWindow.fiatPrice > 0 && appWindow.fiatPriceUSD7d > 0 && rate7d > 0)
@@ -3169,6 +3333,15 @@ ApplicationWindow {
             ? (appWindow.fiatPriceUSD / appWindow.fiatPriceUSD24h - 1) * 100
             : NaN;
 
+        if (symbol === "BTC") {
+            var source = historicalPriceSource("btc");
+            var now = Date.now()/1000;
+            var data = middlePanel.tradingView.cache;
+            var week = TransactionPrices.compare(data, "btc", now - 7*86400, now, source).change;
+            var day = TransactionPrices.compare(data, "btc", now - 86400, now, source).change;
+            appWindow.fiatChange7d = week === null ? NaN : week;
+            appWindow.fiatChange24h = day === null ? NaN : day;
+        }
         appWindow.updateBalance();
         appWindow.fiatCacheSave();
     }
@@ -3190,6 +3363,7 @@ ApplicationWindow {
             return;
         var rows = [
             "fecha_utc," + new Date().toISOString(),
+            "provider," + persistentSettings.fiatPriceProvider,
             "usd," + appWindow.fiatPriceUSD,
             "usd_7d," + appWindow.fiatPriceUSD7d,
             "usd_24h," + appWindow.fiatPriceUSD24h,
@@ -3224,6 +3398,7 @@ ApplicationWindow {
             if (i > 0)
                 v[line.substring(0, i)] = line.substring(i + 1).trim();
         });
+        if (v.provider !== persistentSettings.fiatPriceProvider) return;
         var usd = parseFloat(v.usd);
         if (!(usd > 0))
             return;
@@ -3245,6 +3420,7 @@ ApplicationWindow {
             appWindow.priceBtc = parseFloat(v.btc);
         appWindow.fiatRates = rates;
         appWindow.fiatRates7d = rates7d;
+        appWindow.rememberFiatTicker();
         // timestamps stay 0, so the first refresh still asks the services for fresh prices
         appWindow.fiatApiUpdatePrice();
         appWindow.fiatCacheLoading = false;
@@ -3275,15 +3451,16 @@ ApplicationWindow {
             return;
 
         var userProvider = persistentSettings.fiatPriceProvider;
-        if(!appWindow.fiatPriceAPIs.hasOwnProperty(userProvider)){
+        if (!userProvider || !priceSourceEnabled(userProvider)) return;
+        if (!appWindow.fiatPriceAPIs.hasOwnProperty(userProvider)){
             appWindow.fiatApiError("provider \"" + userProvider + "\" not implemented");
             return;
         }
 
-        network.getJSON(appWindow.fiatPriceAPIs[userProvider], fiatApiJsonReceived);
+        appWindow.priceGetJSON(appWindow.fiatPriceAPIs[userProvider], fiatApiJsonReceived);
         // XMR/BTC last trade for the title bar chip, every minute too (its own request: if Kraken stops
         // listing the pair, the USD price above is not affected)
-        network.getJSON("https://api.kraken.com/0/public/Ticker?pair=XMRXBT", function(url, resp, error) {
+        if (priceSourceEnabled("kraken")) appWindow.priceGetJSON("https://api.kraken.com/0/public/Ticker?pair=XMRXBT", function(url, resp, error) {
             if (error) return;
             try {
                 var j = JSON.parse(resp);
@@ -3298,8 +3475,8 @@ ApplicationWindow {
             } catch (e) {}
         });
         // XMR -> BTC quote for 1 XMR from Wagyu (no API key), at most every 5 minutes
-        if (Date.now() - appWindow.priceBtcTimestamp > 5 * 60 * 1000)
-            network.postJSON("https://api-beta.wagyu.xyz/v2/swaps/quote",
+        if (priceSourceEnabled("wagyu") && Date.now() - appWindow.priceBtcTimestamp > 5 * 60 * 1000)
+            appWindow.pricePostJSON("https://api-beta.wagyu.xyz/v2/swaps/quote",
                              JSON.stringify({ fromChainId: 0, fromToken: "XMR",
                                               toChainId: 20000000000001, toToken: "bitcoin",
                                               fromAmount: "1000000000000" }),
@@ -3307,22 +3484,22 @@ ApplicationWindow {
 
         // price from 7 days ago (CoinPaprika sends it with the ticker)
         if (userProvider === "kraken" && Date.now() - appWindow.fiatHistoryTimestamp > 15 * 60 * 1000)
-            network.getJSON("https://api.kraken.com/0/public/OHLC?pair=XMRUSD&interval=60", fiatApiHistoryReceived);
+            appWindow.priceGetJSON("https://api.kraken.com/0/public/OHLC?pair=XMRUSD&interval=60", fiatApiHistoryReceived);
         if (userProvider !== "kraken")
             appWindow.fiatHistoryTimestamp = 0;
 
-        if(appWindow.fiatApiCurrencySymbol() !== "USD"){
+        if (priceSourceEnabled("frankfurter") && ["USD", "BTC"].indexOf(appWindow.fiatApiCurrencySymbol()) < 0) {
             if(!persistentSettings.fiatRatesConsentGiven){
                 appWindow.fiatApiError("exchange rate provider consent not given for non-USD currency");
                 return;
             }
 
             if(Date.now() - appWindow.fiatRatesTimestamp > appWindow.fiatRatesMaxAge)
-                network.getJSON(appWindow.fiatRatesAPI, fiatApiRatesReceived);
+                appWindow.priceGetJSON(appWindow.fiatRatesAPI, fiatApiRatesReceived);
 
             const date7d = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString().slice(0, 10);
             if (appWindow.fiatRates7dDate !== date7d)
-                network.getJSON("https://api.frankfurter.dev/v1/" + date7d + "?base=USD", fiatApiRates7dReceived);
+                appWindow.priceGetJSON("https://api.frankfurter.dev/v1/" + date7d + "?base=USD", fiatApiRates7dReceived);
         }
     }
 
@@ -3341,7 +3518,7 @@ ApplicationWindow {
             fiatApiError("Invalid ticker value: " + ticker);
             return "?.??";
         }
-        return (amount * ticker).toFixed(2);
+        return (amount * ticker).toFixed(fiatApiCurrencySymbol() === "BTC" ? 8 : 2);
     }
 
     function fiatApiConvertToXMR(amount) {
@@ -3364,17 +3541,8 @@ ApplicationWindow {
 
     // same as picking the currency in Settings: USD <-> last non-USD currency
     function fiatApiToggleUsd() {
-        if (persistentSettings.fiatPriceCurrency === "xmrusd") {
-            persistentSettings.fiatPriceCurrency = persistentSettings.fiatPriceCurrencyOther;
-        } else {
-            persistentSettings.fiatPriceCurrencyOther = persistentSettings.fiatPriceCurrency;
-            persistentSettings.fiatPriceCurrency = "xmrusd";
-        }
-
-        if (persistentSettings.fiatPriceEnabled) {
-            appWindow.fiatApiUpdatePrice();
-            appWindow.fiatApiRefresh();
-        }
+        var index = favoriteCurrencies.indexOf(fiatApiCurrencySymbol());
+        persistentSettings.fiatPriceCurrency = "xmr" + favoriteCurrencies[(index+1) % favoriteCurrencies.length].toLowerCase();
     }
 
     function fiatApiError(msg){
@@ -3401,6 +3569,8 @@ ApplicationWindow {
     }
 
     Component.onCompleted: {
+        if (favoriteCurrencies.indexOf(fiatApiCurrencySymbol()) < 0)
+            setFavoriteCurrency(fiatApiCurrencySymbol(), true);
         logger.resetLogFilePath(portableSettings.portable);
         if (persistentSettings.logLevel == 5)
             walletManager.setLogCategories(persistentSettings.logCategories)
@@ -3603,6 +3773,8 @@ ApplicationWindow {
         property bool tradingShowBalance: true   // Trading data: chart of the wallet's value
         property bool fiatPriceToggle: false
         property string fiatPriceCurrencyOther: "xmreur" // restored when leaving USD
+        property string favoriteCurrenciesJson: '["USD","EUR","BTC"]'
+        property string priceSourcesJson: "{}"
         property string fiatPriceProvider: "kraken"
         property string fiatPriceCurrency: "xmrusd"
         property bool fiatRatesConsentGiven: false
@@ -3677,7 +3849,7 @@ ApplicationWindow {
             if (netSync === "i2p")
                 netSync = "tor"
 
-            if (!appWindow.fiatPriceAPIs.hasOwnProperty(fiatPriceProvider)) {
+            if (fiatPriceProvider !== "" && !appWindow.fiatPriceAPIs.hasOwnProperty(fiatPriceProvider)) {
                 console.warn("unsupported fiat price provider \"" + fiatPriceProvider + "\", resetting");
                 fiatPriceProvider = "kraken";
                 fiatPriceEnabled = false;
@@ -4004,7 +4176,7 @@ ApplicationWindow {
         messageText: qsTr("Please wait...") + translationManager.emptyString
         // wallet being opened or used, and its Trezor (shown while waiting on the device)
         walletLabel: persistentSettings.wallet_path ? appWindow.usefulName(String(persistentSettings.wallet_path).replace(/.*[\/\\]/, "").replace(/\.keys$/, "")) : ""
-        deviceLabel: deviceMode ? appWindow.knownTrezorLabel(persistentSettings.wallet_path) : ""
+        deviceLabel: deviceMode ? (currentWallet && currentWallet.isTrezor() ? walletDeviceLabel : openingTrezorLabel) : ""
         onCancelRequested: appWindow.cancelDeviceConfirmation()
     }
 
@@ -4049,6 +4221,7 @@ ApplicationWindow {
                 currentAccountIndex: currentWallet ? currentWallet.currentSubaddressAccount : 0
                 minedActive: appWindow.minedAccountActive
                 currentAccountLabel: {
+                    appWindow.accountLabelsRevision;
                     if (appWindow.minedAccountActive)
                         return qsTr("Mined addresses") + translationManager.emptyString;
                     if (currentWallet) {

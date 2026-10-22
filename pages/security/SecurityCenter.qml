@@ -12,6 +12,8 @@ ColumnLayout {
     spacing: 16
     property alias backupsHeading: backupsHeading
 
+    enabled: !!appWindow.currentWallet
+    property int requestGeneration: 0
     property int refreshTick: 0
     property var nodeInfo: null
     property string nodeError: ""
@@ -51,6 +53,14 @@ ColumnLayout {
     }
 
     readonly property string walletPath: currentWallet ? currentWallet.path : ""
+    onWalletPathChanged: {
+        requestGeneration++;
+        backupMessage = "";
+        nodeInfo = null;
+        nodeError = "";
+        refreshTick++;
+        if (backupFolderDialog) backupFolderDialog.close();
+    }
     readonly property bool hardware: currentWallet ? currentWallet.isHwBacked() : false
     readonly property string walletFolder: walletPath.substring(0, Math.max(walletPath.lastIndexOf("/"), 0))
 
@@ -92,6 +102,7 @@ ColumnLayout {
         try { return (JSON.parse(persistentSettings.securityBackups) || {})[walletPath] || {}; } catch (e) { return {}; }
     }
     function setBackup(key, value) {
+        if (!walletPath) return;
         var all = {};
         try { all = JSON.parse(persistentSettings.securityBackups) || {}; } catch (e) {}
         var b = all[walletPath] || {};
@@ -120,12 +131,14 @@ ColumnLayout {
                                   + (nodeOk ? 1 : 0) + (privacyOk ? 1 : 0) + (sessionOk ? 1 : 0)
 
     function loadNode() {
+        var generation = ++requestGeneration;
         nodeError = "";
         if (persistentSettings.useRemoteNode || !appWindow.daemonRunning) {
             nodeInfo = null;
             return;
         }
         oshelper.nodeRpc(appWindow.localDaemonAddress, "", "/get_info", "", 8000, function(ok, ms, body, error) {
+            if (generation !== requestGeneration) return;
             if (!ok) { nodeInfo = null; nodeError = error; return; }
             try { nodeInfo = JSON.parse(body); } catch (e) { nodeInfo = null; nodeError = "JSON"; }
         });
@@ -138,8 +151,11 @@ ColumnLayout {
 
     FolderDialog {
         id: backupFolderDialog
+        property string ownerPath: ""
+        onVisibleChanged: if (visible) ownerPath = tab.walletPath
         title: qsTr("Choose where to save the wallet backup") + translationManager.emptyString
         onAccepted: {
+            if (!ownerPath || ownerPath !== tab.walletPath) return;
             var folder = walletManager.urlToLocalPath(backupFolderDialog.selectedFolder);
             var r = oshelper.backupWallet(tab.walletPath, folder);
             if (r.ok) {

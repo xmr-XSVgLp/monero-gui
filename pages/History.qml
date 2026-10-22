@@ -42,11 +42,39 @@ import "../components/effects/" as MoneroEffects
 import "../components" as MoneroComponents
 import "../js/Utils.js" as Utils
 import "../js/TxUtils.js" as TxUtils
+import "../js/TransactionPrices.js" as TransactionPrices
 
 
 Rectangle {
     id: root
-    property var model
+    readonly property var model: appWindow.currentWallet ? appWindow.currentWallet.historyModel : null
+
+    // The page persists across wallet switches; discard all copied rows immediately.
+    property int walletGeneration: 0
+    onModelChanged: { walletGeneration++; clearTransactions(); }
+
+    function clearTransactions() {
+        root.txModelData = [];
+        root.txData = [];
+        root.txDataCollapsed = [];
+        root.txCount = 0;
+        root.txOffset = 0;
+        if (txListViewModel) txListViewModel.clear();
+    }
+    // Model resets also happen on local actions. Rebuild the copied rows after
+    // the model has finished resetting, without starting another wallet refresh.
+    Connections {
+        target: root.model
+        function onModelReset() { Qt.callLater(root.syncModelRows); }
+    }
+    function syncModelRows() {
+        if (!root.initialized || !root.model || !appWindow.currentWallet) return;
+        var page = root.txPage;
+        root.updateTransactionsFromModel();
+        root.updateFilter();
+        root.paginationJump(Math.min(page, Math.max(1, Math.ceil(root.txCount / root.txMax))));
+    }
+
     property int sideMargin: 20
     readonly property color accentColor: MoneroComponents.Style.blackTheme ? "#4E9E6A" : "#2E7D4A"
     readonly property color borderColor: MoneroComponents.Style.blackTheme ? "#E8ECE9" : "#2B3A30"
@@ -462,6 +490,27 @@ Rectangle {
                 id: delegate
                 property bool collapsed: root.txDataCollapsed.indexOf(hash) >= 0 ? true : false
                 readonly property bool hovered: rowHover.hovered
+                readonly property string valuationPair: appWindow.fiatApiCurrencySymbol().toLowerCase()
+                readonly property string valuationSource: appWindow.historicalPriceSource(valuationPair)
+                readonly property var historicalQuote: TransactionPrices.compare(
+                    middlePanel.tradingView ? middlePanel.tradingView.cache : {}, valuationPair,
+                    !isPending && !isFailed ? timestamp : 0, Date.now() / 1000, valuationSource).historical
+                readonly property var historicalValue: TransactionPrices.value(historicalQuote, amount)
+                function requestHeaderPrices() {
+                    var market = middlePanel.tradingView;
+                    if (!market || !persistentSettings.fiatPriceEnabled || !valuationSource || isPending || isFailed) return;
+                    [1, 90, 365].forEach(function(days) {
+                        var key = market.keyFor(valuationSource, valuationPair, days);
+                        if (market.isStale(key)) market.enqueue(key, false);
+                    });
+                }
+                Component.onCompleted: Qt.callLater(requestHeaderPrices)
+                onValuationPairChanged: Qt.callLater(requestHeaderPrices)
+                onValuationSourceChanged: Qt.callLater(requestHeaderPrices)
+                Connections {
+                    target: persistentSettings
+                    function onFiatPriceEnabledChanged() { delegate.requestHeaderPrices(); }
+                }
                 readonly property bool confirmed: confirmations < confirmationsRequired ? false : true
                 readonly property real detailColumnWidth: Math.floor((width - 32 - 40) / 3)
                 width: txListview.width
@@ -555,6 +604,19 @@ Rectangle {
                                 onExited: parent.font.underline = false
                             }
                         }
+                    }
+
+                    MoneroComponents.TextPlain {
+                        visible: amount != 0 && !isPending && !isFailed
+                        Layout.maximumWidth: 160
+                        elide: Text.ElideRight
+                        font.family: MoneroComponents.Style.fontMonoRegular.name
+                        font.pixelSize: 12
+                        text: "(" + (delegate.historicalValue === null ? "—" : "≈ " + Utils.prettyAmount(delegate.historicalValue.toFixed(delegate.valuationPair === "btc" ? 8 : 2)))
+                              + " " + delegate.valuationPair.toUpperCase() + ")"
+                        tooltip: "Valor del importe entonces: " + text
+                        color: MoneroComponents.Style.dimmedFontColor
+                        themeTransition: false
                     }
 
                     // direction + counterpart
@@ -711,19 +773,29 @@ Rectangle {
                         opacity: 0.3
                     }
 
-                    GridLayout {
+                    MoneroComponents.TextPlain {
                         Layout.fillWidth: true
-                        Layout.topMargin: 14
-                        columns: 3
-                        columnSpacing: 20
-                        rowSpacing: 14
+                        Layout.topMargin: 10
+                        text: qsTr("Transaction information") + translationManager.emptyString
+                        font.pixelSize: 14
+                        font.bold: true
+                        color: MoneroComponents.Style.defaultFontColor
+                        themeTransition: false
+                    }
+
+                    Flow {
+                        Layout.fillWidth: true
+                        Layout.topMargin: 6
+                        spacing: 14
+                        Layout.preferredHeight: implicitHeight
 
                         // fee / mined
-                        ColumnLayout {
-                            Layout.preferredWidth: delegate.detailColumnWidth
-                            spacing: 3
+                        Row {
+                            spacing: 6
+                            height: 26
 
                             MoneroComponents.TextPlain {
+                                anchors.verticalCenter: parent.verticalCenter
                                 font.family: MoneroComponents.Style.fontRegular.name
                                 font.pixelSize: 12
                                 text: isout ? qsTr("Fee") : confirmationsRequired === 60 ? qsTr("Mined") : qsTr("Fee") + translationManager.emptyString
@@ -732,6 +804,7 @@ Rectangle {
                             }
 
                             MoneroComponents.TextPlain {
+                                anchors.verticalCenter: parent.verticalCenter
                                 font.family: MoneroComponents.Style.fontMonoRegular.name
                                 font.pixelSize: 13
                                 text: {
@@ -753,19 +826,21 @@ Rectangle {
                         }
 
                         // confirmations
-                        ColumnLayout {
-                            Layout.preferredWidth: delegate.detailColumnWidth
-                            spacing: 3
+                        Row {
+                            spacing: 6
+                            height: 26
 
                             MoneroComponents.TextPlain {
+                                anchors.verticalCenter: parent.verticalCenter
                                 font.family: MoneroComponents.Style.fontRegular.name
                                 font.pixelSize: 12
-                                text: qsTr("Confirmations") + translationManager.emptyString
+                                text: qsTr("Confirmations") + ":" + translationManager.emptyString
                                 color: MoneroComponents.Style.dimmedFontColor
                                 themeTransition: false
                             }
 
                             MoneroComponents.TextPlain {
+                                anchors.verticalCenter: parent.verticalCenter
                                 font.family: MoneroComponents.Style.fontMonoRegular.name
                                 font.pixelSize: 13
                                 text: delegate.confirmed ? confirmations : confirmations + "/" + confirmationsRequired
@@ -783,19 +858,21 @@ Rectangle {
                         }
 
                         // blockheight
-                        ColumnLayout {
-                            Layout.preferredWidth: delegate.detailColumnWidth
-                            spacing: 3
+                        Row {
+                            spacing: 6
+                            height: 26
 
                             MoneroComponents.TextPlain {
+                                anchors.verticalCenter: parent.verticalCenter
                                 font.family: MoneroComponents.Style.fontRegular.name
                                 font.pixelSize: 12
-                                text: qsTr("Blockheight") + translationManager.emptyString
+                                text: qsTr("Blockheight") + ":" + translationManager.emptyString
                                 color: MoneroComponents.Style.dimmedFontColor
                                 themeTransition: false
                             }
 
                             MoneroComponents.TextPlain {
+                                anchors.verticalCenter: parent.verticalCenter
                                 font.family: MoneroComponents.Style.fontMonoRegular.name
                                 font.pixelSize: 13
                                 text: (blockheight > 0 ? blockheight : qsTr('Pending')) + translationManager.emptyString;
@@ -813,19 +890,21 @@ Rectangle {
                         }
 
                         // date (full)
-                        ColumnLayout {
-                            Layout.preferredWidth: delegate.detailColumnWidth
-                            spacing: 3
+                        Row {
+                            spacing: 6
+                            height: 26
 
                             MoneroComponents.TextPlain {
+                                anchors.verticalCenter: parent.verticalCenter
                                 font.family: MoneroComponents.Style.fontRegular.name
                                 font.pixelSize: 12
-                                text: qsTr("Date") + translationManager.emptyString
+                                text: qsTr("Date") + ":" + translationManager.emptyString
                                 color: MoneroComponents.Style.dimmedFontColor
                                 themeTransition: false
                             }
 
                             MoneroComponents.TextPlain {
+                                anchors.verticalCenter: parent.verticalCenter
                                 font.family: MoneroComponents.Style.fontMonoRegular.name
                                 font.pixelSize: 13
                                 text: persistentSettings.historyHumanDates ? dateHuman : dateTime
@@ -853,26 +932,27 @@ Rectangle {
                         }
 
                         // description + edit
-                        ColumnLayout {
-                            Layout.preferredWidth: 2 * delegate.detailColumnWidth + 20
-                            Layout.columnSpan: 2
-                            spacing: 3
+                        Row {
+                            spacing: 6
+                            height: 26
 
                             MoneroComponents.TextPlain {
+                                anchors.verticalCenter: parent.verticalCenter
                                 font.family: MoneroComponents.Style.fontRegular.name
                                 font.pixelSize: 12
-                                text: qsTr("Description") + translationManager.emptyString
+                                text: qsTr("Description") + ":" + translationManager.emptyString
                                 color: MoneroComponents.Style.dimmedFontColor
                                 themeTransition: false
                             }
 
-                            RowLayout {
-                                Layout.fillWidth: true
-                                spacing: 10
+                            Row {
+                                spacing: 6
+                                height: 26
 
                                 MoneroComponents.TextPlain {
+                                anchors.verticalCenter: parent.verticalCenter
                                     id: txNoteText
-                                    Layout.maximumWidth: detailsColumn.width * 0.55
+                                    width: Math.min(implicitWidth, Math.max(80, Math.min(200, detailsColumn.width - 130)))
                                     elide: Text.ElideRight
                                     font.family: MoneroComponents.Style.fontRegular.name
                                     font.pixelSize: 14
@@ -890,8 +970,8 @@ Rectangle {
                                 }
 
                                 MoneroComponents.BookIconButton {
-                                    Layout.preferredWidth: 26
-                                    Layout.preferredHeight: 26
+                                    width: 26
+                                    height: 26
                                     interactive: false
                                     hovered: txNoteArea.containsMouse
                                     image: "qrc:///images/icons/edit-neon.png"
@@ -905,14 +985,16 @@ Rectangle {
                                     }
                                 }
 
-                                Item { Layout.fillWidth: true }
                             }
                         }
                     }
 
                     // transaction ID
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.topMargin: 8
+                        spacing: 8
                     MoneroComponents.TextPlain {
-                        Layout.topMargin: 14
                         font.family: MoneroComponents.Style.fontRegular.name
                         font.pixelSize: 12
                         text: qsTr("Transaction ID") + translationManager.emptyString
@@ -921,7 +1003,6 @@ Rectangle {
                     }
 
                     MoneroComponents.TextPlain {
-                        Layout.topMargin: 3
                         Layout.fillWidth: true
                         elide: Text.ElideMiddle
                         font.family: MoneroComponents.Style.fontMonoRegular.name
@@ -942,16 +1023,18 @@ Rectangle {
                         }
                     }
 
+                    }
+
                     // transaction key + actions
                     RowLayout {
-                        Layout.topMargin: 14
-                        Layout.bottomMargin: 14
+                        Layout.topMargin: 8
+                        Layout.bottomMargin: 10
                         Layout.fillWidth: true
                         spacing: 10
 
-                        ColumnLayout {
+                        RowLayout {
                             Layout.fillWidth: true
-                            spacing: 3
+                            spacing: 8
 
                             MoneroComponents.TextPlain {
                                 font.family: MoneroComponents.Style.fontRegular.name
@@ -1037,6 +1120,22 @@ Rectangle {
                             }
                         }
                     }
+                    Loader {
+                        Layout.fillWidth: true
+                        Layout.topMargin: 2
+                        Layout.bottomMargin: 12
+                        active: delegate.collapsed
+                        sourceComponent: MoneroComponents.TransactionPriceSummary {
+                            transactionTime: !isPending && !isFailed ? timestamp : 0
+                            transactionAmount: amount
+                            pair: appWindow.fiatApiCurrencySymbol().toLowerCase()
+                            source: appWindow.historicalPriceSource(pair)
+                            sourceName: appWindow.priceSourceName(source)
+                            market: middlePanel.tradingView
+                            pricesEnabled: persistentSettings.fiatPriceEnabled
+                        }
+                    }
+
                 }
 
                 MouseArea {
@@ -1350,8 +1449,11 @@ Rectangle {
 
     function updateTransactionsFromModel() {
         // This function copies the items of `appWindow.currentWallet.historyModel` to `root.txModelData`, as a list of javascript objects
-        if(currentWallet == null || typeof currentWallet.history === "undefined" ) return;
-        if(currentWallet.isBackgroundSyncing()) return;
+        if (!root.model || !currentWallet || typeof currentWallet.history === "undefined"
+                || currentWallet.isBackgroundSyncing()) {
+            root.clearTransactions();
+            return;
+        }
 
         var _model = root.model;
         var total = 0
@@ -1377,7 +1479,7 @@ Rectangle {
             var fee = _model.data(idx, TransactionHistoryModel.TransactionFeeRole);
             var subaddrAccount = model.data(idx, TransactionHistoryModel.TransactionSubaddrAccountRole);
             var subaddrIndex = model.data(idx, TransactionHistoryModel.TransactionSubaddrIndexRole);
-            var timestamp = new Date(date + " " + time).getTime() / 1000;
+            var timestamp = new Date(_model.data(idx, TransactionHistoryModel.TransactionTimeStampRole)).getTime() / 1000;
             var dateHuman = Utils.ago(timestamp);
 
             if (amount === 0) {
@@ -1469,6 +1571,10 @@ Rectangle {
 
     function update(currentPage) {
         // handle outside mutation of tx model; incoming/outgoing funds or new blocks. Update table.
+        if (!currentWallet || !root.model) {
+            root.clearTransactions();
+            return;
+        }
         currentWallet.history.refresh(currentWallet.currentSubaddressAccount);
 
         root.updateTransactionsFromModel();
@@ -1518,8 +1624,10 @@ Rectangle {
     }
 
     function getTxKey(hash, elem){
+        var generation = walletGeneration;
         if (elem.parent.state != 'ready'){
             currentWallet.getTxKeyAsync(hash, function(hash, txKey) {
+                if (generation !== walletGeneration) return;
                 elem.parent.text = txKey ? txKey : '-';
                 elem.parent.state = 'ready';
             });
@@ -1529,6 +1637,7 @@ Rectangle {
     }
 
     function showTxDetails(hash, paymentId, destinations, subaddrAccount, subaddrIndex, dateTime, amount, isout) {
+        var generation = walletGeneration;
         var tx_note = currentWallet.getUserNote(hash)
         var rings = currentWallet.getRings(hash)
         var address_label = subaddrIndex == 0 ? (qsTr("Primary address") + translationManager.emptyString) : currentWallet.getSubaddressLabel(subaddrAccount, subaddrIndex)
@@ -1540,6 +1649,7 @@ Rectangle {
             rings = rings.replace(/\|/g, '\n')
 
         currentWallet.getTxKeyAsync(hash, function(hash, tx_key) {
+            if (generation !== walletGeneration) return;
             informationPopup.title = qsTr("Transaction details") + translationManager.emptyString;
             informationPopup.kind = "tx";
             informationPopup.content = buildTxDetailsString(hash, hasPaymentId ? paymentId : null, tx_key, tx_note, destinations, rings, address, address_label, integratedAddress, dateTime, amount);
@@ -1637,7 +1747,6 @@ Rectangle {
 
     function onPageCompleted() {
         if(appWindow.currentWallet != null){
-            root.model = appWindow.currentWallet.historyModel;
             root.model.sortRole = TransactionHistoryModel.TransactionBlockHeightRole
             root.model.sort(0, Qt.DescendingOrder);
         }

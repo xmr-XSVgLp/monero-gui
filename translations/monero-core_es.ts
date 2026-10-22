@@ -397,6 +397,7 @@ Es recomendable escribirla en la billetera física para mayor seguridad.</transl
 </context>
 <context>
     <name>History</name>
+<message><source>Transaction information</source><translation>Información de la transacción</translation></message>
     <message>
         <location filename="../pages/History.qml" line="213"/>
         <source>Date from</source>
@@ -5350,6 +5351,7 @@ Si no tienes la opción de ejecutar tu propio nodo, hay una opción de conectars
 </context>
 <context>
     <name>main</name>
+    <message><source>Wait for the Trezor operation to finish before closing or switching wallets.</source><translation>Espera a que termine la operación del Trezor antes de cerrar o cambiar de cartera.</translation></message>
     <message>
         <source>Nym stopped answering: reconnecting…</source>
         <translation>Nym no respondía: reconectando…</translation>
@@ -9726,4 +9728,5 @@ Si no tienes la opción de ejecutar tu propio nodo, hay una opción de conectars
 <context><name>Transfer</name>
 <message><source>Keep the app open with this wallet selected and synced. A password screen can stay locked only if background-sync mode has not removed spending access. Scheduled payments are unavailable on hardware wallets. If the wallet is closed when a payment becomes due, you must confirm it after reopening. Other sends from the source account are blocked during the previous 25 minutes; funds must still be unlocked at payment time.</source><translation>Mantén la aplicación abierta con esta cartera seleccionada y sincronizada. La pantalla de contraseña puede permanecer bloqueada solo si la sincronización en segundo plano no ha desactivado la capacidad de gastar. Los pagos programados no están disponibles en carteras hardware. Si llega la hora con la cartera cerrada, deberás confirmar el pago al reabrirla. Se bloquean otros envíos desde la cuenta de origen durante los 25 minutos anteriores; los fondos deberán estar desbloqueados al realizar el pago.</translation></message>
 </context>
+<context><name>TransactionPriceSummary</name><message><source>XMR market price</source><translation>Precio de mercado de XMR</translation></message><message><source>At transaction time ≈</source><translation>Al realizar la transacción ≈</translation></message><message><source>Current price</source><translation>Precio actual</translation></message><message><source>Last available price</source><translation>Último precio disponible</translation></message><message><source>Price change</source><translation>Variación del precio</translation></message><message><source>Compared with the historical price</source><translation>Respecto al precio histórico</translation></message><message><source>No data available</source><translation>Sin datos disponibles</translation></message><message><source>CoinGecko · Price per 1 XMR. Historical sample at or before the transaction, not an execution price. Change is not profit or loss.</source><translation>CoinGecko · Precio de 1 XMR. Cotización histórica anterior o igual a la fecha de la transacción; no es el precio de ejecución. La variación no representa ganancias ni pérdidas.</translation></message><message><source>Price connections are disabled; showing saved data.</source><translation>Conexiones de precios desactivadas; se muestran datos guardados.</translation></message></context>
 </TS>

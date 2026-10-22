@@ -93,13 +93,15 @@ Rectangle {
                     w.switchSubaddressAccount(0);
                 // their scanning keys went with the removed accounts: watch them again
                 appWindow.rewatchMinedAddresses(w);
-                w.subaddressAccount.getAll();
+                w.subaddressAccount.refresh();
                 w.subaddress.refresh(w.currentSubaddressAccount);
                 w.startRefresh();
                 if (error) {
                     appWindow.showStatusMessage(qsTr("Could not remove the accounts: %1").arg(error) + translationManager.emptyString, 8);
                     return;
                 }
+                if (appWindow.currentWallet !== w) return;
+                subaddressAccountListRow.balanceTick++;
                 appWindow.onWalletUpdate();
                 appWindow.showStatusMessage(removed > 0 ? qsTr("%1 empty accounts removed, %2 left").arg(removed).arg(left) + translationManager.emptyString
                                                         : qsTr("No empty accounts at the end of the list") + translationManager.emptyString, 5);
@@ -204,7 +206,8 @@ Rectangle {
                         inputDialog.onAcceptedCallback = function() {
                             appWindow.currentWallet.subaddressAccount.addRow(inputDialog.inputText)
                             appWindow.currentWallet.switchSubaddressAccount(appWindow.currentWallet.numSubaddressAccounts() - 1)
-                            appWindow.onWalletUpdate();
+                            subaddressAccountListRow.balanceTick++;
+                            appWindow.updateBalance();
                         }
                         inputDialog.onRejectedCallback = null;
                         inputDialog.open()
@@ -267,6 +270,7 @@ Rectangle {
 
                 ListView {
                     id: subaddressAccountListView
+                    model: appWindow.currentWallet ? appWindow.currentWallet.subaddressAccountModel : null
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     clip: true
@@ -308,9 +312,7 @@ Rectangle {
                       }
                     }
 
-                    onCurrentIndexChanged: {
-                        appWindow.onWalletUpdate();
-                    }
+                    onCurrentIndexChanged: subaddressAccountListRow.balanceTick++
                 }
             }
 
@@ -366,9 +368,8 @@ Rectangle {
 
     function onPageCompleted() {
         console.log("account");
-        if (appWindow.currentWallet !== undefined) {
+        if (appWindow.currentWallet) {
             appWindow.currentWallet.subaddressAccount.refresh();
-            subaddressAccountListView.model = appWindow.currentWallet.subaddressAccountModel;
             appWindow.currentWallet.subaddress.refresh(appWindow.currentWallet.currentSubaddressAccount)
 
             subaddressAccountListRow.balanceTick++;

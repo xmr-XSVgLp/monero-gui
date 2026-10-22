@@ -6,7 +6,7 @@ function extract(source, name) {
  return source.slice(start, source.indexOf('\n    }', start) + 6);
 }
 function setup() {
- const writes=[], c={scheduledSends:[], scheduledSaving:0, scheduledLoadFailed:false,
+ const writes=[], c={middlePanel:{trezorView:{busy:""}},scheduledSends:[], scheduledSaving:0, scheduledLoadFailed:false,
  scheduledWalletCounts:{},scheduledExitApproved:false,scheduledReserveMs:1500000,
  scheduledRunningId:'', scheduledRequestId:0, transactionRequestId:0, scheduledCommitting:false,
  persistentSettings:{wallet_path:'wallet',scheduledSends:'[]',sync(){}},

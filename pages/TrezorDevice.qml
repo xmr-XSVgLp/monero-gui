@@ -46,7 +46,8 @@ Rectangle {
     readonly property color blue: dark ? "#6CB8FF" : "#1565C0"
     readonly property color good: dark ? "#3DDC84" : "#1E7D45"
     readonly property color bad: dark ? "#FF6B6B" : "#C62828"
-    readonly property bool isTrezor: currentWallet ? currentWallet.isTrezor() : false
+    readonly property var activeWallet: appWindow.currentWallet
+    readonly property bool isTrezor: activeWallet ? activeWallet.isTrezor() : false
 
     // what the device reported (GetFeatures), null until read
     property var features: null
@@ -112,6 +113,8 @@ Rectangle {
     readonly property int thumbHeight: monoScreen ? 64 : squareScreen ? 112 : 131
 
     function modelName(f) {
+        if (f.internalModel === "T2B1" || f.internalModel === "T3B1")
+            return "Trezor Safe 3";
         if (f.internalModel === "T3W1")
             return "Trezor Safe 7";
         if (f.internalModel === "T3T1")
@@ -119,17 +122,38 @@ Rectangle {
         return f.model ? "Trezor " + f.model : "Trezor";
     }
 
+    function resetDeviceView() {
+        features = null;
+        readError = "";
+        busy = "";
+        message = "";
+        messageOk = true;
+        pendingWallpaper = "";
+        pendingName = "";
+        labelInput.text = "";
+        lockDropdown.currentIndex = 0;
+        wallpaperDialog.close();
+    }
+
+    onActiveWalletChanged: {
+        resetDeviceView();
+        Qt.callLater(function() {
+            if (middlePanel.currentView === pageTrezor)
+                readFeatures();
+        });
+    }
+
     function onPageCompleted() {
-        if (isTrezor && busy === "")
-            readFeatures();
+        readFeatures();
     }
 
     function readFeatures() {
-        if (!currentWallet || !isTrezor)
+        if (!activeWallet || !isTrezor || busy !== "")
             return;
         busy = "read";
         readError = "";
-        currentWallet.deviceFeaturesAsync();
+        features = null;
+        activeWallet.deviceFeaturesAsync();
     }
 
     function errorText(error) {
@@ -149,11 +173,11 @@ Rectangle {
     }
 
     function apply(kind, settings) {
-        if (!currentWallet || busy !== "")
+        if (!activeWallet || !isTrezor || features === null || busy !== "")
             return;
         busy = kind;
         message = "";
-        currentWallet.deviceApplySettingsAsync(settings);
+        activeWallet.deviceApplySettingsAsync(settings);
     }
 
     function sendWallpaper() {
@@ -171,7 +195,7 @@ Rectangle {
     }
 
     Connections {
-        target: currentWallet
+        target: activeWallet
         ignoreUnknownSignals: true
 
         function onDeviceFeaturesReceived(json, error) {
@@ -234,6 +258,7 @@ Rectangle {
         title: qsTr("Choose an image for the Trezor") + translationManager.emptyString
         nameFilters: [ qsTr("Images") + " (*.jpg *.jpeg *.png *.bmp *.gif *.webp)" ]
         onAccepted: {
+            if (!pageTrezor.isTrezor || !pageTrezor.features) return;
             pageTrezor.pendingWallpaper = wallpaperDialog.selectedFile.toString();
             var path = decodeURIComponent(pageTrezor.pendingWallpaper);
             pageTrezor.pendingName = path.substring(path.lastIndexOf("/") + 1);
@@ -563,7 +588,7 @@ Rectangle {
                     onClicked: {
                         pageTrezor.busy = "brightness";
                         pageTrezor.message = "";
-                        currentWallet.deviceSetBrightnessAsync();
+                        activeWallet.deviceSetBrightnessAsync();
                     }
                 }
             }

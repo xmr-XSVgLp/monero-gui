@@ -128,6 +128,19 @@ Rectangle {
         }
     }
 
+    // Called before detaching the old wallet, including when parking it.
+    function clearWalletPages() {
+        [transferView, receiveView, historyView, addressBookView, advancedView,
+         keysView, merchantView].forEach(function(page) {
+            if (typeof page.clearFields === "function") page.clearFields();
+        });
+        addressBookView.onPageClosed();
+        historyView.clearTransactions();
+        if (currentView === keysView) state = "Settings";
+        if (currentView && typeof currentView.onPageClosed === "function")
+            currentView.onPageClosed();
+    }
+
     function updateStatus(){
         transferView.updateStatus();
     }

@@ -163,6 +163,7 @@ Rectangle {
 
                 ListView {
                     id: addressBookListView
+                model: appWindow.currentWallet ? appWindow.currentWallet.addressBookModel : null
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     clip: true
@@ -621,7 +622,6 @@ Rectangle {
     }
     function onPageCompleted() {
         console.log("adress book");
-        addressBookListView.model = currentWallet.addressBookModel;
         showAddressBook();
     }
 

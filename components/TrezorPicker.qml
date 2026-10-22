@@ -3,7 +3,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import "." as MoneroComponents
 
-// List of the connected Trezors, shown when there is more than one, so the wallet connects to the right one
+// Explicit device choice, including Bluetooth discovery while a USB Trezor is connected
 // (like Cake Wallet). open(devices, preselectPath, onChosen, onCancelled)
 Item {
     id: root
@@ -11,6 +11,7 @@ Item {
     property var devices: []
     property string selectedPath: ""
     property bool searching: false
+    property int searchGeneration: 0
     property var chosenCallback: null
     property var cancelledCallback: null
     readonly property bool dark: MoneroComponents.Style.blackTheme
@@ -39,6 +40,8 @@ Item {
     }
 
     function open(list, preselectPath, onChosen, onCancelled) {
+        ++searchGeneration;
+        searching = false;
         devices = list;
         chosenCallback = onChosen;
         cancelledCallback = onCancelled;
@@ -54,6 +57,9 @@ Item {
         forceActiveFocus();
     }
     function finish(chosen) {
+        if (!visible || (chosen && (searching || !devices.some(function(d) { return d.path === selectedPath; })))) return;
+        ++searchGeneration;
+        searching = false;
         if (visible) appWindow.modalDialogs = Math.max(0, appWindow.modalDialogs - 1);
         visible = false;
         var cb = chosen ? chosenCallback : cancelledCallback;
@@ -62,8 +68,11 @@ Item {
         if (cb) cb(selectedPath);
     }
     function searchBluetooth() {
+        if (searching || !visible) return;
         searching = true;
+        var generation = ++searchGeneration;
         walletManager.trezorDevicesAsync(true, function(json) {
+            if (!visible || generation !== searchGeneration) return;
             searching = false;
             var list = [];
             try { list = JSON.parse(json); } catch (e) {}
@@ -96,7 +105,7 @@ Item {
         MoneroComponents.TextPlain {
             Layout.fillWidth: true
             wrapMode: Text.WordWrap
-            text: qsTr("Hay varios Trezor conectados. Elige con cuál quieres abrir la cartera.")
+            text: qsTr("Elige el Trezor para esta cartera. Si usas un Safe 7 inalámbrico, pulsa Buscar por Bluetooth aunque haya otro Trezor conectado por USB.")
             font.pixelSize: 14
         }
 

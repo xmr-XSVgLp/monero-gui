@@ -71,6 +71,7 @@
 #include "qt/KeysFiles.h"
 #include "qt/PortableSettings.h"
 #include "qt/NetworkAccessBlockingFactory.h"
+#include "qt/SystemCaCertificates.h"
 #ifdef QML_TESTS
 #include "QmlTestHarness.h"
 #endif
@@ -125,6 +126,7 @@ bool isARM = false;
 
 int main(int argc, char *argv[])
 {
+    configureSystemCaCertificates();
     Q_INIT_RESOURCE(translations);
 
 #ifdef QML_TESTS

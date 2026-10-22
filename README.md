@@ -52,7 +52,9 @@ and other platforms are untested. The interface is available in English and Span
 | **Scheduled sends** (send at a date and time) | ❌ | ✅ |
 | Remove empty accounts | ❌ | ✅ |
 | **Encrypted notes** tied to the wallet (and to the Trezor on hardware wallets) | ❌ | ✅ |
-| Balance in fiat | ✅ | ✅ (Kraken / CoinPaprika, with 24 h and 7 d change, last price cached) |
+| Balance in fiat | ✅ | ✅ (Kraken / CoinGecko / CoinPaprika, favourite currencies, 24 h and 7 d change, last price cached) |
+| **Value of each transaction** at the time it happened and today, in your main currency | ❌ | ✅ |
+| Turn every price / market / swap service on or off one by one | ❌ | ✅ |
 | XMR price in mBTC with 24 h trend in the title bar | ❌ | ✅ (live from Kraken, every minute) |
 | **Markets**: XMR/EUR, XMR/USD, XMR/BTC charts, wallet value and balance over time, converter | ❌ | ✅ (CoinGecko, Kraken, KuCoin, CoinMarketCap) |
 | **Price alerts** with system notifications | ❌ | ✅ |
@@ -89,8 +91,9 @@ and other platforms are untested. The interface is available in English and Span
   the **Safe 3** (128×64, black and white) a Trezor TOIF image, dithered to black and white, with its own gallery
   drawn for that screen. Images dropped in `images/trezor-wallpapers/` (`safe5/`, `safe3/`) join the gallery
   after a rebuild.
-- **Several Trezors connected**: before opening a Trezor wallet the app lists the connected devices (by name and
-  model, Bluetooth on request) and remembers which Trezor each wallet uses.
+- **Choosing the Trezor**: before opening a Trezor wallet the app always lists the connected devices (by name and
+  model) with a **Search by Bluetooth** button, so a wireless Safe 7 can be used even while another Trezor is
+  plugged in by USB. The choice is remembered for that wallet only after it opens correctly.
 - Close Trezor Suite before opening the wallet: the Safe 7 is used directly, not through Trezor Bridge.
 
 ### Several wallets at once
@@ -104,6 +107,10 @@ and other platforms are untested. The interface is available in English and Span
   back to it. Switching back resumes the same session, so the Trezor does not ask for the passphrase again.
 - Closing a wallet no longer blocks the window: it saves and closes on its own thread. Quitting the app waits
   until every wallet has been saved.
+- Switching is safe while something is in progress: the app waits for a Trezor operation, a note being saved,
+  address groups or mined addresses being created and empty accounts being removed, and saves unsaved notes
+  first. Dialogs of the previous wallet are closed, every page (transactions, receive, accounts…) is cleared and
+  reloaded for the new one, and results of a running proof are ignored if the wallet changed meanwhile.
 
 ### Seed accounts (several "4…" addresses from one seed)
 - Only a wallet's primary address starts with 4; accounts and subaddresses always start with 8. To get more
@@ -174,6 +181,14 @@ Four tabs:
   a final check before broadcasting a manually prepared transaction). This is a buffer, not a guarantee:
   spendable outputs must still be unlocked. Keep this wallet selected and synced; hardware wallets cannot schedule payments, and a background-sync lock that removes spending access cannot execute payments.
 
+### Transactions
+- Each transaction shows, next to its amount, what it was worth **at that moment** in your main currency
+  (≈, from the Markets history). Expanding it shows a card with the XMR price then and now, the value of the
+  amount then and today and the change, with the source and the date of both quotes. It is approximate, does not
+  include the fee, and the change is not a realised gain or loss. Without history for that date it says so.
+- The details are laid out in one compact block (confirmations, block height, date…) under
+  "Transaction information", and the list refreshes by itself after local changes without a new wallet refresh.
+
 ### Accounts and mined addresses
 - **Wallet+ → Mined addresses** searches your own subaddresses for a text at the start, at the end or anywhere
   (optionally ignoring case), over a range of accounts and addresses or without end, with live results, a progress
@@ -223,8 +238,15 @@ Four tabs:
 - The **Welcome to Monero** page (before opening a wallet) shows the same **Network configuration** card, then
   the Nym, Tor and I2P panels and the **Connection check**, so the network can be set up before the first wallet.
 - Below it: the **Node** card (start / stop, Local / Remote node, live list of the node's external IPs), a
-  **connection check per network**, the Nym, Tor and I2P panels and **External connections** (price and market
-  services).
+  **connection check per network**, the Nym, Tor and I2P panels and **External connections**.
+- **External connections** turns prices, markets and swap quotes on or off as a whole and then lets you choose:
+  - your **favourite currencies** (any fiat plus BTC) and the **main currency** used for balances, transactions
+    and Markets;
+  - each **source** one by one (Kraken, CoinGecko, CoinPaprika, KuCoin, CoinMarketCap, Frankfurter, Wagyu,
+    NonKYC, ChangeNOW, MoneroPriceNow), with its host and what it is used for; a disabled source gets no new
+    requests, and saved data is kept;
+  - the **main price source** (Kraken, CoinGecko or CoinPaprika). If it has no history for the chosen currency,
+    another enabled source is used and named; with none, "no data" is shown.
 - **Spy-node ban list**: the MRL ban list ([Boog900/monero-ban-list](https://github.com/Boog900/monero-ban-list))
   is downloaded at build time (`actualizar-banlist.sh`) and the local node starts with `--ban-list` and
   `--enable-dns-blocklist`. In Security → Nodes each remote node is also checked over P2P: a node on the list, or
@@ -315,7 +337,10 @@ ends up in `build/release/bin`.
 To copy the app to another Mac, run `bash empaquetar-macos.sh`. It creates `dist/XMR-wallet+.app` and
 `dist/XMR-wallet+-macos.zip`, which do not need Homebrew and include the GeoIP base (downloaded by the script; it
 is not in the repository). On the other Mac, run
-`xattr -dr com.apple.quarantine XMR-wallet+.app` once before opening it.
+`xattr -dr com.apple.quarantine XMR-wallet+.app` once before opening it. The script finishes by checking the
+package (`scripts/check-macos-runtime.py`): monerod, the Nym client, Tor and i2pd start from inside the app, the
+Qt TLS plugin, ban list and I2P reseed certificates are present and no file points outside the app. HTTPS uses
+the macOS system certificates (`/etc/ssl/cert.pem`), so prices and node lists work on a Mac without Homebrew.
 
 The Nym client needs an active NymVPN subscription account. Without it, everything else works (use a SOCKS5
 route such as the built-in Tor client).

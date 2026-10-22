@@ -60,7 +60,16 @@ Item {
     property string addressLabel: ""
     property var    hiddenAmounts: []
 
+    function clearFields() {
+        onPageClosed();
+        hiddenAmounts = [];
+        addressLabel = "";
+        trackingError = "";
+        amountToReceive.text = "";
+    }
+
     function onPageCompleted() {
+        if (!appWindow.currentWallet) return;
         if (appWindow.currentWallet) {
             appWindow.current_address = appWindow.currentWallet.address(appWindow.currentWallet.currentSubaddressAccount, appWindow.current_subaddress_table_index);
         }

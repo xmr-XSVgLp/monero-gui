@@ -110,7 +110,11 @@ if not manifest.is_file():
     sys.exit('ERROR: QML build manifest missing; compile the wallet first')
 for qrc in (manifest, manifest.with_name('monero-wallet-gui_raw_res_0.qrc')):
     for item in ET.parse(qrc).iter('file'):
-        src = pathlib.Path(item.text)
+        # the .qrc has absolute paths from where the build was configured; read the file from this
+        # checkout (alias = path inside the repo) so a moved or renamed folder still works
+        src = pathlib.Path(item.get('alias', ''))
+        if not src.is_file():
+            src = pathlib.Path(item.text)
         if src.suffix not in ('.qml', '.js', '.mjs') and src.name != 'qmldir':
             continue
         dest = root / item.get('alias', src.name)
@@ -219,12 +223,7 @@ done
 echo "== Tor"
 bash "$(dirname "$0")/actualizar-tor.sh" "$APP"
 bash "$(dirname "$0")/actualizar-i2pd.sh" "$APP"
-if [ ! -x "$APP/Contents/MacOS/i2pd/i2pd" ]; then
-  echo "################################################################"
-  echo "AVISO: el paquete va SIN I2P (i2pd no se ha copiado; mira el WARNING de arriba)."
-  echo "En este Mac la app usa el i2pd de Homebrew, pero en otro Mac no habrá I2P."
-  echo "################################################################"
-fi
+
 
 echo "== Checking all bundled dependencies"
 python3 scripts/check-macos-dependencies.py "$APP"
@@ -240,6 +239,9 @@ else
   echo "ERROR: monerod does not start; no ZIP will be produced"
   exit 1
 fi
+
+echo "== Testing portable runtime resources and helpers"
+python3 scripts/check-macos-runtime.py "$APP"
 
 echo "== Making the zip"
 ZIP="$DIST/XMR-wallet+-macos.zip"

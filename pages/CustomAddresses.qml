@@ -46,6 +46,7 @@ Rectangle {
 
     readonly property color hit: MoneroComponents.Style.blackTheme ? "#3DDC84" : "#1E7D46"
 
+    property int walletGeneration: 0
     property bool busy: false
     property var results: []
     property double scanned: 0
@@ -146,8 +147,10 @@ Rectangle {
         searchStartMs = Date.now();
         clock.now = searchStartMs;
         progressTotal = endless ? 0 : accounts * perAccount;
+        var generation = walletGeneration;
         currentWallet.findAddressesAsync(pattern, atStart.checked, atEnd.checked, anywhere.checked, ignoreCase.checked,
                                          endless ? endlessAccounts : accounts, endless ? 0 : perAccount, function(json, count, stopped) {
+            if (generation !== walletGeneration) return;
             busy = false;
             scanned = count;
             cancelled = stopped;
@@ -269,7 +272,17 @@ Rectangle {
 
     Connections {
         target: appWindow
-        function onCurrentWalletChanged() { pageCustom.results = []; pageCustom.searched = ""; pageCustom.scanned = 0; }
+        function onCurrentWalletChanged() {
+            pageCustom.walletGeneration++;
+            pageCustom.busy = false;
+            pageCustom.adding = false;
+            pageCustom.results = [];
+            pageCustom.searched = "";
+            pageCustom.scanned = 0;
+            pageCustom.progressScanned = 0;
+            pageCustom.progressTotal = 0;
+            pageCustom.cancelled = false;
+        }
     }
 
     ColumnLayout {

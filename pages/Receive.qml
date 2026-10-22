@@ -214,7 +214,16 @@ Rectangle {
     Connections {
         target: appWindow.currentWallet
         ignoreUnknownSignals: true
-        function onCurrentSubaddressAccountChanged() { pageReceive.selectedGroup = null; }
+        function onCurrentSubaddressAccountChanged() {
+            pageReceive.selectedGroup = null;
+            subaddressListView.currentIndex = 0;
+            pageReceive.updateSelectedAddressDisplay();
+            pageReceive.updateUsedAddresses();
+        }
+    }
+    Connections {
+        target: appWindow.currentWallet ? appWindow.currentWallet.subaddress : null
+        function onRefreshFinished() { pageReceive.updateSelectedAddressDisplay(); }
     }
     property bool creatingGroup: false
     function createGroup(count, label) {
@@ -262,6 +271,8 @@ Rectangle {
     }
 
     function updateSelectedAddressDisplay() {
+        if (!appWindow.currentWallet || subaddressListView.currentIndex < 0
+                || subaddressListView.currentIndex >= appWindow.currentWallet.numSubaddresses(appWindow.currentWallet.currentSubaddressAccount)) return;
         appWindow.current_subaddress_table_index = subaddressListView.currentIndex;
         appWindow.current_address = appWindow.currentWallet.address(
             appWindow.currentWallet.currentSubaddressAccount,
@@ -1065,6 +1076,7 @@ Rectangle {
 
                 ListView {
                     id: subaddressListView
+                    model: appWindow.currentWallet ? appWindow.currentWallet.subaddressModel : null
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     clip: true
@@ -1218,7 +1230,6 @@ Rectangle {
     function onPageCompleted() {
         console.log("Receive page loaded");
         pageReceive.clearFields();
-        subaddressListView.model = appWindow.currentWallet.subaddressModel;
 
         if (appWindow.currentWallet) {
             appWindow.currentWallet.subaddress.refresh(appWindow.currentWallet.currentSubaddressAccount)
@@ -1232,6 +1243,9 @@ Rectangle {
     }
 
     function clearFields() {
+        selectedGroup = null;
+        usedAddresses = {};
+        subaddressListView.currentIndex = 0;
         amountToReceiveFiat.text = "";
         amountToReceiveXMR.text = "";
         txDescriptionInput.text = "";

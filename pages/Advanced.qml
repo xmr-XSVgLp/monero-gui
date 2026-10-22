@@ -135,6 +135,11 @@ ColumnLayout {
         }
     }
 
+    function onPageCompleted() {
+        if (stateView.currentView && typeof stateView.currentView.onPageCompleted === "function")
+            stateView.currentView.onPageCompleted();
+    }
+
     function clearFields() {
         signView.clearFields();
         prooveView.clearFields();

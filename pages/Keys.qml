@@ -262,8 +262,25 @@ Rectangle {
         }
     }
 
+    function clearFields() {
+        primaryAddress.text = "";
+        walletCreationHeight.text = "";
+        secretViewKey.text = "";
+        publicViewKey.text = "";
+        secretSpendKey.text = "";
+        publicSpendKey.text = "";
+        seedText.text = "";
+        viewOnlyQRCode.source = "";
+        fullWalletQRCode.source = "";
+        viewOnlyQRCode.visible = false;
+        showFullQr.visible = true;
+        showViewOnlyQr.visible = true;
+    }
+
     // fires on every page load
     function onPageCompleted() {
+        clearFields();
+        if (!currentWallet) return;
         console.log("keys page loaded");
 
         primaryAddress.text = currentWallet.address(0, 0)

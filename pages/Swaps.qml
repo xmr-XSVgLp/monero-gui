@@ -233,9 +233,9 @@ Rectangle {
                 };
             })(r);
             if (r.post)
-                network.postJSON(r.url, r.body, cb);
+                appWindow.pricePostJSON(r.url, r.body, cb);
             else
-                network.getJSON(r.url, cb);
+                appWindow.priceGetJSON(r.url, cb);
         }
     }
 
@@ -429,6 +429,14 @@ Rectangle {
 
     onCompareIndexChanged: loadCompare()
 
+    Connections {
+        target: persistentSettings
+        function onPriceSourcesJsonChanged() {
+            pageSwaps.results = ({});
+            pageSwaps.nkMarkets = [];
+            if (pageSwaps.visible && pageSwaps.pending === 0) pageSwaps.refresh();
+        }
+    }
     function onPageCompleted() {
         loadCompare();
         if (Object.keys(results).length === 0 || pending === 0)
