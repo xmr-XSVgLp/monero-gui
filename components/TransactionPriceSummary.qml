@@ -53,7 +53,8 @@ Rectangle {
         Layout.minimumWidth: 0
         spacing: 2
         UI.TextPlain { Layout.fillWidth: true; text: caption; font.pixelSize: 12; color: UI.Style.dimmedFontColor; themeTransition: false; wrapMode: Text.WordWrap }
-        UI.TextPlain { Layout.fillWidth: true; text: amount; font.pixelSize: 17; font.bold: true; color: valueColor; themeTransition: false; wrapMode: Text.WrapAnywhere }
+        property bool rich: true
+        UI.TextPlain { Layout.fillWidth: true; text: rich ? Utils.prettyAmountRich(amount, Math.round(font.pixelSize * 0.65)) : amount; textFormat: rich ? Text.RichText : Text.PlainText; font.pixelSize: 17; font.bold: true; color: valueColor; themeTransition: false; wrapMode: Text.WrapAnywhere }
     }
     ColumnLayout {
         id: content
@@ -79,6 +80,7 @@ Rectangle {
             Metric { caption: root.fresh ? qsTr("Current price") : qsTr("Last available price"); amount: root.price(root.quote.latest) }
             Metric {
                 caption: qsTr("Price change")
+                rich: false
                 amount: root.quote.change === null ? "—" : (root.quote.change > 0 ? "+" : "") + root.quote.change.toFixed(2) + "%"
                 valueColor: root.quote.change === null || root.quote.change === 0 ? UI.Style.defaultFontColor
                     : root.quote.change > 0 ? (UI.Style.blackTheme ? "#65CA92" : "#21633D") : (UI.Style.blackTheme ? "#E38787" : "#A43535")

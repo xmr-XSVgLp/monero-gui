@@ -144,7 +144,8 @@ Item {
             visible: row.fiat !== ""
             Layout.minimumWidth: 110
             horizontalAlignment: Text.AlignRight
-            text: Utils.prettyAmount(row.fiat)
+            text: Utils.prettyAmountRich(row.fiat, Math.round(font.pixelSize * 0.65))
+            textFormat: Text.RichText
             font.family: MoneroComponents.Style.fontMonoRegular.name
             font.pixelSize: 12
             color: MoneroComponents.Style.dimmedFontColor

@@ -768,7 +768,7 @@ Rectangle {
                         inputPaddingTop: 0
                         inputPaddingBottom: 0
                         readOnly: true
-                        text: Utils.removeTrailingZeros(walletManager.displayAmount(recipientModel.getAmountTotal()))
+                        text: Utils.prettyAmount(Utils.removeTrailingZeros(walletManager.displayAmount(recipientModel.getAmountTotal())))
                         visible: recipientModel.count > 1
                     }
 
@@ -804,7 +804,7 @@ Rectangle {
                         inputPaddingTop: 0
                         inputPaddingBottom: 0
                         readOnly: true
-                        text: fiatApiConvertToFiat(walletManager.displayAmount(recipientModel.getAmountTotal()))
+                        text: Utils.prettyAmount(fiatApiConvertToFiat(walletManager.displayAmount(recipientModel.getAmountTotal())))
                         visible: persistentSettings.fiatPriceEnabled
                     }
 

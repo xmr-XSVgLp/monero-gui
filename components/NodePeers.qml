@@ -166,15 +166,25 @@ ColumnLayout {
                 }
             }
             // country from the offline GeoIP base (oshelper.geoIpReady re-reads it once the base is loaded)
-            MoneroComponents.TextPlain {
+            // hidden service: no IP, so no location; the network's logo and name instead of the flag
+            Row {
                 readonly property string cc: peerIp.net !== "" ? "" : (oshelper.geoIpReady, oshelper.ipCountry(peerIp.ip))
                 Layout.preferredWidth: 56
-                // hidden service: no IP, so no location; the network name instead
-                text: peerIp.net === "TOR" ? "🧅 TOR" : peerIp.net !== "" ? peerIp.net : cc !== "" ? peersView.flag(cc) + " " + cc : "—"
-                font.family: MoneroComponents.Style.fontMonoRegular.name
-                font.pixelSize: 12
-                color: peerIp.net !== "" ? "#B07CFF" : MoneroComponents.Style.defaultFontColor
-                themeTransition: false
+                spacing: 4
+                MoneroComponents.NetIcon {
+                    visible: peerIp.net !== ""
+                    net: peerIp.net === "I2P" ? "i2p" : "tor"
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+                MoneroComponents.TextPlain {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: peerIp.net !== "" ? peerIp.net : parent.cc !== "" ? peersView.flag(parent.cc) + " " + parent.cc : "—"
+                    font.family: MoneroComponents.Style.fontMonoRegular.name
+                    font.pixelSize: 12
+                    color: peerIp.net === "TOR" ? "#B07CFF" : peerIp.net === "I2P" ? (MoneroComponents.Style.blackTheme ? "#5EC8FF" : "#1F6FA8")
+                           : MoneroComponents.Style.defaultFontColor
+                    themeTransition: false
+                }
             }
             MoneroComponents.TextPlain {
                 Layout.preferredWidth: 60

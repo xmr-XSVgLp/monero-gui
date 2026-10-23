@@ -2,10 +2,13 @@
 // The key comes from the wallet keys (and a confirmation on the Trezor for hardware wallets),
 // They open by themselves with the password the wallet was opened with (plus one confirmation on the
 // Trezor) and stay open until the wallet is closed.
-// Notes are kept as JSON { version, notes: [{ title, text, updated }] } inside the encrypted file.
+// Notes are kept as JSON { version, notes: [{ title, text, updated }] } inside the encrypted file;
+// text is rich text (HTML from the editor: bold, italic, sizes, colours, lists).
 
 import QtQuick
 import QtQuick.Layouts
+
+import moneroComponents.RichTextHelper 1.0
 
 import "../components" as MoneroComponents
 
@@ -357,6 +360,7 @@ Rectangle {
                                     elide: Text.ElideRight
                                     text: modelData.title !== "" ? modelData.title : (qsTr("Untitled") + translationManager.emptyString)
                                     font.pixelSize: 14
+                                    font.family: MoneroComponents.Style.fontXmrRegular.name
                                     font.bold: index === pageNotes.current
                                     color: MoneroComponents.Style.defaultFontColor
                                     themeTransition: false
@@ -412,6 +416,7 @@ Rectangle {
                         color: MoneroComponents.Style.defaultFontColor
                         selectionColor: Qt.rgba(0.5, 0.5, 0.5, 0.4)
                         font.pixelSize: 20
+                        font.family: MoneroComponents.Style.fontXmrRegular.name
                         font.bold: true
                         selectByMouse: true
                         clip: true
@@ -424,6 +429,22 @@ Rectangle {
                         height: 1
                         color: pageNotes.accent
                         opacity: 0.5
+                    }
+
+                    // formatting toolbar, like the one in macOS TextEdit
+                    RichTextHelper {
+                        id: richText
+                        document: bodyInput.textDocument
+                        cursorPosition: bodyInput.cursorPosition
+                        selectionStart: bodyInput.selectionStart
+                        selectionEnd: bodyInput.selectionEnd
+                        defaultFontSize: bodyInput.font.pixelSize
+                    }
+
+                    MoneroComponents.RichTextToolbar {
+                        Layout.fillWidth: true
+                        helper: richText
+                        editor: bodyInput
                     }
 
                     Flickable {
@@ -452,12 +473,30 @@ Rectangle {
                             font.family: MoneroComponents.Style.fontRegular.name
                             font.pixelSize: 15
                             selectByMouse: true
-                            textFormat: TextEdit.PlainText
+                            textFormat: TextEdit.RichText
+                            persistentSelection: true   // keep the selection while a toolbar button is clicked
                             onTextChanged: pageNotes.edited()
+                            Keys.onPressed: function(event) {
+                                if (!(event.modifiers & Qt.ControlModifier)) return;
+                                if (event.key === Qt.Key_B) richText.setBold(!richText.bold);
+                                else if (event.key === Qt.Key_I) richText.setItalic(!richText.italic);
+                                else if (event.key === Qt.Key_U) richText.setUnderline(!richText.underline);
+                                else return;
+                                event.accepted = true;
+                            }
+                            // a click on the box of a checklist item ticks it
+                            TapHandler {
+                                onTapped: function(eventPoint) {
+                                    var p = eventPoint.position;
+                                    var pos = bodyInput.positionAt(p.x, p.y);
+                                    if (p.x < bodyInput.positionToRectangle(pos).x - 2)
+                                        richText.toggleCheck(pos);
+                                }
+                            }
                             onCursorRectangleChanged: bodyFlick.ensureVisible(cursorRectangle)
 
                             MoneroComponents.TextPlain {
-                                visible: bodyInput.text === "" && pageNotes.current >= 0
+                                visible: bodyInput.length === 0 && pageNotes.current >= 0
                                 text: qsTr("Write here. Everything is saved encrypted.") + translationManager.emptyString
                                 font.pixelSize: 15
                                 color: MoneroComponents.Style.dimmedFontColor

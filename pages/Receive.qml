@@ -44,6 +44,7 @@ import moneroComponents.TransactionHistoryModel 1.0
 import moneroComponents.Subaddress 1.0
 import moneroComponents.SubaddressModel 1.0
 import "../js/TxUtils.js" as TxUtils
+import "../js/Utils.js" as Utils
 
 Rectangle {
     id: pageReceive
@@ -907,7 +908,8 @@ Rectangle {
                                                 themeTransition: false
                                             }
                                             MoneroComponents.TextPlain {
-                                                text: pageReceive.piconeroText(pageReceive.groupAmounts[index]) + " XMR"
+                                                textFormat: Text.RichText
+                                                text: Utils.prettyAmountRich(pageReceive.piconeroText(pageReceive.groupAmounts[index]), Math.round(font.pixelSize * 0.65)) + " XMR"
                                                 font.pixelSize: 12
                                                 font.family: MoneroComponents.Style.fontMonoRegular.name
                                                 color: MoneroComponents.Style.defaultFontColor

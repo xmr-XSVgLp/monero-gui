@@ -12,6 +12,13 @@ Item {
     property string unlockedLabel: ""
     property string balanceText: ""
     property string unlockedText: ""
+
+    // amount with the Monero symbol of XMR Sans (Ɱ, the solid M in a ring) in place of "XMR"
+    function withSymbol(text, smallPx) {
+        var amount = text.replace(/\s*XMR$/, "");
+        return Utils.prettyAmountRich(amount, smallPx)
+            + (amount !== text ? " <span style=\"font-family:'" + MoneroComponents.Style.fontXmrRegular.name + "'\">\u2C6E</span>" : "");
+    }
     property bool fiatEnabled: false
     property string fiatSymbol: ""
     property string fiatTotal: "?.??"
@@ -199,7 +206,8 @@ Item {
                     MoneroComponents.TextPlain {
                         id: fiatTotalText
                         anchors.centerIn: parent
-                        text: "≈ " + Utils.prettyAmount(root.chipTotal) + " " + root.chipSymbol
+                        text: "≈ " + Utils.prettyAmountRich(root.chipTotal, Math.round(font.pixelSize * 0.65)) + " " + root.chipSymbol
+                        textFormat: Text.RichText
                         font.family: MoneroComponents.Style.fontMonoMedium.name
                         font.pixelSize: 18
                         color: MoneroComponents.Style.defaultFontColor
@@ -243,7 +251,7 @@ Item {
                 id: balanceValue
                 Layout.topMargin: 4
                 Layout.fillWidth: true
-                text: Utils.prettyAmountRich(root.balanceText, Math.round(font.pixelSize * 0.65))
+                text: root.withSymbol(root.balanceText, Math.round(font.pixelSize * 0.65))
                 textFormat: Text.RichText
                 elide: Text.ElideRight
                 font.family: MoneroComponents.Style.fontMonoMedium.name
@@ -286,7 +294,7 @@ Item {
 
                 MoneroComponents.TextPlain {
                     id: unlockedValue
-                    text: Utils.prettyAmountRich(root.unlockedText, Math.round(font.pixelSize * 0.65))
+                    text: root.withSymbol(root.unlockedText, Math.round(font.pixelSize * 0.65))
                     textFormat: Text.RichText
                     font.family: MoneroComponents.Style.fontMonoRegular.name
                     font.pixelSize: 15
@@ -304,7 +312,8 @@ Item {
 
                 MoneroComponents.TextPlain {
                     visible: root.fiatEnabled
-                    text: "≈ " + Utils.prettyAmount(root.fiatUnlocked) + " " + root.fiatSymbol
+                    text: "≈ " + Utils.prettyAmountRich(root.fiatUnlocked, Math.round(font.pixelSize * 0.65)) + " " + root.fiatSymbol
+                    textFormat: Text.RichText
                     font.family: MoneroComponents.Style.fontMonoRegular.name
                     font.pixelSize: 15
                     color: MoneroComponents.Style.dimmedFontColor
@@ -312,11 +321,65 @@ Item {
                 }
             }
 
-            // XMR price and 7-day change
-            Item {
+            // fold-out: XMR price and the value of the whole wallet over time
+            Rectangle {
+                id: foldHeader
                 visible: root.fiatEnabled
                 Layout.fillWidth: true
-                Layout.topMargin: 12
+                Layout.topMargin: 10
+                height: 32
+                radius: 6
+                color: foldArea.containsMouse ? (MoneroComponents.Style.blackTheme ? Qt.rgba(1, 1, 1, 0.07) : Qt.rgba(0, 0, 0, 0.05)) : "transparent"
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: 6
+                    anchors.rightMargin: 8
+                    spacing: 8
+                    MoneroComponents.TextPlain {
+                        text: "›"
+                        rotation: persistentSettings.accountPriceOpen ? 90 : 0
+                        Behavior on rotation { NumberAnimation { duration: 150 } }
+                        font.pixelSize: 18
+                        color: MoneroComponents.Style.defaultFontColor
+                        themeTransition: false
+                    }
+                    MoneroComponents.TextPlain {
+                        text: qsTr("Monero price and balance history") + translationManager.emptyString
+                        font.family: MoneroComponents.Style.fontMedium.name
+                        font.pixelSize: 14
+                        color: MoneroComponents.Style.defaultFontColor
+                        themeTransition: false
+                    }
+                    Item { Layout.fillWidth: true }
+                    // folded: the price stays visible on the right
+                    MoneroComponents.TextPlain {
+                        visible: !persistentSettings.accountPriceOpen
+                        text: "1 <span style=\"font-family:'" + MoneroComponents.Style.fontXmrRegular.name + "'\">\u2C6E</span> = "
+                              + Utils.prettyAmountRich(root.priceText, Math.round(font.pixelSize * 0.65)) + " " + root.fiatSymbol
+                              + (isNaN(root.change24h) ? "" : "  <span style=\"color:" + (root.change24h >= 0 ? "#5FD08F" : "#FF6B6B") + "\">"
+                                 + (root.change24h >= 0 ? "▲ +" : "▼ ") + root.change24h.toFixed(2) + " %</span>")
+                        textFormat: Text.RichText
+                        font.family: MoneroComponents.Style.fontMonoRegular.name
+                        font.pixelSize: 13
+                        color: MoneroComponents.Style.defaultFontColor
+                        themeTransition: false
+                    }
+                }
+                MouseArea {
+                    id: foldArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: persistentSettings.accountPriceOpen = !persistentSettings.accountPriceOpen
+                }
+            }
+
+            // XMR price and 7-day change
+            Item {
+                visible: root.fiatEnabled && persistentSettings.accountPriceOpen
+                Layout.fillWidth: true
+                Layout.topMargin: 4
                 implicitHeight: ticker.implicitHeight + 20
 
                 MoneroComponents.NeonFrame {
@@ -380,7 +443,8 @@ Item {
                             themeTransition: false
                         }
                         MoneroComponents.TextPlain {
-                            text: "1 XMR = " + Utils.prettyAmount(root.priceText) + " " + root.fiatSymbol
+                            text: "1 XMR = " + Utils.prettyAmountRich(root.priceText, Math.round(font.pixelSize * 0.65)) + " " + root.fiatSymbol
+                            textFormat: Text.RichText
                             font.family: MoneroComponents.Style.fontMonoMedium.name
                             font.pixelSize: 15
                             color: MoneroComponents.Style.defaultFontColor
@@ -424,6 +488,14 @@ Item {
                         label: root.changeLabel
                     }
                 }
+            }
+
+            // value of the whole wallet over time
+            MoneroComponents.BalanceHistoryChart {
+                visible: root.fiatEnabled && persistentSettings.accountPriceOpen
+                Layout.fillWidth: true
+                Layout.topMargin: 6
+                currency: root.fiatSymbol !== "" ? root.fiatSymbol : "USD"
             }
         }
     }

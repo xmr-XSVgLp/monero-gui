@@ -70,6 +70,7 @@
 #include "qt/TailsOS.h"
 #include "qt/KeysFiles.h"
 #include "qt/PortableSettings.h"
+#include "qt/RichTextHelper.h"
 #include "qt/NetworkAccessBlockingFactory.h"
 #include "qt/SystemCaCertificates.h"
 #ifdef QML_TESTS
@@ -346,6 +347,7 @@ Verify update binary using 'shasum'-compatible (SHA256 algo) output signed by tw
     qmlRegisterType<WalletManager>("moneroComponents.WalletManager", 1, 0, "WalletManager");
 
     qmlRegisterType<PortableSettings>("moneroComponents.Settings", 1, 0, "PortableSettings");
+    qmlRegisterType<RichTextHelper>("moneroComponents.RichTextHelper", 1, 0, "RichTextHelper");
 
     qmlRegisterUncreatableType<Wallet>("moneroComponents.Wallet", 1, 0, "Wallet", "Wallet can't be instantiated directly");
 

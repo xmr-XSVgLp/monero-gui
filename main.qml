@@ -3724,6 +3724,7 @@ ApplicationWindow {
         property bool displayWalletNameInTitleBar: true
         property bool hideBalance: false
         property bool priceTicker: true
+        property bool accountPriceOpen: false   // Account page: price and balance chart unfolded
 
         // Matrix FX
         property bool fxMatrixRain: true
@@ -4910,6 +4911,12 @@ ApplicationWindow {
         versionNumber: Version.GUI_VERSION_NUMBER
         versionTag: Version.GUI_VERSION_TAG
         Component.onCompleted: Qt.callLater(start)
+        onFinished: {
+            // The intro takes focus after the startup password dialog has opened.
+            // Restore it only once the intro has fully disappeared.
+            if (passwordDialog.visible)
+                Qt.callLater(passwordDialog.focusPassword);
+        }
     }
 
     // borders on white theme + linux

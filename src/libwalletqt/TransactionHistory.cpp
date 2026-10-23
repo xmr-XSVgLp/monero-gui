@@ -157,6 +157,22 @@ QVariantList TransactionHistory::usedSubaddresses() const
     return list;
 }
 
+QVariantList TransactionHistory::balanceEventsAll() const
+{
+    QReadLocker locker(&m_lock);
+
+    QVariantList list;
+    for (const auto *tx : m_pimpl->getAll()) {
+        if (tx->isFailed() || tx->isPending() || tx->timestamp() <= 0)
+            continue;
+        const double amount = tx->amount() / 1e12;
+        const double fee = tx->fee() / 1e12;
+        const bool out = tx->direction() == Monero::TransactionInfo::Direction_Out;
+        list.append(QVariant(QVariantList{static_cast<qlonglong>(tx->timestamp()), out ? -(amount + fee) : amount}));
+    }
+    return list;
+}
+
 quint64 TransactionHistory::count() const
 {
     QReadLocker locker(&m_lock);

@@ -589,10 +589,10 @@ Rectangle {
 
                         MoneroComponents.TextPlain {
                             Layout.fillWidth: true
-                            elide: Text.ElideRight
                             font.family: amount == 0 ? MoneroComponents.Style.fontRegular.name : MoneroComponents.Style.fontMonoMedium.name
                             font.pixelSize: 15
-                            text: (amount == 0 ? qsTr("Unknown amount") : displayAmount) + translationManager.emptyString
+                            textFormat: Text.RichText
+                            text: (amount == 0 ? qsTr("Unknown amount") : Utils.prettyAmountRich(displayAmount, Math.round(font.pixelSize * 0.65))) + translationManager.emptyString
                             color: MoneroComponents.Style.defaultFontColor
                             themeTransition: false
 
@@ -609,12 +609,13 @@ Rectangle {
                     MoneroComponents.TextPlain {
                         visible: amount != 0 && !isPending && !isFailed
                         Layout.maximumWidth: 160
-                        elide: Text.ElideRight
                         font.family: MoneroComponents.Style.fontMonoRegular.name
                         font.pixelSize: 12
-                        text: "(" + (delegate.historicalValue === null ? "—" : "≈ " + Utils.prettyAmount(delegate.historicalValue.toFixed(delegate.valuationPair === "btc" ? 8 : 2)))
+                        textFormat: Text.RichText
+                        readonly property string plain: "(" + (delegate.historicalValue === null ? "—" : "≈ " + Utils.prettyAmount(delegate.historicalValue.toFixed(delegate.valuationPair === "btc" ? 8 : 2)))
                               + " " + delegate.valuationPair.toUpperCase() + ")"
-                        tooltip: "Valor del importe entonces: " + text
+                        text: Utils.prettyAmountRich(plain, Math.round(font.pixelSize * 0.8))
+                        tooltip: "Valor del importe entonces: " + plain
                         color: MoneroComponents.Style.dimmedFontColor
                         themeTransition: false
                     }
@@ -807,9 +808,10 @@ Rectangle {
                                 anchors.verticalCenter: parent.verticalCenter
                                 font.family: MoneroComponents.Style.fontMonoRegular.name
                                 font.pixelSize: 13
+                                textFormat: Text.RichText
                                 text: {
                                     if(!isout && confirmationsRequired === 60) return qsTr("Yes") + translationManager.emptyString;
-                                    if(fee !== "") return Utils.removeTrailingZeros(fee) + " XMR";
+                                    if(fee !== "") return Utils.prettyAmountRich(Utils.removeTrailingZeros(fee), Math.round(font.pixelSize * 0.65)) + " XMR";
                                     return "-";
                                 }
                                 color: MoneroComponents.Style.defaultFontColor

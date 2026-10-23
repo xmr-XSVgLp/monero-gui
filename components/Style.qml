@@ -80,6 +80,11 @@ QtObject {
     property QtObject fontBold: FontLoader { id: _fontBold; source: "qrc:/fonts/Roboto-Bold.ttf"; }
     property QtObject fontLight: FontLoader { id: _fontLight; source: "qrc:/fonts/Roboto-Light.ttf"; }
     property QtObject fontRegular: FontLoader { id: _fontRegular; source: "qrc:/fonts/Roboto-Regular.ttf"; }
+    // XMR Sans: Roboto plus the Monero symbol at ɱ (U+0271); loaded so it can be picked anywhere, notes included
+    property QtObject fontXmrLight: FontLoader { source: "qrc:/fonts/XMRSans-Light.ttf"; }
+    property QtObject fontXmrRegular: FontLoader { source: "qrc:/fonts/XMRSans-Regular.ttf"; }
+    property QtObject fontXmrMedium: FontLoader { source: "qrc:/fonts/XMRSans-Medium.ttf"; }
+    property QtObject fontXmrBold: FontLoader { source: "qrc:/fonts/XMRSans-Bold.ttf"; }
 
     property QtObject fontMonoMedium: FontLoader { id: _fontMonoMedium; source: "qrc:/fonts/RobotoMono-Medium.ttf"; }
     property QtObject fontMonoBold: FontLoader { id: _fontMonoBold; source: "qrc:/fonts/RobotoMono-Bold.ttf"; }

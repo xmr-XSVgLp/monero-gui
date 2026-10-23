@@ -9729,4 +9729,157 @@ Si no tienes la opción de ejecutar tu propio nodo, hay una opción de conectars
 <message><source>Keep the app open with this wallet selected and synced. A password screen can stay locked only if background-sync mode has not removed spending access. Scheduled payments are unavailable on hardware wallets. If the wallet is closed when a payment becomes due, you must confirm it after reopening. Other sends from the source account are blocked during the previous 25 minutes; funds must still be unlocked at payment time.</source><translation>Mantén la aplicación abierta con esta cartera seleccionada y sincronizada. La pantalla de contraseña puede permanecer bloqueada solo si la sincronización en segundo plano no ha desactivado la capacidad de gastar. Los pagos programados no están disponibles en carteras hardware. Si llega la hora con la cartera cerrada, deberás confirmar el pago al reabrirla. Se bloquean otros envíos desde la cuenta de origen durante los 25 minutos anteriores; los fondos deberán estar desbloqueados al realizar el pago.</translation></message>
 </context>
 <context><name>TransactionPriceSummary</name><message><source>XMR market price</source><translation>Precio de mercado de XMR</translation></message><message><source>At transaction time ≈</source><translation>Al realizar la transacción ≈</translation></message><message><source>Current price</source><translation>Precio actual</translation></message><message><source>Last available price</source><translation>Último precio disponible</translation></message><message><source>Price change</source><translation>Variación del precio</translation></message><message><source>Compared with the historical price</source><translation>Respecto al precio histórico</translation></message><message><source>No data available</source><translation>Sin datos disponibles</translation></message><message><source>CoinGecko · Price per 1 XMR. Historical sample at or before the transaction, not an execution price. Change is not profit or loss.</source><translation>CoinGecko · Precio de 1 XMR. Cotización histórica anterior o igual a la fecha de la transacción; no es el precio de ejecución. La variación no representa ganancias ni pérdidas.</translation></message><message><source>Price connections are disabled; showing saved data.</source><translation>Conexiones de precios desactivadas; se muestran datos guardados.</translation></message></context>
+<context>
+    <name>RichTextToolbar</name>
+    <message>
+        <source>Monero symbol</source>
+        <translation>Símbolo de Monero</translation>
+    </message>
+    <message>
+        <source>Bold</source>
+        <translation>Negrita</translation>
+    </message>
+    <message>
+        <source>Italic</source>
+        <translation>Cursiva</translation>
+    </message>
+    <message>
+        <source>Underline</source>
+        <translation>Subrayado</translation>
+    </message>
+    <message>
+        <source>Strikethrough</source>
+        <translation>Tachado</translation>
+    </message>
+    <message>
+        <source>Text colour</source>
+        <translation>Color del texto</translation>
+    </message>
+    <message>
+        <source>Automatic</source>
+        <translation>Automático</translation>
+    </message>
+    <message>
+        <source>Highlight</source>
+        <translation>Resaltado</translation>
+    </message>
+    <message>
+        <source>No highlight</source>
+        <translation>Sin resaltado</translation>
+    </message>
+    <message>
+        <source>Font</source>
+        <translation>Tipo de letra</translation>
+    </message>
+    <message>
+        <source>Paragraph style</source>
+        <translation>Estilo de párrafo</translation>
+    </message>
+    <message>
+        <source>Title</source>
+        <translation>Título</translation>
+    </message>
+    <message>
+        <source>Heading</source>
+        <translation>Encabezado</translation>
+    </message>
+    <message>
+        <source>Subheading</source>
+        <translation>Subencabezado</translation>
+    </message>
+    <message>
+        <source>Normal</source>
+        <translation>Normal</translation>
+    </message>
+    <message>
+        <source>Monospaced</source>
+        <translation>Monoespaciado</translation>
+    </message>
+    <message>
+        <source>Size</source>
+        <translation>Tamaño</translation>
+    </message>
+    <message>
+        <source>Align left</source>
+        <translation>Alinear a la izquierda</translation>
+    </message>
+    <message>
+        <source>Centre</source>
+        <translation>Centrar</translation>
+    </message>
+    <message>
+        <source>Align right</source>
+        <translation>Alinear a la derecha</translation>
+    </message>
+    <message>
+        <source>Justify</source>
+        <translation>Justificar</translation>
+    </message>
+    <message>
+        <source>Lists</source>
+        <translation>Listas</translation>
+    </message>
+    <message>
+        <source>None</source>
+        <translation>Ninguna</translation>
+    </message>
+    <message>
+        <source>Bullets</source>
+        <translation>Viñetas</translation>
+    </message>
+    <message>
+        <source>Circles</source>
+        <translation>Círculos</translation>
+    </message>
+    <message>
+        <source>Squares</source>
+        <translation>Cuadrados</translation>
+    </message>
+    <message>
+        <source>Checklist</source>
+        <translation>Lista de verificación</translation>
+    </message>
+    <message>
+        <source>Line spacing</source>
+        <translation>Interlineado</translation>
+    </message>
+</context>
+<context>
+    <name>BalanceHistoryChart</name>
+    <message>
+        <source>VALUE</source>
+        <translation>VALOR</translation>
+    </message>
+    <message>
+        <source>NOW</source>
+        <translation>AHORA</translation>
+    </message>
+    <message>
+        <source>CHANGE</source>
+        <translation>CAMBIO</translation>
+    </message>
+    <message>
+        <source>BALANCE</source>
+        <translation>SALDO</translation>
+    </message>
+    <message>
+        <source>DATE</source>
+        <translation>FECHA</translation>
+    </message>
+    <message>
+        <source>Balance hidden</source>
+        <translation>Saldo oculto</translation>
+    </message>
+    <message>
+        <source>No price history for %1 yet. Open Wallet+ &gt; Markets once to download it.</source>
+        <translation>Aún no hay historial de precios de %1. Abre Wallet+ &gt; Mercados una vez para descargarlo.</translation>
+    </message>
+</context>
+<context>
+    <name>BalanceCard</name>
+    <message>
+        <source>Monero price and balance history</source>
+        <translation>Precio de Monero y evolución del saldo</translation>
+    </message>
+</context>
 </TS>

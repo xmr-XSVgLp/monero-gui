@@ -154,7 +154,7 @@ Rectangle {
 
     function showFiatConversion(valueXMR) {
         const fiatFee = fiatApiConvertToFiat(valueXMR);
-        return "%1 %2".arg(fiatFee < 0.01 ? "&lt;0.01" : "~" + fiatFee).arg(fiatApiCurrencySymbol());
+        return "%1 %2".arg(fiatFee < 0.01 ? "&lt;0.01" : "~" + Utils.prettyAmount(fiatFee)).arg(fiatApiCurrencySymbol());
     }
 
     ColumnLayout {
@@ -218,7 +218,7 @@ Rectangle {
                     if (root.transactionAmount == "(all)" && currentWallet.isHwBacked() === true) {
                         return qsTr("All unlocked balance") +  translationManager.emptyString;
                     } else {
-                        return root.transactionAmount + " XMR " +  translationManager.emptyString;
+                        return Utils.prettyAmountRich(root.transactionAmount, Math.round(font.pixelSize * 0.6)) + " XMR " +  translationManager.emptyString;
                     }
                 }
             }
@@ -366,7 +366,7 @@ Rectangle {
                                     return qsTr("Calculating fee") + "..." +  translationManager.emptyString;
                                 }
                             } else {
-                                return root.transactionFee + " XMR" + (maliciousTxFee ? " (HIGH FEE)" : "")
+                                return Utils.prettyAmountRich(root.transactionFee, Math.round(font.pixelSize * 0.7)) + " XMR" + (maliciousTxFee ? " (HIGH FEE)" : "")
                             }
                         } else {
                             return "";

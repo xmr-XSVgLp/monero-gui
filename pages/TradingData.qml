@@ -33,6 +33,7 @@ import moneroComponents.TransactionHistoryModel 1.0
 
 import "../components" as MoneroComponents
 import "../js/SwapHistory.js" as SwapHistory
+import "../js/Utils.js" as Utils
 
 // XMR price chart (CoinGecko public market_chart, no key) in EUR, USD or BTC.
 // Like Swaps, it is only reachable with "Price conversion" on. Every series is saved as CSV and
@@ -811,7 +812,9 @@ Rectangle {
             themeTransition: false
         }
         MoneroComponents.TextPlain {
-            text: parent.value
+            // amounts with small decimals; percentages and dates as they are
+            text: /%|\/|:/.test(parent.value) ? parent.value : Utils.prettyAmountRich(parent.value, Math.round(font.pixelSize * 0.65))
+            textFormat: Text.RichText
             font.pixelSize: 16
             font.bold: true
             font.family: MoneroComponents.Style.fontMonoMedium.name

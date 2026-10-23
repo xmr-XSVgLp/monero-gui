@@ -132,8 +132,8 @@ function prettyAmount(s) {
     });
 }
 
-// Same as prettyAmount, as rich text: decimals after the third are drawn at smallPx.
-// Use with textFormat: Text.RichText. "12.345678901234" -> "12.345<span ...>678901234</span>"
+// Same as prettyAmount, as rich text: the decimals are drawn at smallPx.
+// Use with textFormat: Text.RichText. "1234.5678" -> "1,234.<span ...>5678</span>"
 function prettyAmountRich(s, smallPx) {
     return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
         .replace(/\d+(\.\d+)?/g, function(m) {
@@ -141,9 +141,7 @@ function prettyAmountRich(s, smallPx) {
             var i = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, amountThousandsSep);
             if (p.length < 2) return i;
             var d = p[1];
-            if (d.length <= 3) return i + amountDecimalSep + d;
-            return i + amountDecimalSep + d.slice(0, 3)
-                + '<span style="font-size:' + smallPx + 'px">' + d.slice(3) + '</span>';
+            return i + amountDecimalSep + '<span style="font-size:' + smallPx + 'px">' + d + '</span>';
         });
 }
 

@@ -118,6 +118,7 @@ Rectangle {
         property string label: ""
         property color dot: "#8C8C8C"
         property string tip: ""
+        property Component tipContent: null
         property bool blink: false
         property string page: ""      // page opened on click; Settings > Node / Network when empty
         width: chipRow.implicitWidth + 18
@@ -161,14 +162,31 @@ Rectangle {
             anchors.fill: parent
             text: chip.tip
         }
+        QQC.ToolTip {
+            id: richTip
+            width: 360
+            padding: 12
+            y: chip.height + 4
+            x: chip.width - width
+            closePolicy: QQC.Popup.NoAutoClose
+            contentItem: Loader { sourceComponent: chip.tipContent }
+            background: MoneroComponents.NeonFrame {
+                cut: 7
+                fillColor: MoneroComponents.Style.blackTheme ? "#000A02" : "#DEE3DF"
+                fillOpacity: 0.96
+                lineOpacity: 0.9
+                glow: 0.45
+            }
+        }
         MouseArea {
             id: chipArea
             anchors.fill: parent
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
-            onEntered: chipTip.tooltipPopup.open()
-            onExited: chipTip.tooltipPopup.close()
+            onEntered: chip.tipContent ? richTip.open() : chipTip.tooltipPopup.open()
+            onExited: { richTip.close(); chipTip.tooltipPopup.close(); }
             onClicked: {
+                richTip.close();
                 chipTip.tooltipPopup.close();
                 if (chip.page !== "") {
                     appWindow.showPageRequest(chip.page);
@@ -610,19 +628,13 @@ Rectangle {
                 readonly property color ink: MoneroComponents.Style.blackTheme ? "#FFFFFF" : "#0B1F0F"
                 readonly property int nameMax: Math.max(40, parent.width - 170)
 
-                MoneroComponents.SafeIcon {
+                // seed accounts menu
+                MoneroComponents.TitleIconButton {
                     visible: !root.hardwareWallet && !root.removableWallet
                     anchors.verticalCenter: parent.verticalCenter
-                    width: 22
-                    height: 22
-
-                    // seed accounts menu
-                    MouseArea {
-                        anchors.fill: parent
-                        anchors.margins: -4
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: seedAccountsPopup.visible ? seedAccountsPopup.close() : seedAccountsPopup.open()
-                    }
+                    kind: "safe"
+                    active: seedAccountsPopup.visible
+                    onClicked: seedAccountsPopup.visible ? seedAccountsPopup.close() : seedAccountsPopup.open()
                 }
 
                 MoneroComponents.UsbIcon {
@@ -887,50 +899,22 @@ Rectangle {
                 }
 
                 // quick wallet switch (main.qml unlockedWallets)
-                Rectangle {
+                MoneroComponents.TitleIconButton {
                     id: walletSwitchButton
                     // seed accounts (wallets_passphrase) stay in their wallet's own menu, not here
                     readonly property var wallets: appWindow.unlockedWallets.filter(function(w) { return appWindow.seedAccountOffset(w.path) === 0; })
                     visible: persistentSettings.quickWalletSwitch && typeof appWindow.currentWallet !== "undefined" && appWindow.currentWallet !== null
                     anchors.verticalCenter: parent.verticalCenter
-                    width: switchRow.implicitWidth + 14
-                    height: 22
-                    radius: 3
-                    color: switchArea.containsMouse || walletSwitchPopup.visible ? MoneroComponents.Style.c("#2600FF41") : "#99000000"
-                    border.width: 1
-                    border.color: switchArea.containsMouse || walletSwitchPopup.visible ? MoneroComponents.Style.c("#00FF41") : MoneroComponents.Style.c("#5500FF41")
-
-                    Row {
-                        id: switchRow
-                        anchors.centerIn: parent
-                        spacing: 5
-                        Text {
-                            text: "⇄"
-                            color: MoneroComponents.Style.c("#00FF41")
-                            font.pixelSize: 13
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                        Text {
-                            visible: walletSwitchButton.wallets.length > 1
-                            text: walletSwitchButton.wallets.length
-                            color: "#FFFFFF"
-                            font.family: MoneroComponents.Style.fontMonoRegular.name
-                            font.pixelSize: 11
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
+                    kind: "wallet"
+                    active: walletSwitchPopup.visible
+                    badge: wallets.length > 1 ? String(wallets.length) : ""
+                    onHoveredChanged: {
+                        if (hovered && !walletSwitchPopup.visible) switchTip.tooltipPopup.open();
+                        else switchTip.tooltipPopup.close();
                     }
-
-                    MouseArea {
-                        id: switchArea
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onEntered: if (!walletSwitchPopup.visible) switchTip.tooltipPopup.open()
-                        onExited: switchTip.tooltipPopup.close()
-                        onClicked: {
-                            switchTip.tooltipPopup.close();
-                            walletSwitchPopup.visible ? walletSwitchPopup.close() : walletSwitchPopup.open();
-                        }
+                    onClicked: {
+                        switchTip.tooltipPopup.close();
+                        walletSwitchPopup.visible ? walletSwitchPopup.close() : walletSwitchPopup.open();
                     }
 
                     MoneroComponents.Tooltip {
@@ -1125,6 +1109,53 @@ Rectangle {
             // one NODE chip: node connection + Nym state in the dot and tooltip
             Chip {
                 label: qsTr("NODE") + translationManager.emptyString
+                tipContent: Component {
+                    ColumnLayout {
+                        spacing: 8
+                        MoneroComponents.TextPlain {
+                            Layout.fillWidth: true
+                            wrapMode: Text.WrapAnywhere
+                            font.pixelSize: 12
+                            text: (privacyStatus.remote ? qsTr("Remote node: %1") : qsTr("Local node: %1")).arg(privacyStatus.nodeAddress)
+                                  + " · " + (appWindow.disconnected ? qsTr("disconnected") : qsTr("connected"))
+                        }
+                        Repeater {
+                            model: [
+                                {label: qsTr("Wallet"), net: persistentSettings.netWallet},
+                                {label: qsTr("Sync"), net: persistentSettings.netSync},
+                                {label: qsTr("Transactions"), net: persistentSettings.netTx}
+                            ]
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: 6
+                                MoneroComponents.TextPlain {
+                                    Layout.preferredWidth: 125
+                                    text: modelData.label + ":"
+                                    font.pixelSize: 12
+                                }
+                                MoneroComponents.NetIcon {
+                                    net: modelData.net === "both" ? "tor" : modelData.net
+                                }
+                                MoneroComponents.NetIcon {
+                                    visible: modelData.net === "both"
+                                    net: "i2p"
+                                }
+                                MoneroComponents.TextPlain {
+                                    Layout.fillWidth: true
+                                    text: privacyStatus.netName(modelData.net)
+                                    font.pixelSize: 12
+                                }
+                            }
+                        }
+                        MoneroComponents.TextPlain {
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            font.pixelSize: 12
+                            text: privacyStatus.nymUp ? qsTr("The wallet's network is connected.")
+                                : qsTr("The wallet's network is connecting: its requests wait, nothing goes out directly.")
+                        }
+                    }
+                }
                 dot: appWindow.disconnected ? "#FF5A5A"
                      : privacyStatus.nymWorking ? "#F5B83D"
                      : "#3DDC84"

@@ -55,9 +55,10 @@ Item {
         if (!visible) appWindow.modalDialogs++;
         visible = true;
         forceActiveFocus();
+        Qt.callLater(root.searchBluetooth);
     }
     function finish(chosen) {
-        if (!visible || (chosen && (searching || !devices.some(function(d) { return d.path === selectedPath; })))) return;
+        if (!visible || (chosen && !devices.some(function(d) { return d.path === selectedPath; }))) return;
         ++searchGeneration;
         searching = false;
         if (visible) appWindow.modalDialogs = Math.max(0, appWindow.modalDialogs - 1);
@@ -83,6 +84,14 @@ Item {
         });
     }
 
+    // Leave a pause after each completed scan, without overlapping discovery requests.
+    Timer {
+        interval: 5000
+        running: root.visible && !root.searching
+        repeat: false
+        onTriggered: root.searchBluetooth()
+    }
+
     Keys.onEscapePressed: finish(false)
     Keys.onReturnPressed: if (selectedPath !== "") finish(true)
     Keys.onEnterPressed: if (selectedPath !== "") finish(true)
@@ -105,7 +114,7 @@ Item {
         MoneroComponents.TextPlain {
             Layout.fillWidth: true
             wrapMode: Text.WordWrap
-            text: qsTr("Elige el Trezor para esta cartera. Si usas un Safe 7 inalámbrico, pulsa Buscar por Bluetooth aunque haya otro Trezor conectado por USB.")
+            text: qsTr("Elige el Trezor para esta cartera. La lista busca y actualiza automáticamente los dispositivos USB y Bluetooth mientras esta ventana está abierta.")
             font.pixelSize: 14
         }
 
@@ -164,6 +173,26 @@ Item {
                                     color: MoneroComponents.Style.dimmedFontColor
                                 }
                             }
+                            Canvas {
+                                visible: modelData.path.indexOf("ble:") === 0
+                                Layout.preferredWidth: 14
+                                Layout.preferredHeight: 20
+                                property color ink: root.dark ? "#80BCFF" : "#2466AC"
+                                onInkChanged: requestPaint()
+                                onPaint: {
+                                    var ctx = getContext("2d");
+                                    ctx.clearRect(0, 0, width, height);
+                                    ctx.strokeStyle = ink;
+                                    ctx.lineWidth = 1.7;
+                                    ctx.lineJoin = "round";
+                                    ctx.beginPath();
+                                    ctx.moveTo(6, 1); ctx.lineTo(12, 6);
+                                    ctx.lineTo(2, 15);
+                                    ctx.moveTo(2, 5); ctx.lineTo(12, 14);
+                                    ctx.lineTo(6, 19); ctx.lineTo(6, 1);
+                                    ctx.stroke();
+                                }
+                            }
                             MoneroComponents.TextPlain {
                                 visible: !!modelData.lastUsed
                                 text: qsTr("último usado")
@@ -200,14 +229,14 @@ Item {
                 small: true
                 primary: false
                 enabled: !root.searching
-                text: root.searching ? qsTr("Buscando...") : qsTr("Buscar por Bluetooth")
+                text: root.searching ? qsTr("Buscando...") : qsTr("Actualizar ahora")
                 onClicked: root.searchBluetooth()
             }
             Item { Layout.fillWidth: true }
             MoneroComponents.StandardButton { small: true; primary: false; text: qsTr("Cancelar"); onClicked: root.finish(false) }
             MoneroComponents.StandardButton {
                 small: true
-                enabled: root.selectedPath !== "" && !root.searching
+                enabled: root.selectedPath !== "" && root.devices.some(function(d) { return d.path === root.selectedPath; })
                 text: qsTr("Conectar")
                 onClicked: root.finish(true)
             }

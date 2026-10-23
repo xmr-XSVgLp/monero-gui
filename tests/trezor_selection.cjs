@@ -24,8 +24,18 @@ let pending;
 const c={visible:true,searching:false,searchGeneration:0,devices:[{path:'webusb:1'}],selectedPath:'webusb:1',chosenCallback:null,cancelledCallback:null,
  appWindow:{modalDialogs:1,rememberTrezorDevices(){},withKnownTrezorNames:l=>l},walletManager:{trezorDevicesAsync:(ble,cb)=>pending=cb}};
 c.root=c;vm.createContext(c);vm.runInContext(['searchBluetooth','finish'].map(n=>extract(picker,n)).join('\n'),c);
-c.searchBluetooth();c.finish(true);assert.equal(c.visible,true,'Enter cannot select while scanning');
-c.finish(false);pending('[{"path":"ble:7"}]');assert.equal(c.devices[0].path,'webusb:1','late scan cannot change closed picker');
+let connectedPath='', connections=0;
+c.chosenCallback=p=>{connectedPath=p;connections++;};
+c.searchBluetooth();c.finish(true);
+assert.equal(c.visible,false,'a discovered device can connect while scanning');
+assert.equal(connectedPath,'webusb:1');assert.equal(connections,1);
+pending('[{"path":"ble:7"}]');
+assert.equal(c.devices[0].path,'webusb:1','late scan cannot change the chosen device');
+c.finish(true);assert.equal(connections,1,'cannot connect twice');
+c.visible=true;c.selectedPath='missing';c.finish(true);
+assert.equal(c.visible,true,'cannot connect a device absent from the list');
+c.selectedPath='webusb:1';c.searchBluetooth();c.finish(false);
+pending('[{"path":"ble:7"}]');assert.equal(c.devices[0].path,'webusb:1','late scan cannot change cancelled picker');
 console.log('PASS: explicit choice with zero/one/multiple USB devices, BLE choice, cancellation and stale discovery');
 
 // A device settings request cannot cross a wallet switch while it is pending.

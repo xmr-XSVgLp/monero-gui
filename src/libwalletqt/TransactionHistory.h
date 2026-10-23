@@ -59,6 +59,8 @@ public:
     Q_INVOKABLE QString writeCSV(quint32 accountIndex, QString out);
     // subaddress indices of the loaded account that already received a transaction (incoming, not failed)
     Q_INVOKABLE QVariantList usedSubaddresses() const;
+    // movements of every account (the model only holds the selected one): [[unix seconds, delta XMR], ...]
+    Q_INVOKABLE QVariantList balanceEventsAll() const;
     quint64 count() const;
     QDateTime firstDateTime() const;
     QDateTime lastDateTime() const;

@@ -10,6 +10,7 @@ import QtQuick.Layouts
 import moneroComponents.Clipboard 1.0
 
 import "../components" as MoneroComponents
+import "../js/Utils.js" as Utils
 
 Rectangle {
     id: pageCustom
@@ -336,7 +337,8 @@ Rectangle {
                         font.pixelSize: 14
                         color: MoneroComponents.Style.defaultFontColor
                         themeTransition: false
-                        text: (persistentSettings.hideBalance ? "?.??" : pageCustom.minedTotal) + " XMR"
+                        textFormat: Text.RichText
+                        text: (persistentSettings.hideBalance ? "?.??" : Utils.prettyAmountRich(pageCustom.minedTotal, Math.round(font.pixelSize * 0.65))) + " XMR"
                     }
                 }
                 MoneroComponents.TextPlain {
@@ -391,7 +393,8 @@ Rectangle {
                                 font.pixelSize: 13
                                 color: MoneroComponents.Style.defaultFontColor
                                 themeTransition: false
-                                text: (persistentSettings.hideBalance ? "?.??" : walletManager.displayAmount(pageCustom.minedBalance(m, false))) + " XMR"
+                                textFormat: Text.RichText
+                                text: (persistentSettings.hideBalance ? "?.??" : Utils.prettyAmountRich(walletManager.displayAmount(pageCustom.minedBalance(m, false)), Math.round(font.pixelSize * 0.65))) + " XMR"
                             }
                             MoneroComponents.StandardButton {
                                 small: true
