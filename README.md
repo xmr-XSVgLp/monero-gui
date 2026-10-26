@@ -12,6 +12,17 @@ It tracks upstream `monero-gui` **master** and Monero **v0.18.5.4**.
 Tested on **macOS (Apple Silicon) with a Trezor Safe 7**, over USB and Bluetooth. Older Trezor models, Ledger
 and other platforms are untested. The interface is available in English and Spanish.
 
+
+<p align="center">
+  <img src="images/1.png" width="49%">
+  <img src="images/2.png" width="49%">
+</p>
+<p align="center">
+  <img src="images/3.png" width="49%">
+  <img src="images/4.png" width="49%">
+</p>
+
+
 ## Official Monero GUI vs XMR Wallet+
 
 | Feature | Monero GUI (official) | XMR Wallet+ |
